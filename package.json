@@ -12,8 +12,16 @@
     "dist",
     "schemas",
     "examples",
+    "docs",
     "README.md",
-    "LICENSE"
+    "CHANGELOG.md",
+    "CONTRIBUTING.md",
+    "DIFFERENTIATION_REPORT.md",
+    "GOVERNANCE.md",
+    "LICENSE",
+    "PRIVACY.md",
+    "SAFETY.md",
+    "SECURITY.md"
   ],
   "keywords": [
     "vocation-os",

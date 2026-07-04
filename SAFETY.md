@@ -18,3 +18,9 @@ VocationOS is a human supervised decision system.
 The system treats immigration, licensing, financial liability, clinical vulnerability, research integrity, conflict of interest, public reputation, and family relocation as high stakes signals.
 
 High stakes mode outputs include specialist question templates at runtime.
+
+## Integrity Controls
+
+Claim text hashes and packet hashes are runtime gates, not display metadata. Any mismatch between graph claim text, packet claim text, source claim text hash, or packet hash blocks automation.
+
+The action ledger uses unique action ids and rejects duplicate ids so blocked attempts and consequential actions remain auditable.

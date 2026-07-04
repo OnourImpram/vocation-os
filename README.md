@@ -60,6 +60,12 @@ Packet claims are bound to canonical claim text hashes. Stale packet hashes, cha
 
 The public repository includes only synthetic examples. Real private profile data belongs in ignored local state.
 
+## Release Validation
+
+The v0.2 public release candidate was checked against claim text inflation, stale packet hashes, duplicate ledger ids, package execution, state validation, structured authorization, and hidden automation bypass classes.
+
+See `docs/RELEASE_VALIDATION.md` for the release validation surface.
+
 ## What This Is Not
 
 VocationOS is not an autonomous hiring system.

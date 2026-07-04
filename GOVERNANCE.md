@@ -16,6 +16,8 @@ Source: https://www.nist.gov/itl/ai-risk-management-framework
 
 This mapping targets NIST AI RMF 1.0. Because NIST states that AI RMF 1.0 is being revised, this document should be reviewed before every major release.
 
+Release validation notes are maintained in `docs/RELEASE_VALIDATION.md`. They record engineering evidence gates and do not constitute legal, clinical, financial, immigration, licensing, employment, or standards compliance certification.
+
 ## Management System Reference
 
 ISO/IEC 42001 is a reference point for mature AI management systems. VocationOS does not claim certification.

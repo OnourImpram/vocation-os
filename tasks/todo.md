@@ -17,3 +17,10 @@
 - 2026-07-04: `node dist/cli.js doctor` passed from a temporary working directory.
 - 2026-07-05: `npm run site:build` passed for the Astro microsite.
 - 2026-07-05: Generated `assets/control-room-background.png`, `assets/vocationos-banner.png`, and `assets/social-preview.png`.
+
+## 2026-07-05 Review Integration
+
+- [x] Interpret shared post-public review as implementation input, not as a GitHub comment thread.
+- [x] Add a public release validation note without copying the raw review text.
+- [x] Link validation, safety, governance, changelog, and roadmap surfaces.
+- [x] Verify privacy, brand, docs, test, package, and site gates.
