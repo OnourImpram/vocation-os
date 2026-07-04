@@ -1,0 +1,10 @@
+cff-version: 1.2.0
+message: "If you use VocationOS in research, teaching, or applied work, please cite it."
+title: "VocationOS: Evidence-grounded career decision safety"
+authors:
+  - family-names: "Impram"
+    given-names: "Onour"
+    orcid: "https://orcid.org/0000-0003-1076-3928"
+version: "0.2.0"
+url: "https://github.com/OnourImpram/vocation-os"
+type: software

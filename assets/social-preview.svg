@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="640" viewBox="0 0 1280 640" role="img" aria-labelledby="title desc">
+  <title id="title">VocationOS social preview</title>
+  <desc id="desc">Evidence-grounded career decision safety.</desc>
+  <rect width="1280" height="640" fill="#101216"/>
+  <rect x="78" y="78" width="1124" height="484" rx="24" fill="#f2eee4" stroke="#b9ad97" stroke-width="2"/>
+  <rect x="122" y="126" width="1036" height="86" rx="12" fill="#161a20"/>
+  <text x="152" y="184" fill="#f6f0e4" font-family="Arial, Helvetica, sans-serif" font-size="42" font-weight="700">Decision Control Room</text>
+  <text x="122" y="312" fill="#14171c" font-family="Arial, Helvetica, sans-serif" font-size="86" font-weight="700">VocationOS</text>
+  <text x="126" y="386" fill="#34404d" font-family="Arial, Helvetica, sans-serif" font-size="34">Evidence-grounded career decision safety.</text>
+  <text x="126" y="486" fill="#0f7d7a" font-family="Arial, Helvetica, sans-serif" font-size="28" font-weight="700">Claim graph</text>
+  <text x="332" y="486" fill="#996515" font-family="Arial, Helvetica, sans-serif" font-size="28" font-weight="700">Reversibility</text>
+  <text x="570" y="486" fill="#8f2f32" font-family="Arial, Helvetica, sans-serif" font-size="28" font-weight="700">High-stakes gates</text>
+  <text x="892" y="486" fill="#1e293b" font-family="Arial, Helvetica, sans-serif" font-size="28" font-weight="700">Human approval</text>
+  <text x="126" y="538" fill="#627083" font-family="Arial, Helvetica, sans-serif" font-size="22">OnourImpram</text>
+</svg>
