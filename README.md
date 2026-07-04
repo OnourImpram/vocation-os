@@ -2,12 +2,16 @@
 
 Evidence grounded career decision safety for high agency operators.
 
+![VocationOS decision control room banner](assets/vocationos-banner.png)
+
 ![CI](https://img.shields.io/badge/CI-configured-informational)
 ![TypeScript](https://img.shields.io/badge/TypeScript-strict-blue)
 ![Safety](https://img.shields.io/badge/safety-red--team--tested-informational)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
 VocationOS is not a faster auto apply bot. It is a career decision safety system that makes automation conditional on evidence, reversibility, stakes, and human authorization.
+
+Website: https://onourimpram.github.io/vocation-os/
 
 ## Why It Exists
 

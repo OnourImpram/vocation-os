@@ -6,7 +6,7 @@ import { normalizePath, walkFiles } from "./file-walk.mjs";
 
 function trackedFiles() {
   try {
-    const output = execFileSync("git", ["ls-files"], {
+    const output = execFileSync("git", ["ls-files", "--cached", "--others", "--exclude-standard"], {
       cwd: process.cwd(),
       encoding: "utf8",
       stdio: ["ignore", "pipe", "ignore"]

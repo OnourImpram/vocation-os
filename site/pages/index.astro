@@ -1,0 +1,727 @@
+---
+import backgroundImage from "../../assets/control-room-background.png";
+
+const base = import.meta.env.BASE_URL.endsWith("/")
+  ? import.meta.env.BASE_URL
+  : `${import.meta.env.BASE_URL}/`;
+const homeHref = base;
+const siteUrl = "https://onourimpram.github.io/vocation-os/";
+const socialImage = `${siteUrl}social-preview.png`;
+const iconImage = `${base}control-room-background.png`;
+const backgroundUrl = typeof backgroundImage === "string" ? backgroundImage : backgroundImage.src;
+const repoUrl = "https://github.com/OnourImpram/vocation-os";
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>VocationOS | Career Decision Safety</title>
+    <meta
+      name="description"
+      content="Evidence grounded career decision safety for high agency operators."
+    />
+    <meta property="og:title" content="VocationOS" />
+    <meta
+      property="og:description"
+      content="Automation conditional on evidence, reversibility, stakes, and human authorization."
+    />
+    <meta property="og:image" content={socialImage} />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="icon" href={iconImage} />
+    <style>
+      :root {
+        color-scheme: dark;
+        --ink: #070a0c;
+        --ink-2: #0d1215;
+        --panel: #f2eee2;
+        --paper: #fffbef;
+        --paper-soft: #e6dfcd;
+        --line: rgba(255, 251, 239, 0.16);
+        --line-strong: rgba(255, 251, 239, 0.28);
+        --amber: #d89a35;
+        --amber-soft: rgba(216, 154, 53, 0.16);
+        --teal: #55d6c2;
+        --teal-soft: rgba(85, 214, 194, 0.15);
+        --red: #d85b4d;
+        --red-soft: rgba(216, 91, 77, 0.18);
+        --muted: #9ca69f;
+        --white: #fff9eb;
+        --max: 1160px;
+        --sans: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        --mono: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html {
+        background: var(--ink);
+        scroll-behavior: smooth;
+      }
+
+      body {
+        margin: 0;
+        overflow-x: hidden;
+        background:
+          radial-gradient(circle at 72% 12%, rgba(85, 214, 194, 0.08), transparent 28rem),
+          linear-gradient(180deg, #070a0c 0%, #101114 44%, #070a0c 100%);
+        color: var(--white);
+        font-family: var(--sans);
+        line-height: 1.55;
+      }
+
+      a {
+        color: inherit;
+        text-decoration: none;
+      }
+
+      a:focus-visible,
+      button:focus-visible {
+        outline: 2px solid var(--teal);
+        outline-offset: 4px;
+      }
+
+      .skip {
+        position: absolute;
+        left: 1rem;
+        top: -4rem;
+        z-index: 20;
+        border-radius: 8px;
+        background: var(--paper);
+        color: var(--ink);
+        padding: 0.75rem 1rem;
+        font-weight: 700;
+      }
+
+      .skip:focus {
+        top: 1rem;
+      }
+
+      .site-header {
+        position: sticky;
+        top: 0;
+        z-index: 10;
+        border-bottom: 1px solid rgba(255, 251, 239, 0.12);
+        background: rgba(7, 10, 12, 0.78);
+        backdrop-filter: blur(18px);
+      }
+
+      .nav {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        justify-content: space-between;
+        margin: 0 auto;
+        max-width: var(--max);
+        padding: 0.95rem 1.25rem;
+      }
+
+      .brand {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.7rem;
+        font-weight: 800;
+        letter-spacing: 0.02em;
+      }
+
+      .mark {
+        display: grid;
+        width: 34px;
+        height: 34px;
+        place-items: center;
+        border: 1px solid rgba(216, 154, 53, 0.55);
+        border-radius: 9px;
+        background: linear-gradient(145deg, rgba(216, 154, 53, 0.18), rgba(85, 214, 194, 0.1));
+        box-shadow: inset 0 0 24px rgba(216, 154, 53, 0.18);
+        color: var(--amber);
+        font-family: var(--mono);
+        font-size: 0.78rem;
+      }
+
+      .nav-links {
+        display: flex;
+        align-items: center;
+        gap: 0.35rem;
+      }
+
+      .nav-links a {
+        border-radius: 8px;
+        color: var(--muted);
+        font-size: 0.9rem;
+        padding: 0.55rem 0.75rem;
+      }
+
+      .nav-links a:hover {
+        background: rgba(255, 251, 239, 0.08);
+        color: var(--white);
+      }
+
+      .hero {
+        min-height: calc(100vh - 66px);
+        position: relative;
+        overflow: hidden;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .hero::before {
+        position: absolute;
+        inset: 0;
+        background:
+          linear-gradient(90deg, rgba(7, 10, 12, 0.96) 0%, rgba(7, 10, 12, 0.78) 34%, rgba(7, 10, 12, 0.25) 72%),
+          linear-gradient(180deg, rgba(7, 10, 12, 0.22), rgba(7, 10, 12, 0.84)),
+          var(--control-bg) center right / cover no-repeat;
+        content: "";
+      }
+
+      .hero::after {
+        position: absolute;
+        inset: 0;
+        background-image:
+          linear-gradient(rgba(255, 251, 239, 0.035) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(255, 251, 239, 0.03) 1px, transparent 1px);
+        background-size: 48px 48px;
+        content: "";
+        mask-image: linear-gradient(90deg, black, transparent 72%);
+      }
+
+      .hero-inner {
+        position: relative;
+        z-index: 1;
+        display: grid;
+        align-items: end;
+        min-height: calc(100vh - 66px);
+        margin: 0 auto;
+        max-width: var(--max);
+        padding: 5rem 1.25rem 4rem;
+      }
+
+      .hero-copy {
+        max-width: 720px;
+      }
+
+      .eyebrow {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.55rem;
+        margin: 0 0 1rem;
+        color: var(--teal);
+        font-family: var(--mono);
+        font-size: 0.78rem;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      .eyebrow::before {
+        width: 9px;
+        height: 9px;
+        border-radius: 999px;
+        background: var(--teal);
+        box-shadow: 0 0 24px var(--teal);
+        content: "";
+      }
+
+      h1 {
+        margin: 0;
+        max-width: 11ch;
+        font-size: clamp(4rem, 13vw, 9.6rem);
+        letter-spacing: -0.055em;
+        line-height: 0.85;
+      }
+
+      .hero-subtitle {
+        margin: 1.35rem 0 0;
+        max-width: 760px;
+        color: var(--paper-soft);
+        font-size: clamp(1.25rem, 2.4vw, 2.1rem);
+        line-height: 1.25;
+      }
+
+      .hero-proof {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.65rem;
+        margin: 2rem 0;
+      }
+
+      .chip {
+        border: 1px solid rgba(255, 251, 239, 0.16);
+        border-radius: 999px;
+        background: rgba(255, 251, 239, 0.075);
+        color: var(--paper);
+        font-family: var(--mono);
+        font-size: 0.78rem;
+        padding: 0.55rem 0.72rem;
+      }
+
+      .actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.85rem;
+      }
+
+      .button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 46px;
+        border: 1px solid rgba(255, 251, 239, 0.22);
+        border-radius: 8px;
+        font-weight: 800;
+        padding: 0.78rem 1.05rem;
+      }
+
+      .button.primary {
+        background: var(--paper);
+        color: var(--ink);
+      }
+
+      .button.secondary {
+        background: rgba(255, 251, 239, 0.06);
+        color: var(--white);
+      }
+
+      main section {
+        border-bottom: 1px solid var(--line);
+      }
+
+      .band {
+        margin: 0 auto;
+        max-width: var(--max);
+        padding: 5rem 1.25rem;
+      }
+
+      .section-head {
+        display: grid;
+        grid-template-columns: minmax(0, 0.9fr) minmax(260px, 0.65fr);
+        gap: 2.5rem;
+        align-items: end;
+        margin-bottom: 2.4rem;
+      }
+
+      h2 {
+        margin: 0;
+        max-width: 13ch;
+        font-size: clamp(2.5rem, 6vw, 5.2rem);
+        letter-spacing: -0.048em;
+        line-height: 0.92;
+      }
+
+      .lead {
+        margin: 0;
+        color: var(--paper-soft);
+        font-size: 1.08rem;
+      }
+
+      .rail-grid,
+      .gate-grid {
+        display: grid;
+        gap: 1px;
+        background: var(--line);
+        border: 1px solid var(--line);
+      }
+
+      .rail-grid {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+      }
+
+      .gate-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+
+      .rail,
+      .gate,
+      .terminal,
+      .governance-panel {
+        background: linear-gradient(180deg, rgba(255, 251, 239, 0.075), rgba(255, 251, 239, 0.035));
+      }
+
+      .rail,
+      .gate {
+        min-height: 240px;
+        padding: 1.2rem;
+      }
+
+      .index {
+        color: var(--amber);
+        font-family: var(--mono);
+        font-size: 0.78rem;
+      }
+
+      h3 {
+        margin: 1.2rem 0 0.65rem;
+        font-size: 1.24rem;
+        line-height: 1.1;
+      }
+
+      .rail p,
+      .gate p,
+      .governance-panel p {
+        margin: 0;
+        color: var(--muted);
+      }
+
+      .gate strong {
+        color: var(--paper);
+      }
+
+      .demo {
+        display: grid;
+        grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+        gap: 1px;
+        background: var(--line);
+        border: 1px solid var(--line);
+      }
+
+      .terminal {
+        padding: 1.35rem;
+      }
+
+      .terminal pre {
+        overflow: auto;
+        margin: 0;
+        color: var(--paper);
+        font-family: var(--mono);
+        font-size: 0.88rem;
+        line-height: 1.7;
+      }
+
+      .terminal .ok {
+        color: var(--teal);
+      }
+
+      .terminal .warn {
+        color: var(--amber);
+      }
+
+      .terminal .block {
+        color: var(--red);
+      }
+
+      .flow {
+        display: grid;
+        grid-template-columns: repeat(7, minmax(0, 1fr));
+        gap: 0.55rem;
+      }
+
+      .node {
+        min-height: 116px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: rgba(255, 251, 239, 0.055);
+        padding: 0.85rem;
+      }
+
+      .node b {
+        display: block;
+        margin-bottom: 0.35rem;
+        color: var(--paper);
+        font-size: 0.95rem;
+      }
+
+      .node span {
+        color: var(--muted);
+        font-size: 0.84rem;
+      }
+
+      .quick {
+        display: grid;
+        grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+        gap: 2rem;
+        align-items: center;
+      }
+
+      .command {
+        border: 1px solid rgba(85, 214, 194, 0.24);
+        border-radius: 10px;
+        background: #050708;
+        box-shadow: inset 0 0 0 1px rgba(255, 251, 239, 0.04);
+        padding: 1.1rem;
+      }
+
+      .command pre {
+        overflow: auto;
+        margin: 0;
+        color: var(--teal);
+        font-family: var(--mono);
+        font-size: 0.9rem;
+        line-height: 1.75;
+      }
+
+      .governance {
+        background: linear-gradient(180deg, rgba(216, 154, 53, 0.07), rgba(85, 214, 194, 0.04));
+      }
+
+      .governance-panel {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 2rem;
+        align-items: center;
+        border: 1px solid var(--line-strong);
+        padding: 1.5rem;
+      }
+
+      .footer {
+        padding: 2.2rem 1.25rem;
+        color: var(--muted);
+        text-align: center;
+      }
+
+      @media (max-width: 900px) {
+        .nav-links {
+          display: none;
+        }
+
+        .hero {
+          min-height: auto;
+        }
+
+        .hero::before {
+          background:
+            linear-gradient(180deg, rgba(7, 10, 12, 0.78), rgba(7, 10, 12, 0.98) 70%),
+            var(--control-bg) center top / cover no-repeat;
+        }
+
+        .hero-inner {
+          align-items: end;
+          min-height: 760px;
+          padding-top: 18rem;
+        }
+
+        .section-head,
+        .demo,
+        .quick,
+        .governance-panel {
+          grid-template-columns: 1fr;
+        }
+
+        .rail-grid,
+        .gate-grid,
+        .flow {
+          grid-template-columns: 1fr;
+        }
+
+        .rail,
+        .gate,
+        .node {
+          min-height: auto;
+        }
+      }
+
+      @media (max-width: 520px) {
+        .hero-inner,
+        .band,
+        .nav {
+          padding-left: 1rem;
+          padding-right: 1rem;
+        }
+
+        h1 {
+          max-width: 100%;
+          font-size: clamp(3.05rem, 16vw, 3.95rem);
+          letter-spacing: -0.07em;
+        }
+
+        .button {
+          width: 100%;
+        }
+      }
+    </style>
+  </head>
+  <body style={`--control-bg: url('${backgroundUrl}')`}>
+    <a class="skip" href="#main">Skip to content</a>
+    <header class="site-header" aria-label="Primary navigation">
+      <nav class="nav">
+        <a class="brand" href={homeHref}>
+          <span class="mark">R4</span>
+          <span>VocationOS</span>
+        </a>
+        <div class="nav-links" aria-label="Page sections">
+          <a href="#rails">Rails</a>
+          <a href="#gates">Gates</a>
+          <a href="#demo">Demo</a>
+          <a href="#quick-start">Quick start</a>
+          <a href={repoUrl}>GitHub</a>
+        </div>
+      </nav>
+    </header>
+
+    <main id="main">
+      <section class="hero" aria-labelledby="hero-title">
+        <div class="hero-inner">
+          <div class="hero-copy">
+            <p class="eyebrow">Decision control room</p>
+            <h1 id="hero-title">VocationOS</h1>
+            <p class="hero-subtitle">
+              Evidence grounded career decision safety for high agency operators.
+            </p>
+            <div class="hero-proof" aria-label="Runtime safety controls">
+              <span class="chip">Claim hash binding</span>
+              <span class="chip">R0 to R4 reversibility</span>
+              <span class="chip">High stakes certainty gates</span>
+              <span class="chip">Human authorization ledger</span>
+            </div>
+            <div class="actions">
+              <a class="button primary" href={repoUrl}>View on GitHub</a>
+              <a class="button secondary" href="#quick-start">Run the safety demo</a>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="rails">
+        <div class="band">
+          <div class="section-head">
+            <h2>Not faster. Safer.</h2>
+            <p class="lead">
+              VocationOS makes automation conditional on evidence, reversibility, stakes, and human authorization. It is built for career moves where a confident sentence can have real consequences.
+            </p>
+          </div>
+          <div class="rail-grid">
+            <article class="rail">
+              <span class="index">01 Evidence</span>
+              <h3>Claims stay bound to sources.</h3>
+              <p>Profile statements, packets, and public outputs carry evidence status, source pointers, and canonical text hashes.</p>
+            </article>
+            <article class="rail">
+              <span class="index">02 Reversibility</span>
+              <h3>Drafts and submissions are not equal.</h3>
+              <p>R0 to R4 tags separate reversible thinking from external action and irreversible disclosure.</p>
+            </article>
+            <article class="rail">
+              <span class="index">03 Stakes</span>
+              <h3>High impact routes slow down.</h3>
+              <p>Immigration, licensing, clinical, financial, research, conflict, reputation, and relocation routes trigger certainty brakes.</p>
+            </article>
+            <article class="rail">
+              <span class="index">04 Authorization</span>
+              <h3>The operator remains accountable.</h3>
+              <p>Consequential actions require structured approval and append only audit evidence before completion is claimed.</p>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section id="gates">
+        <div class="band">
+          <div class="section-head">
+            <h2>Runtime gates, not slogans.</h2>
+            <p class="lead">
+              The public demo ships with synthetic data, schema validation, red-team tests, and blocked automation examples. Weak or private claims do not become polished outreach by accident.
+            </p>
+          </div>
+          <div class="gate-grid">
+            <article class="gate">
+              <span class="index">Gate A</span>
+              <h3><strong>Packet integrity</strong></h3>
+              <p>Changed claim text, stale packet hashes, duplicate claims, and weak source states block the packet.</p>
+            </article>
+            <article class="gate">
+              <span class="index">Gate B</span>
+              <h3><strong>Automation risk</strong></h3>
+              <p>CAPTCHA, anti-bot ambiguity, payment, identity checks, unclear terms, fabricated credentials, and unsupported licenses fail closed.</p>
+            </article>
+            <article class="gate">
+              <span class="index">Gate C</span>
+              <h3><strong>Decision trace</strong></h3>
+              <p>Allowed and blocked attempts write a ledger entry, including evidence gate status, approval state, result, and block reasons.</p>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section id="demo">
+        <div class="band">
+          <div class="section-head">
+            <h2>Blocked is a feature.</h2>
+            <p class="lead">
+              VocationOS proves safety by refusing to submit when the packet is not ready. A blocked demo is not a broken demo. It is the control room doing its job.
+            </p>
+          </div>
+          <div class="demo">
+            <div class="terminal" aria-label="Blocked automation demo">
+              <pre><span class="warn">$ npx tsx src/cli.ts demo-auto-apply-decision</span>
+&#123;
+  "allowed": false,
+  "blockedBy": [
+    <span class="block">"packet-claim-not-verified:C-DEMO-002"</span>
+  ],
+  "requiredApprovals": [
+    "operator"
+  ]
+&#125;</pre>
+            </div>
+            <div class="terminal" aria-label="Allowed local fixture demo">
+              <pre><span class="warn">$ npx tsx src/cli.ts demo-auto-apply-allowed</span>
+&#123;
+  "allowed": true,
+  "confirmationEvidenceRequired": true,
+  "ledgerActionId": <span class="ok">"A-2026-..."</span>
+&#125;</pre>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="architecture">
+        <div class="band">
+          <div class="section-head">
+            <h2>One screen architecture.</h2>
+            <p class="lead">
+              A career decision enters as operator intent and leaves as a validated output, a blocked attempt, or a human decision packet. The system never collapses those states into one confidence score.
+            </p>
+          </div>
+          <div class="flow" aria-label="VocationOS architecture flow">
+            <div class="node"><b>Intent</b><span>Goal, mode, opportunity, constraints</span></div>
+            <div class="node"><b>Mode</b><span>Output contract and stakes profile</span></div>
+            <div class="node"><b>Claims</b><span>Graph, status, source, hash</span></div>
+            <div class="node"><b>R gate</b><span>Reversibility from R0 to R4</span></div>
+            <div class="node"><b>Stakes</b><span>Certainty brake and specialist questions</span></div>
+            <div class="node"><b>Approval</b><span>Structured operator authorization</span></div>
+            <div class="node"><b>Ledger</b><span>Append only action record</span></div>
+          </div>
+        </div>
+      </section>
+
+      <section id="quick-start">
+        <div class="band quick">
+          <div>
+            <p class="eyebrow">Local public demo</p>
+            <h2>Run the control room.</h2>
+            <p class="lead">
+              Install, test, run a score, then inspect blocked and allowed automation fixtures without any private profile data.
+            </p>
+          </div>
+          <div class="command">
+            <pre>npm ci
+npm run ci
+npx tsx src/cli.ts demo-score
+npx tsx src/cli.ts demo-auto-apply-decision
+npx tsx src/cli.ts demo-auto-apply-allowed</pre>
+          </div>
+        </div>
+      </section>
+
+      <section class="governance" id="governance">
+        <div class="band">
+          <div class="governance-panel">
+            <div>
+              <span class="index">Governance boundary</span>
+              <h3>Individual decision support, not employer-side screening.</h3>
+              <p>
+                VocationOS is not an autonomous hiring system, a legal authority, an immigration authority, a clinical authority, a financial authority, or a licensing authority. It does not rank or reject candidates for employers.
+              </p>
+            </div>
+            <a class="button primary" href={repoUrl}>Inspect the repo</a>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="footer">
+      VocationOS is MIT licensed. The public demo uses synthetic data only.
+    </footer>
+  </body>
+</html>

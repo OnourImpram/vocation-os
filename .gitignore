@@ -18,8 +18,10 @@ _research/*.json
 *.crt
 private-profile/
 .vocationos/
+.astro/
 node_modules/
 dist/
+site-dist/
 coverage/
 .cache/
 .DS_Store

@@ -1,0 +1,190 @@
+---
+import backgroundImage from "../../assets/control-room-background.png";
+
+const backgroundUrl = typeof backgroundImage === "string" ? backgroundImage : backgroundImage.src;
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="robots" content="noindex" />
+    <title>VocationOS Banner Render</title>
+    <style>
+      :root {
+        --ink: #070a0c;
+        --paper: #fff7e4;
+        --paper-soft: #d9d0bd;
+        --amber: #d89a35;
+        --teal: #55d6c2;
+        --red: #d85b4d;
+        --sans: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        --mono: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        width: 1280px;
+        height: 640px;
+        margin: 0;
+        overflow: hidden;
+        background: var(--ink);
+      }
+
+      .frame {
+        position: relative;
+        width: 1280px;
+        height: 640px;
+        overflow: hidden;
+        background:
+          linear-gradient(90deg, rgba(7, 10, 12, 0.98) 0%, rgba(7, 10, 12, 0.78) 42%, rgba(7, 10, 12, 0.12) 82%),
+          linear-gradient(180deg, rgba(7, 10, 12, 0.1), rgba(7, 10, 12, 0.86)),
+          var(--control-bg) center right / cover no-repeat;
+      }
+
+      .frame::before {
+        position: absolute;
+        inset: 36px;
+        border: 1px solid rgba(255, 247, 228, 0.18);
+        border-radius: 28px;
+        box-shadow: inset 0 0 0 1px rgba(216, 154, 53, 0.12), 0 30px 90px rgba(0, 0, 0, 0.45);
+        content: "";
+      }
+
+      .grid {
+        position: absolute;
+        inset: 0;
+        background-image:
+          linear-gradient(rgba(255, 247, 228, 0.035) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(255, 247, 228, 0.03) 1px, transparent 1px);
+        background-size: 48px 48px;
+        mask-image: linear-gradient(90deg, black, transparent 70%);
+      }
+
+      .content {
+        position: absolute;
+        left: 86px;
+        top: 82px;
+        width: 620px;
+      }
+
+      .eyebrow {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        color: var(--teal);
+        font-family: var(--mono);
+        font-size: 20px;
+        font-weight: 800;
+        letter-spacing: 0.09em;
+        text-transform: uppercase;
+      }
+
+      .eyebrow::before {
+        width: 14px;
+        height: 14px;
+        border-radius: 50%;
+        background: var(--teal);
+        box-shadow: 0 0 28px var(--teal);
+        content: "";
+      }
+
+      h1 {
+        margin: 34px 0 0;
+        color: var(--paper);
+        font-family: var(--sans);
+        font-size: 112px;
+        font-weight: 900;
+        letter-spacing: -0.065em;
+        line-height: 0.86;
+      }
+
+      .subtitle {
+        margin: 34px 0 0;
+        max-width: 600px;
+        color: var(--paper-soft);
+        font-family: var(--sans);
+        font-size: 35px;
+        font-weight: 650;
+        letter-spacing: -0.018em;
+        line-height: 1.16;
+      }
+
+      .chips {
+        display: grid;
+        grid-template-columns: repeat(2, max-content);
+        gap: 14px;
+        margin-top: 42px;
+      }
+
+      .chip {
+        border: 1px solid rgba(255, 247, 228, 0.18);
+        border-radius: 999px;
+        background: rgba(255, 247, 228, 0.08);
+        color: var(--paper);
+        font-family: var(--mono);
+        font-size: 18px;
+        font-weight: 750;
+        padding: 12px 16px;
+      }
+
+      .chip:nth-child(1) {
+        border-color: rgba(85, 214, 194, 0.38);
+      }
+
+      .chip:nth-child(2) {
+        border-color: rgba(216, 154, 53, 0.42);
+      }
+
+      .chip:nth-child(3) {
+        border-color: rgba(216, 91, 77, 0.36);
+      }
+
+      .chip:nth-child(4) {
+        border-color: rgba(255, 247, 228, 0.28);
+      }
+
+      .lock {
+        position: absolute;
+        right: 86px;
+        bottom: 70px;
+        display: grid;
+        width: 156px;
+        height: 156px;
+        place-items: center;
+        border: 1px solid rgba(216, 154, 53, 0.42);
+        border-radius: 24px;
+        background: rgba(7, 10, 12, 0.72);
+        box-shadow: inset 0 0 60px rgba(216, 154, 53, 0.16);
+      }
+
+      .lock span {
+        color: var(--amber);
+        font-family: var(--mono);
+        font-size: 44px;
+        font-weight: 900;
+      }
+    </style>
+  </head>
+  <body style={`--control-bg: url('${backgroundUrl}')`}>
+    <main class="frame" aria-label="VocationOS social preview">
+      <div class="grid"></div>
+      <section class="content">
+        <div class="eyebrow">Decision control room</div>
+        <h1>VocationOS</h1>
+        <p class="subtitle">Evidence grounded career decision safety for high agency operators.</p>
+        <div class="chips">
+          <span class="chip">Evidence</span>
+          <span class="chip">Reversibility</span>
+          <span class="chip">High stakes gates</span>
+          <span class="chip">Human authorization</span>
+        </div>
+      </section>
+      <div class="lock" aria-hidden="true"><span>R4</span></div>
+    </main>
+  </body>
+</html>
