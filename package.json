@@ -1,0 +1,58 @@
+{
+  "name": "vocation-os",
+  "version": "0.2.0",
+  "description": "Evidence grounded career decision safety for high agency operators.",
+  "type": "module",
+  "license": "MIT",
+  "private": false,
+  "bin": {
+    "vocation": "./dist/cli.js"
+  },
+  "files": [
+    "dist",
+    "schemas",
+    "examples",
+    "README.md",
+    "LICENSE"
+  ],
+  "keywords": [
+    "vocation-os",
+    "vocational-psychology",
+    "career-guidance",
+    "decision-support",
+    "ai-safety",
+    "human-in-the-loop",
+    "llm-agent",
+    "typescript",
+    "cli",
+    "reversibility",
+    "evidence-based",
+    "career-development"
+  ],
+  "scripts": {
+    "build": "node scripts/clean-dist.mjs && tsc -p tsconfig.build.json",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "validate:schemas": "tsx src/cli.ts validate-schemas",
+    "privacy:scan": "node scripts/privacy-scan.mjs",
+    "brand:scan": "node scripts/brand-scan.mjs",
+    "docs:check": "node scripts/docs-check.mjs",
+    "selfcheck": "tsx src/cli.ts selfcheck",
+    "evaluate": "tsx src/cli.ts evaluate",
+    "scan-fable": "node scripts/scan-fable.mjs",
+    "pack:check": "npm run build && node scripts/pack-check.mjs",
+    "ci": "npm run privacy:scan && npm run brand:scan && npm run typecheck && npm run test && npm run validate:schemas && npm run selfcheck && npm run evaluate && npm run scan-fable && npm run docs:check && npm run pack:check",
+    "safe:publish-check": "npm run ci"
+  },
+  "dependencies": {
+    "ajv": "^8.17.1",
+    "ajv-formats": "^3.0.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.13.14",
+    "tsx": "^4.19.3",
+    "typescript": "^5.8.2",
+    "vitest": "^3.0.8"
+  }
+}

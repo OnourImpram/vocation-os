@@ -1,0 +1,83 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://vocation-os.dev/schemas/opportunity-score.schema.json",
+  "title": "OpportunityScore",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "compositeScore",
+    "confidence",
+    "dimensions",
+    "uncertaintyBand",
+    "uncertaintyDrivers",
+    "capReasons",
+    "forced"
+  ],
+  "properties": {
+    "compositeScore": {
+      "type": ["integer", "null"],
+      "minimum": 0,
+      "maximum": 100
+    },
+    "confidence": {
+      "type": "string",
+      "enum": ["High", "Medium", "Low"]
+    },
+    "dimensions": {
+      "type": "array",
+      "minItems": 20,
+      "maxItems": 20,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "label", "score", "evidenceStatus"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^D(0[1-9]|1[0-9]|20)$"
+          },
+          "label": {
+            "type": "string",
+            "minLength": 1
+          },
+          "score": {
+            "type": ["integer", "null"],
+            "minimum": 0,
+            "maximum": 100
+          },
+          "evidenceStatus": {
+            "$ref": "https://vocation-os.dev/schemas/evidence-status.schema.json"
+          }
+        }
+      }
+    },
+    "uncertaintyBand": {
+      "type": ["array", "null"],
+      "minItems": 2,
+      "maxItems": 2,
+      "items": {
+        "type": "integer",
+        "minimum": 0,
+        "maximum": 100
+      }
+    },
+    "uncertaintyDrivers": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "capReasons": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "forced": {
+      "type": "boolean"
+    },
+    "auditReference": {
+      "type": "string"
+    }
+  }
+}

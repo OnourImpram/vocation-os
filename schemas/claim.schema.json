@@ -1,0 +1,87 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://vocation-os.dev/schemas/claim.schema.json",
+  "title": "Claim",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "claimId",
+    "text",
+    "canonicalTextHash",
+    "claimType",
+    "evidenceStatus",
+    "sourceType",
+    "sourcePointer",
+    "recencyRequired",
+    "publiclyAssertable",
+    "allowedInCv",
+    "allowedInOutreach",
+    "allowedInAutoApply"
+  ],
+  "properties": {
+    "claimId": {
+      "type": "string",
+      "pattern": "^CLM-[A-Z0-9-]+$"
+    },
+    "text": {
+      "type": "string",
+      "minLength": 3
+    },
+    "canonicalTextHash": {
+      "type": "string",
+      "pattern": "^sha256:[a-f0-9]{64}$"
+    },
+    "claimType": {
+      "type": "string",
+      "enum": [
+        "degree",
+        "license",
+        "publication",
+        "affiliation",
+        "grant",
+        "employment",
+        "credential",
+        "award",
+        "skill",
+        "project",
+        "other"
+      ]
+    },
+    "evidenceStatus": {
+      "$ref": "https://vocation-os.dev/schemas/evidence-status.schema.json"
+    },
+    "sourceType": {
+      "type": "string",
+      "enum": [
+        "file",
+        "url",
+        "official-record",
+        "self-attested",
+        "operator-supplied"
+      ]
+    },
+    "sourcePointer": {
+      "type": "string",
+      "minLength": 1
+    },
+    "verifiedDate": {
+      "type": "string",
+      "format": "date"
+    },
+    "recencyRequired": {
+      "type": "boolean"
+    },
+    "publiclyAssertable": {
+      "type": "boolean"
+    },
+    "allowedInCv": {
+      "type": "boolean"
+    },
+    "allowedInOutreach": {
+      "type": "boolean"
+    },
+    "allowedInAutoApply": {
+      "type": "boolean"
+    }
+  }
+}

@@ -1,0 +1,93 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://vocation-os.dev/schemas/auto-apply-config.schema.json",
+  "title": "AutoApplyConfig",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "enabled",
+    "mode",
+    "killSwitch",
+    "rateLimit",
+    "adapterAllowlist",
+    "perOpportunity",
+    "exclusionRules"
+  ],
+  "properties": {
+    "enabled": {
+      "type": "boolean"
+    },
+    "mode": {
+      "type": "string",
+      "enum": ["manual", "draft-only", "auto"]
+    },
+    "killSwitch": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["available", "engaged"],
+      "properties": {
+        "available": {
+          "type": "boolean"
+        },
+        "engaged": {
+          "type": "boolean"
+        },
+        "engagedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "engagedBy": {
+          "type": "string"
+        },
+        "reason": {
+          "type": "string"
+        }
+      }
+    },
+    "rateLimit": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["maxPerDay"],
+      "properties": {
+        "maxPerDay": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "cooldownUntil": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "adapterAllowlist": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "perOpportunity": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "mode": {
+            "type": "string",
+            "enum": ["manual", "draft-only", "auto"]
+          },
+          "excluded": {
+            "type": "boolean"
+          }
+        }
+      }
+    },
+    "exclusionRules": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  }
+}

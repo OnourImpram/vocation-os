@@ -1,0 +1,62 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://vocation-os.dev/schemas/action-ledger-entry.schema.json",
+  "title": "ActionLedgerEntry",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "actionId",
+    "timestamp",
+    "mode",
+    "opportunityId",
+    "reversibilityTag",
+    "evidenceGatePassed",
+    "approvalRequired",
+    "approvalReceived",
+    "highStakesGatePassed",
+    "result"
+  ],
+  "properties": {
+    "actionId": {
+      "type": "string",
+      "pattern": "^A-\\d{4}-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "mode": {
+      "type": "string"
+    },
+    "opportunityId": {
+      "type": "string",
+      "pattern": "^OPP-[A-Z0-9-]+$"
+    },
+    "reversibilityTag": {
+      "type": "string",
+      "enum": ["R0", "R1", "R2", "R3", "R4"]
+    },
+    "evidenceGatePassed": {
+      "type": "boolean"
+    },
+    "approvalRequired": {
+      "type": "boolean"
+    },
+    "approvalReceived": {
+      "type": "boolean"
+    },
+    "highStakesGatePassed": {
+      "type": "boolean"
+    },
+    "result": {
+      "type": "string",
+      "enum": ["blocked", "draft_generated", "submitted", "confirmed"]
+    },
+    "blockedBy": {
+      "type": "string"
+    },
+    "confirmationEvidencePointer": {
+      "type": "string"
+    }
+  }
+}

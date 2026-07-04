@@ -1,0 +1,43 @@
+{
+  "profileId": "DEMO-OPERATOR-001",
+  "profileScope": "synthetic",
+  "generatedAt": "2026-07-04T00:00:00.000Z",
+  "graphVersion": "0.2.0",
+  "claims": [
+    {
+      "claimId": "CLM-DEMO-001",
+      "text": "Demo operator completed a synthetic research project about trustworthy career decision workflows.",
+      "canonicalTextHash": "sha256:bcde5d3be7d4177ab2d361c05645764a210b45a42563dffc8fd4fb9400480aa8",
+      "claimType": "project",
+      "evidenceStatus": "verified",
+      "sourceType": "operator-supplied",
+      "sourcePointer": "examples/demo-profile/source.md#project",
+      "verifiedDate": "2026-07-04",
+      "recencyRequired": false,
+      "publiclyAssertable": true,
+      "allowedInCv": true,
+      "allowedInOutreach": true,
+      "allowedInAutoApply": true
+    },
+    {
+      "claimId": "CLM-DEMO-002",
+      "text": "Demo operator can build small TypeScript command line tools.",
+      "canonicalTextHash": "sha256:0e6d445e2fa19cbc8c2bd409ec499d6c70ef43a4318aa0c5b7d9efc5c0cfbad0",
+      "claimType": "skill",
+      "evidenceStatus": "verified",
+      "sourceType": "operator-supplied",
+      "sourcePointer": "examples/demo-profile/source.md#skill",
+      "verifiedDate": "2026-07-04",
+      "recencyRequired": false,
+      "publiclyAssertable": true,
+      "allowedInCv": true,
+      "allowedInOutreach": true,
+      "allowedInAutoApply": true
+    }
+  ],
+  "validationSummary": {
+    "verifiedClaims": 2,
+    "unverifiedClaims": 0,
+    "privateClaims": 0
+  }
+}

@@ -1,0 +1,23 @@
+{
+  "opportunityId": "OPP-DEMO-001",
+  "claims": [
+    {
+      "claimId": "CLM-DEMO-001",
+      "text": "Demo operator completed a synthetic research project about trustworthy career decision workflows.",
+      "sourceClaimTextHash": "sha256:bcde5d3be7d4177ab2d361c05645764a210b45a42563dffc8fd4fb9400480aa8",
+      "evidenceStatus": "unverified",
+      "sourcePointer": "examples/demo-profile/source.md#project",
+      "publiclyAssertable": true
+    }
+  ],
+  "documents": [
+    {
+      "kind": "cv",
+      "contentHash": "sha256:3333333333333333333333333333333333333333333333333333333333333333"
+    }
+  ],
+  "tosCompliant": true,
+  "generatedAt": "2026-07-04T00:00:00.000Z",
+  "packetHash": "sha256:155770d7865aeba94c1254cba2aaf81ef2081ac8251ad11e204ae9017859d6d0",
+  "approvalRequired": true
+}

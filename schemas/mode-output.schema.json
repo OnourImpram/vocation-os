@@ -1,0 +1,64 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://vocation-os.dev/schemas/mode-output.schema.json",
+  "title": "ModeOutput",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "mode",
+    "reversibilityTag",
+    "humanApprovalRequired",
+    "highStakesCertaintyGate",
+    "verificationPerformed",
+    "specialistQuestions"
+  ],
+  "properties": {
+    "mode": {
+      "type": "string",
+      "enum": [
+        "/decision-intake",
+        "/profile-audit",
+        "/opportunity-ingest",
+        "/deep-fit",
+        "/route-map",
+        "/cv-tailor",
+        "/cover-letter",
+        "/outreach",
+        "/interview-brief",
+        "/negotiation",
+        "/fellowship-watch",
+        "/phd-strategy",
+        "/founder-route",
+        "/public-profile",
+        "/evidence-gap",
+        "/steelman",
+        "/risk-register",
+        "/application-packet",
+        "/auto-apply-config",
+        "/post-action-review"
+      ]
+    },
+    "reversibilityTag": {
+      "type": "string",
+      "enum": ["R0", "R1", "R2", "R3", "R4"]
+    },
+    "humanApprovalRequired": {
+      "type": "boolean"
+    },
+    "highStakesCertaintyGate": {
+      "type": "boolean"
+    },
+    "verificationPerformed": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "specialistQuestions": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  }
+}
