@@ -1,0 +1,93 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://vocation-os.dev/schemas/submission-proof.schema.json",
+  "title": "SubmissionProof",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "proofId",
+    "opportunityId",
+    "kind",
+    "capturedAt",
+    "sourcePointer",
+    "officialRoute",
+    "indicators",
+    "recipientDomain",
+    "senderDomain",
+    "attachmentCount",
+    "referenceId",
+    "sentAt",
+    "evidenceHash"
+  ],
+  "properties": {
+    "proofId": {
+      "type": "string",
+      "pattern": "^PRF-[A-Z0-9-]+$"
+    },
+    "opportunityId": {
+      "type": "string",
+      "pattern": "^OPP-[A-Z0-9-]+$"
+    },
+    "kind": {
+      "type": "string",
+      "enum": ["confirmation-page", "ats-dashboard", "sent-items", "receipt-email"]
+    },
+    "capturedAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "sourcePointer": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200,
+      "pattern": "^(redacted|local|proof):[A-Za-z0-9._:/-]+$"
+    },
+    "officialRoute": {
+      "type": "boolean"
+    },
+    "indicators": {
+      "type": "array",
+      "maxItems": 20,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 200
+      }
+    },
+    "recipientDomain": {
+      "oneOf": [
+        { "type": "string", "pattern": "^[a-z0-9.-]+$" },
+        { "type": "null" }
+      ]
+    },
+    "senderDomain": {
+      "oneOf": [
+        { "type": "string", "pattern": "^[a-z0-9.-]+$" },
+        { "type": "null" }
+      ]
+    },
+    "attachmentCount": {
+      "oneOf": [
+        { "type": "integer", "minimum": 0 },
+        { "type": "null" }
+      ]
+    },
+    "referenceId": {
+      "oneOf": [
+        { "type": "string", "minLength": 1 },
+        { "type": "null" }
+      ]
+    },
+    "sentAt": {
+      "oneOf": [
+        { "type": "string", "format": "date-time" },
+        { "type": "null" }
+      ]
+    },
+    "evidenceHash": {
+      "type": "string",
+      "pattern": "^sha256:[a-f0-9]{64}$"
+    }
+  }
+}

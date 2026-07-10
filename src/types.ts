@@ -21,7 +21,8 @@ export const MODE_NAMES = [
   "/risk-register",
   "/application-packet",
   "/auto-apply-config",
-  "/post-action-review"
+  "/post-action-review",
+  "/skill-coach"
 ] as const;
 
 export const CLI_COMMANDS = [
@@ -45,7 +46,11 @@ export const CLI_COMMANDS = [
   "list-theories",
   "list-dimensions",
   "privacy-guidance",
-  "governance-scope"
+  "governance-scope",
+  "demo-skill-coach",
+  "demo-advisory",
+  "demo-opportunity-intake",
+  "demo-submission-proof"
 ] as const;
 
 export type ModeName = (typeof MODE_NAMES)[number];

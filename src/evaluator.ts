@@ -2,9 +2,11 @@ import { decideAutoApply, defaultAutoApplyConfig, engageKillSwitch } from "./aut
 import { validateApplicationPacket } from "./claim-graph.js";
 import { computeClaimTextHash, computePacketHash } from "./hash.js";
 import { runDeepFit } from "./modes.js";
+import { createOpportunityRecord, evaluateOpportunityIntake } from "./opportunity.js";
 import { demoDimensions, scoreOpportunity } from "./rubric.js";
 import { validateAllSchemaFiles } from "./schema.js";
 import { encodeStateKey } from "./state.js";
+import { buildSubmissionProof, evaluateSubmissionProof } from "./submission-proof.js";
 import { MODE_NAMES, PRODUCT_NAME, type ApplicationPacket, type ClaimGraph } from "./types.js";
 
 export interface EvaluatorCase {
@@ -199,6 +201,99 @@ export const EVALUATOR_TESTS: EvaluatorCase[] = [
     run: () => {
       const config = { ...defaultAutoApplyConfig(), enabled: true, mode: "auto" as const };
       return decideAutoApply({ config, packet: packet(), claimGraph: demoGraph(), reversibilityTag: "R3", adapterId: "unknown", approvalReference: approvalReference(), riskSignals: noRiskSignals(), dailyUsageCount: 0 }).blockedBy === "adapter-not-allowlisted";
+    }
+  },
+  {
+    id: "EV-015",
+    name: "explicit remote opportunity passes intake",
+    run: () => {
+      const opportunity = createOpportunityRecord({
+        source: "manual",
+        sourceId: "evaluator-remote",
+        sourceUrl: "https://jobs.example.test/evaluator-remote",
+        applyUrl: "https://jobs.example.test/evaluator-remote/apply",
+        company: "Synthetic Labs",
+        roleTitle: "Responsible AI Product Lead",
+        locationText: "Remote, Europe",
+        remotePolicy: "remote",
+        applicantLocationRequirements: ["Europe"],
+        descriptionText: "A substantive synthetic opportunity for responsible AI product evaluation and evidence grounded operations.",
+        postedAt: "2026-07-01T00:00:00.000Z",
+        capturedAt: "2026-07-10T00:00:00.000Z",
+        extractionConfidence: "high",
+        sourcePayload: { synthetic: true }
+      });
+      return evaluateOpportunityIntake(opportunity, {
+        requiresRemote: true,
+        requireExplicitApplicantLocation: true,
+        candidateRegions: ["Europe"],
+        maxAgeDays: 45,
+        minimumDescriptionCharacters: 40,
+        existingFingerprints: [],
+        evaluatedAt: "2026-07-10T00:00:00.000Z"
+      }).status === "accepted";
+    }
+  },
+  {
+    id: "EV-016",
+    name: "unknown remote eligibility requires review",
+    run: () => {
+      const opportunity = createOpportunityRecord({
+        source: "manual",
+        sourceId: "evaluator-unknown-location",
+        sourceUrl: "https://jobs.example.test/evaluator-unknown-location",
+        applyUrl: "https://jobs.example.test/evaluator-unknown-location/apply",
+        company: "Synthetic Labs",
+        roleTitle: "AI Research Lead",
+        locationText: "Remote",
+        remotePolicy: "remote",
+        applicantLocationRequirements: [],
+        descriptionText: "A substantive synthetic opportunity for AI research, evaluation, governance, and applied safety work.",
+        postedAt: "2026-07-01T00:00:00.000Z",
+        capturedAt: "2026-07-10T00:00:00.000Z",
+        extractionConfidence: "high",
+        sourcePayload: { synthetic: true }
+      });
+      return evaluateOpportunityIntake(opportunity, {
+        requiresRemote: true,
+        requireExplicitApplicantLocation: true,
+        candidateRegions: ["Europe"],
+        maxAgeDays: 45,
+        minimumDescriptionCharacters: 40,
+        existingFingerprints: [],
+        evaluatedAt: "2026-07-10T00:00:00.000Z"
+      }).status === "manual_review";
+    }
+  },
+  {
+    id: "EV-017",
+    name: "verification code is not submission proof",
+    run: () => {
+      const proof = buildSubmissionProof({
+        opportunityId: "OPP-DEMO-001",
+        kind: "receipt-email",
+        capturedAt: "2026-07-10T00:00:00.000Z",
+        sourcePointer: "redacted:security-code",
+        officialRoute: true,
+        senderDomain: "example.test",
+        indicators: ["Copy this security code and resubmit your application"]
+      });
+      return evaluateSubmissionProof(proof).status === "rejected";
+    }
+  },
+  {
+    id: "EV-018",
+    name: "official confirmation can close an application",
+    run: () => {
+      const proof = buildSubmissionProof({
+        opportunityId: "OPP-DEMO-001",
+        kind: "confirmation-page",
+        capturedAt: "2026-07-10T00:00:00.000Z",
+        sourcePointer: "redacted:confirmation",
+        officialRoute: true,
+        indicators: ["Thank you for applying. Your application has been received."]
+      });
+      return evaluateSubmissionProof(proof).status === "confirmed";
     }
   }
 ];

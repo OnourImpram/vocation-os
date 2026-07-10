@@ -27,6 +27,7 @@ It helps an operator structure decisions, validate claims, score opportunities, 
 | Reversibility | Actions use R0 to R4 tags so drafts, disclosures, submissions, and irreversible decisions are gated differently. |
 | High stakes gates | Immigration, licensing, clinical, financial, research integrity, conflict, reputation, and relocation flags trigger certainty brakes. |
 | Human authorization | Consequential actions require explicit approval and append only audit records. |
+| Theory grounding | Twenty eight cited theory lenses bind modes and rubric dimensions to primary sources in vocational psychology and decision science. |
 
 ## Quick Start
 
@@ -35,6 +36,8 @@ npm ci
 npm run ci
 npx tsx src/cli.ts help
 npx tsx src/cli.ts demo-score
+npx tsx src/cli.ts demo-opportunity-intake
+npx tsx src/cli.ts demo-submission-proof
 npx tsx src/cli.ts demo-auto-apply-decision
 npx tsx src/cli.ts demo-auto-apply-allowed
 ```
@@ -44,27 +47,45 @@ npx tsx src/cli.ts demo-auto-apply-allowed
 ```text
 Operator intent
   -> Mode
+  -> Public ATS adapter and opportunity provenance
+  -> Remote and applicant location intake gates
   -> Evidence and claim graph
   -> Reversibility gate
   -> High stakes gate and specialist questions
   -> Packet hash and claim hash validation
   -> Human approval
-  -> Action ledger
+  -> Submitted but unconfirmed attempt
+  -> Submission proof verifier
+  -> Confirmed action ledger entry
 ```
 
 ## Safety Architecture
 
 VocationOS uses packet level claim validation before any allowed automation. A single unverified, private, or disallowed claim blocks an application packet. A kill switch blocks auto apply before every other gate. R4 actions never submit automatically.
 
-Packet claims are bound to canonical claim text hashes. Stale packet hashes, changed claim text, duplicate packet claims, and missing automation risk signals block automation.
+Packet claims are bound to canonical claim text hashes. Stale packet hashes, changed claim text, duplicate packet claims, and missing automation risk signals block automation. A submission attempt remains `submitted_unconfirmed` until an official confirmation page, ATS record, Sent Items record, or receipt email passes the proof verifier.
 
 The public repository includes only synthetic examples. Real private profile data belongs in ignored local state.
 
+## Theory Engine and Advisory Layer
+
+Every mode is bound to operational theory lenses in `src/theory.ts`, each with core constructs, runtime decision questions, rubric dimension bindings, and primary source citations. `docs/THEORY_MAP.md` is generated from the registry and DOIs are machine checked against Crossref with `npm run citations:check` before releases.
+
+The optional advisory layer follows one rule: the model proposes, the gates dispose. Advisory notes are structurally locked to R0, may cite only public verified claims and mode applicable theory lenses, cannot change evidence status, and always carry an advisory disclaimer. Untrusted opportunity text is fenced as data, and hostile output is sanitized rather than trusted. Remote advisory calls require public data classification, explicit egress approval, HTTPS, an exact host allowlist, a timeout, redirect rejection, JSON content, and a response size limit. The `/skill-coach` mode turns the planned happenstance skills into psychoeducational micro practices paired with acceptance and commitment processes, with a named referral boundary when a clinical sensitivity flag is active.
+
+## Opportunity Provenance and Completion Proof
+
+VocationOS includes pure read adapters for public Greenhouse, Lever, and Ashby posting payloads. Adapters do not submit applications. They normalize source identity, canonical URLs, apply routes, remote policy, applicant location evidence, compensation signals, description hashes, freshness, and extraction confidence.
+
+The intake gate treats remote status and applicant location eligibility as separate facts. A remote role with unknown eligibility geography moves to manual review under strict policy. Hybrid, on site, stale, duplicate, insecure, missing route, and thin description records fail closed.
+
+Completion proof is also explicit. A form fill, send call, Outbox item, verification code, or incomplete application notice is not completion evidence. Proof records are hash bound and opportunity bound before they can move an application attempt to `confirmed`.
+
 ## Release Validation
 
-The v0.2 public release candidate was checked against claim text inflation, stale packet hashes, duplicate ledger ids, package execution, state validation, structured authorization, and hidden automation bypass classes.
+The v0.3 release candidate extends the v0.2 validation surface with theory registry integrity, remote model egress controls, public ATS provenance, remote eligibility gates, proof bound confirmation, SBOM validation, and release artifact attestation.
 
-See `docs/RELEASE_VALIDATION.md` for the release validation surface.
+See `docs/RELEASE_VALIDATION.md`, `docs/THREAT_MODEL.md`, and `docs/V0_3_IMPLEMENTATION_PLAN.md` for the release validation and architecture surface.
 
 ## What This Is Not
 
@@ -84,12 +105,12 @@ The values below are checked by `npm run docs:check`.
 
 | Metric | Count |
 | --- | ---: |
-| Modes | 20 |
-| Theories | 25 |
+| Modes | 21 |
+| Theories | 28 |
 | Rubric dimensions | 20 |
-| Schemas | 8 |
-| CLI commands | 21 |
-| Evaluator tests | 14 |
+| Schemas | 14 |
+| CLI commands | 25 |
+| Evaluator tests | 18 |
 
 ## Demo
 
@@ -98,7 +119,15 @@ npx tsx src/cli.ts demo-score
 npx tsx src/cli.ts demo-steelman
 npx tsx src/cli.ts demo-auto-apply-decision
 npx tsx src/cli.ts demo-auto-apply-allowed
+npx tsx src/cli.ts demo-skill-coach
+npx tsx src/cli.ts demo-advisory
+npx tsx src/cli.ts demo-opportunity-intake
+npx tsx src/cli.ts demo-submission-proof
 ```
+
+The advisory demo feeds a hostile model output through the sanitizer and shows it forced back to advisory only R0 with forged claim ids dropped. This proves the gate, not a failure.
+
+The opportunity intake demo shows an explicit Europe eligible remote role passing source, route, duplicate, location, freshness, and description gates. The submission proof demo shows a real confirmation accepted and a security code rejected.
 
 The auto apply demo is intentionally blocked because it includes a packet claim that is not verified. This proves the gate, not a failure.
 

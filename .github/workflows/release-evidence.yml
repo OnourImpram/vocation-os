@@ -1,0 +1,45 @@
+name: release-evidence
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: read
+  id-token: write
+  attestations: write
+  artifact-metadata: write
+
+jobs:
+  build-and-attest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run safe:publish-check
+      - name: Build package archive
+        run: npm pack
+      - name: Generate CycloneDX SBOM
+        run: npm sbom --sbom-format cyclonedx --package-lock-only > vocation-os.cdx.json
+      - name: Attest package provenance
+        uses: actions/attest@v4
+        with:
+          subject-path: "*.tgz"
+      - name: Attest package SBOM
+        uses: actions/attest@v4
+        with:
+          subject-path: "*.tgz"
+          sbom-path: vocation-os.cdx.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: vocation-os-release-evidence
+          path: |
+            *.tgz
+            vocation-os.cdx.json
+

@@ -1,6 +1,6 @@
 {
   "name": "vocation-os",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Evidence grounded career decision safety for high agency operators.",
   "type": "module",
   "license": "MIT",
@@ -47,6 +47,9 @@
     "privacy:scan": "node scripts/privacy-scan.mjs",
     "brand:scan": "node scripts/brand-scan.mjs",
     "docs:check": "node scripts/docs-check.mjs",
+    "docs:theory-map": "tsx scripts/theory-map.ts",
+    "citations:check": "node scripts/citation-check.mjs",
+    "sbom:check": "node scripts/sbom-check.mjs",
     "selfcheck": "tsx src/cli.ts selfcheck",
     "evaluate": "tsx src/cli.ts evaluate",
     "scan-fable": "node scripts/scan-fable.mjs",
@@ -54,7 +57,7 @@
     "site:build": "astro build",
     "site:preview": "astro preview",
     "pack:check": "npm run build && node scripts/pack-check.mjs",
-    "ci": "npm run privacy:scan && npm run brand:scan && npm run typecheck && npm run test && npm run validate:schemas && npm run selfcheck && npm run evaluate && npm run scan-fable && npm run docs:check && npm run site:build && npm run pack:check",
+    "ci": "npm run privacy:scan && npm run brand:scan && npm run typecheck && npm run test && npm run validate:schemas && npm run selfcheck && npm run evaluate && npm run scan-fable && npm run docs:check && npm run sbom:check && npm run site:build && npm run pack:check",
     "safe:publish-check": "npm run ci"
   },
   "dependencies": {

@@ -1,0 +1,67 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://vocation-os.dev/schemas/application-attempt.schema.json",
+  "title": "ApplicationAttempt",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "attemptId",
+    "opportunityId",
+    "packetHash",
+    "channel",
+    "status",
+    "createdAt",
+    "updatedAt",
+    "approvalId",
+    "proofId",
+    "blocker"
+  ],
+  "properties": {
+    "attemptId": {
+      "type": "string",
+      "pattern": "^ATT-\\d{4}-[0-9a-f-]{36}$"
+    },
+    "opportunityId": {
+      "type": "string",
+      "pattern": "^OPP-[A-Z0-9-]+$"
+    },
+    "packetHash": {
+      "type": "string",
+      "pattern": "^sha256:[a-f0-9]{64}$"
+    },
+    "channel": {
+      "type": "string",
+      "enum": ["ats-form", "official-email", "platform-profile", "other"]
+    },
+    "status": {
+      "type": "string",
+      "enum": ["prepared", "approved", "submitted_unconfirmed", "confirmed", "blocked"]
+    },
+    "createdAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "updatedAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "approvalId": {
+      "oneOf": [
+        { "type": "string", "pattern": "^APR-[A-Z0-9-]+$" },
+        { "type": "null" }
+      ]
+    },
+    "proofId": {
+      "oneOf": [
+        { "type": "string", "pattern": "^PRF-[A-Z0-9-]+$" },
+        { "type": "null" }
+      ]
+    },
+    "blocker": {
+      "oneOf": [
+        { "type": "string", "minLength": 1 },
+        { "type": "null" }
+      ]
+    }
+  }
+}

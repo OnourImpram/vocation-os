@@ -14,7 +14,13 @@ export const SCHEMA_NAMES = [
   "auto-apply-config",
   "action-ledger-entry",
   "mode-output",
-  "opportunity-score"
+  "opportunity-score",
+  "advisory-note",
+  "coaching-plan",
+  "opportunity-record",
+  "opportunity-intake",
+  "submission-proof",
+  "application-attempt"
 ] as const;
 
 export type SchemaName = (typeof SCHEMA_NAMES)[number];
