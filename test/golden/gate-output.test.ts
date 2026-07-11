@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { decideAutoApply } from "../../src/auto-apply.js";
-import { demoApprovalReference, demoGraph, demoPacket, enabledConfig, noRiskSignals } from "../fixtures.js";
+import { demoApprovalReference, demoAutoApplyContext, demoGraph, demoPacket, enabledConfig, noRiskSignals } from "../fixtures.js";
 
 describe("golden gate output", () => {
   it("keeps unverified packet decision stable", () => {
@@ -12,7 +12,7 @@ describe("golden gate output", () => {
       adapterId: "local-fixture",
       approvalReference: demoApprovalReference(),
       riskSignals: noRiskSignals(),
-      dailyUsageCount: 0,
+      ...demoAutoApplyContext(),
       now: new Date("2026-07-04T00:00:00.000Z")
     });
     expect(decision).toMatchObject({

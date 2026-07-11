@@ -11,10 +11,19 @@ export const SCHEMA_NAMES = [
   "claim",
   "claim-graph",
   "application-packet",
+  "application-attempt",
+  "approval-reference",
   "auto-apply-config",
+  "career-twin",
+  "document-ast",
   "action-ledger-entry",
+  "advisory-note",
+  "coaching-plan",
   "mode-output",
-  "opportunity-score"
+  "opportunity-intake",
+  "opportunity-record",
+  "opportunity-score",
+  "submission-proof"
 ] as const;
 
 export type SchemaName = (typeof SCHEMA_NAMES)[number];

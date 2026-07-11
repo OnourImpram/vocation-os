@@ -1,6 +1,7 @@
 import { appendLedgerEntry, createActionId, readLedger } from "./action-ledger.js";
+import { validateApprovalReference, type TrustedApprover } from "./approval.js";
 import { validateApplicationPacket } from "./claim-graph.js";
-import { assertSchema } from "./schema.js";
+import { validateAgainstSchema } from "./schema.js";
 import { HIGH_STAKES_FLAGS, type ActionLedgerEntry, type ApplicationPacket, type ApprovalReference, type AutomationRiskSignals, type AutoApplyConfig, type AutoApplyDecision, type ClaimGraph, type HighStakesFlags, type ReversibilityTag } from "./types.js";
 
 export const REARM_TOKEN = "REARM-AUTO-APPLY";
@@ -13,8 +14,9 @@ export interface AutoApplyInput {
   highStakesFlags?: HighStakesFlags;
   adapterId: string;
   approvalReference?: ApprovalReference;
+  trustedApprovers?: readonly TrustedApprover[];
   riskSignals?: AutomationRiskSignals;
-  dailyUsageCount?: number;
+  documentRoot?: string;
   ledgerPath?: string;
   now?: Date;
 }
@@ -62,6 +64,12 @@ function hasHighStakes(flags: HighStakesFlags | undefined): boolean {
   return HIGH_STAKES_FLAGS.some((flag) => flags?.[flag] === true);
 }
 
+const SHIPPED_EXECUTION_ADAPTERS = ["local-fixture"] as const;
+
+function hasCompleteHighStakesAssessment(flags: HighStakesFlags | undefined): boolean {
+  return Boolean(flags) && HIGH_STAKES_FLAGS.every((flag) => typeof flags?.[flag] === "boolean");
+}
+
 function effectiveMode(config: AutoApplyConfig, opportunityId: string): AutoApplyConfig["mode"] {
   const override = config.perOpportunity[opportunityId];
   return override?.mode ?? config.mode;
@@ -99,26 +107,51 @@ function blockingRiskSignal(signals: AutomationRiskSignals): string | null {
   return null;
 }
 
-function dailyUsage(input: AutoApplyInput, now: Date): number | null {
-  if (typeof input.dailyUsageCount === "number") {
-    return input.dailyUsageCount;
-  }
+const RISK_SIGNAL_KEYS = [
+  "captchaPresent",
+  "antiBotDetected",
+  "paymentRequired",
+  "identityCheckRequired",
+  "tosUnclear",
+  "unsupportedLicenseClaim",
+  "credentialFabricationRequested"
+] as const satisfies readonly (keyof AutomationRiskSignals)[];
+
+function hasCompleteRiskSignals(signals: AutomationRiskSignals | undefined): signals is AutomationRiskSignals {
+  return Boolean(signals) && RISK_SIGNAL_KEYS.every((key) => typeof signals?.[key] === "boolean");
+}
+
+function dailyUsage(input: AutoApplyInput, now: Date): { usage: number | null; error?: string } {
   if (!input.ledgerPath) {
-    return null;
+    return { usage: null };
   }
-  const day = now.toISOString().slice(0, 10);
-  return readLedger(input.ledgerPath).filter((entry) => {
-    const resultCounts = entry.result === "draft_generated" || entry.result === "submitted" || entry.result === "confirmed";
-    return resultCounts && entry.timestamp.slice(0, 10) === day;
-  }).length;
+  try {
+    const day = now.toISOString().slice(0, 10);
+    const opportunityIds = new Set(
+      readLedger(input.ledgerPath)
+        .filter((entry) => {
+          const resultCounts = entry.result === "draft_generated" || entry.result === "submitted" || entry.result === "confirmed";
+          return resultCounts && entry.timestamp.slice(0, 10) === day;
+        })
+        .map((entry) => entry.opportunityId)
+    );
+    return { usage: opportunityIds.size };
+  } catch (error) {
+    return { usage: null, error: error instanceof Error ? error.message : String(error) };
+  }
 }
 
 export function decideAutoApply(input: AutoApplyInput): AutoApplyDecision {
-  assertSchema("auto-apply-config", input.config);
-  assertSchema("application-packet", input.packet);
-
   const actionId = createActionId(input.now ?? new Date());
   const finalize = (decision: AutoApplyDecision): AutoApplyDecision => recordDecision(input, decision);
+  const configValidation = validateAgainstSchema("auto-apply-config", input.config);
+  if (!configValidation.valid) {
+    return finalize(blocked("config-schema-invalid", configValidation.errors, actionId));
+  }
+  const packetSchemaValidation = validateAgainstSchema("application-packet", input.packet);
+  if (!packetSchemaValidation.valid) {
+    return finalize(blocked("packet-schema-invalid", packetSchemaValidation.errors, actionId));
+  }
 
   if (input.config.killSwitch.engaged) {
     return finalize(blocked("kill-switch-engaged", ["kill switch is engaged"], actionId));
@@ -132,17 +165,29 @@ export function decideAutoApply(input: AutoApplyInput): AutoApplyDecision {
   if (input.config.perOpportunity[input.packet.opportunityId]?.excluded === true) {
     return finalize(blocked("opportunity-excluded", ["opportunity is explicitly excluded"], actionId));
   }
+  if (!SHIPPED_EXECUTION_ADAPTERS.some((adapter) => adapter === input.adapterId)) {
+    return finalize(blocked("execution-adapter-not-shipped", [`adapter ${input.adapterId} has no shipped execution authority`], actionId));
+  }
+  if (input.adapterId === "local-fixture" && input.claimGraph.profileScope !== "synthetic") {
+    return finalize(blocked("local-fixture-requires-synthetic-profile", ["local fixture execution is limited to synthetic profiles"], actionId));
+  }
   if (!input.config.adapterAllowlist.includes(input.adapterId)) {
     return finalize(blocked("adapter-not-allowlisted", [`adapter ${input.adapterId} is not allowlisted`], actionId));
   }
   if (input.reversibilityTag === "R4") {
     return finalize(blocked("r4-not-auto-submittable", ["R4 action cannot be auto submitted"], actionId));
   }
+  if (!hasCompleteHighStakesAssessment(input.highStakesFlags)) {
+    return finalize(blocked("high-stakes-assessment-incomplete", ["all high stakes flags require explicit assessment"], actionId));
+  }
   if (hasHighStakes(input.highStakesFlags)) {
     return finalize(blocked("high-stakes-requires-manual-review", ["high stakes route requires human specialist review"], actionId));
   }
   if (!input.riskSignals) {
     return finalize(blocked("risk-signals-missing", ["automation risk signals are required for auto mode"], actionId));
+  }
+  if (!hasCompleteRiskSignals(input.riskSignals)) {
+    return finalize(blocked("risk-signals-incomplete", ["all automation risk signals require explicit boolean observations"], actionId));
   }
   const riskBlock = blockingRiskSignal(input.riskSignals);
   if (riskBlock) {
@@ -151,11 +196,14 @@ export function decideAutoApply(input: AutoApplyInput): AutoApplyDecision {
   if (input.config.rateLimit.maxPerDay < 1) {
     return finalize(blocked("rate-limit-exhausted", ["daily rate limit is exhausted"], actionId));
   }
-  const usage = dailyUsage(input, input.now ?? new Date());
-  if (usage === null) {
-    return finalize(blocked("rate-limit-state-missing", ["ledger path or daily usage count is required for rate limit enforcement"], actionId));
+  const usageResult = dailyUsage(input, input.now ?? new Date());
+  if (usageResult.error) {
+    return finalize(blocked("rate-limit-ledger-invalid", [usageResult.error], actionId));
   }
-  if (usage >= input.config.rateLimit.maxPerDay) {
+  if (usageResult.usage === null) {
+    return finalize(blocked("rate-limit-state-missing", ["authoritative ledger path is required for rate limit enforcement"], actionId));
+  }
+  if (usageResult.usage >= input.config.rateLimit.maxPerDay) {
     return finalize(blocked("rate-limit-exhausted", ["daily rate limit is exhausted"], actionId));
   }
   if (isInCooldown(input.config, input.now ?? new Date())) {
@@ -165,7 +213,16 @@ export function decideAutoApply(input: AutoApplyInput): AutoApplyDecision {
     return finalize(blocked("tos-not-compliant", ["packet terms status is not compliant"], actionId));
   }
 
-  const packetValidation = validateApplicationPacket(input.packet, input.claimGraph);
+  let packetValidation;
+  try {
+    packetValidation = validateApplicationPacket(input.packet, input.claimGraph, {
+      now: input.now ?? new Date(),
+      ...(input.documentRoot ? { documentRoot: input.documentRoot } : {})
+    });
+  } catch (error) {
+    const reason = error instanceof Error ? error.message : String(error);
+    return finalize(blocked("packet-validation-error", [reason], actionId));
+  }
   if (!packetValidation.valid) {
     const firstReason = packetValidation.reasons[0] ?? "packet-validation-failed";
     const normalized = firstReason.startsWith("packet-evidence-not-verified")
@@ -174,14 +231,33 @@ export function decideAutoApply(input: AutoApplyInput): AutoApplyDecision {
     return finalize(blocked(normalized, packetValidation.reasons, actionId));
   }
 
-  if (input.packet.approvalRequired && !input.approvalReference) {
+  const approvalRequired = true;
+  if (approvalRequired && !input.approvalReference) {
     return finalize(blocked("approval-required", ["explicit operator approval reference is required"], actionId));
+  }
+  if (input.approvalReference) {
+    const approvalValidation = validateApprovalReference(
+      input.approvalReference,
+      {
+        operation: "auto-apply",
+        opportunityId: input.packet.opportunityId,
+        packetHash: input.packet.packetHash,
+        adapterId: input.adapterId,
+        reversibilityTag: input.reversibilityTag,
+        requiredField: "application-packet",
+        now: input.now ?? new Date()
+      },
+      input.trustedApprovers ?? []
+    );
+    if (!approvalValidation.valid) {
+      return finalize(blocked(approvalValidation.blockedBy ?? "approval-invalid", approvalValidation.reasons, actionId));
+    }
   }
 
   return finalize({
     allowed: true,
     reasons: ["all gates passed"],
-    requiredApprovals: input.packet.approvalRequired ? ["operator"] : [],
+    requiredApprovals: approvalRequired ? ["operator"] : [],
     ledgerActionId: actionId,
     confirmationEvidenceRequired: true
   });
@@ -193,6 +269,7 @@ function recordDecision(input: AutoApplyInput, decision: AutoApplyDecision): Aut
   }
 
   const actionId = decision.ledgerActionId ?? createActionId(input.now ?? new Date());
+  const approvalRequired = true;
   try {
     const entry: ActionLedgerEntry = {
       actionId,
@@ -201,7 +278,7 @@ function recordDecision(input: AutoApplyInput, decision: AutoApplyDecision): Aut
       opportunityId: input.packet.opportunityId,
       reversibilityTag: input.reversibilityTag,
       evidenceGatePassed: decision.allowed || decision.blockedBy === "approval-required",
-      approvalRequired: input.packet.approvalRequired,
+      approvalRequired,
       approvalReceived: Boolean(input.approvalReference),
       highStakesGatePassed: !hasHighStakes(input.highStakesFlags),
       result: decision.allowed ? "draft_generated" : "blocked"

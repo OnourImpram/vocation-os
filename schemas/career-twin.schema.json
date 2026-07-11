@@ -1,0 +1,53 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://vocation-os.dev/schemas/career-twin.schema.json",
+  "title": "CareerTwin",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["twinId", "profileScope", "twinVersion", "createdAt", "updatedAt", "facts", "goals"],
+  "properties": {
+    "twinId": { "type": "string", "pattern": "^(DEMO|LOCAL)-TWIN-[A-F0-9-]+$" },
+    "profileScope": { "type": "string", "enum": ["synthetic", "local-private"] },
+    "twinVersion": { "type": "integer", "minimum": 1 },
+    "createdAt": { "type": "string", "format": "date-time" },
+    "updatedAt": { "type": "string", "format": "date-time" },
+    "facts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["factId", "category", "label", "value", "validFrom", "observedAt", "evidenceStatus", "sourcePointer", "confidence", "sensitivity", "allowedUses"],
+        "properties": {
+          "factId": { "type": "string", "pattern": "^FACT-[A-Z0-9-]+$" },
+          "category": { "type": "string", "enum": ["skill", "credential", "experience", "artifact", "value", "constraint", "preference", "health-boundary", "financial-runway", "family-impact", "work-authorization", "licensing", "network", "reputation", "career-narrative"] },
+          "label": { "type": "string", "minLength": 1 },
+          "value": { "type": ["string", "number", "boolean", "array", "object"] },
+          "claimId": { "type": "string", "pattern": "^CLM-[A-Z0-9-]+$" },
+          "validFrom": { "type": "string", "format": "date-time" },
+          "validTo": { "type": "string", "format": "date-time" },
+          "observedAt": { "type": "string", "format": "date-time" },
+          "evidenceStatus": { "$ref": "https://vocation-os.dev/schemas/evidence-status.schema.json" },
+          "sourcePointer": { "type": "string" },
+          "confidence": { "type": "string", "enum": ["High", "Medium", "Low"] },
+          "sensitivity": { "type": "string", "enum": ["public", "internal", "sensitive"] },
+          "allowedUses": { "type": "array", "uniqueItems": true, "items": { "type": "string", "enum": ["analysis", "cv", "outreach", "application", "interview", "public-profile"] } }
+        }
+      }
+    },
+    "goals": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["goalId", "label", "horizon", "priority", "status"],
+        "properties": {
+          "goalId": { "type": "string", "pattern": "^GOAL-[A-Z0-9-]+$" },
+          "label": { "type": "string", "minLength": 1 },
+          "horizon": { "type": "string", "enum": ["immediate", "one-year", "three-year", "long-term"] },
+          "priority": { "type": "integer", "minimum": 1, "maximum": 100 },
+          "status": { "type": "string", "enum": ["active", "paused", "achieved", "retired"] }
+        }
+      }
+    }
+  }
+}

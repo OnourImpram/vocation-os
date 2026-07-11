@@ -71,6 +71,16 @@
     "recencyRequired": {
       "type": "boolean"
     },
+    "recencyPolicyId": {
+      "type": "string",
+      "enum": [
+        "job-liveness",
+        "salary-market",
+        "legal-regulatory",
+        "organization-contact",
+        "credential-status"
+      ]
+    },
     "publiclyAssertable": {
       "type": "boolean"
     },
@@ -83,5 +93,28 @@
     "allowedInAutoApply": {
       "type": "boolean"
     }
-  }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "recencyRequired": {
+            "const": true
+          }
+        },
+        "required": ["recencyRequired"]
+      },
+      "then": {
+        "properties": {
+          "recencyPolicyId": {
+            "type": "string"
+          },
+          "verifiedDate": {
+            "type": "string"
+          }
+        },
+        "required": ["recencyPolicyId", "verifiedDate"]
+      }
+    }
+  ]
 }

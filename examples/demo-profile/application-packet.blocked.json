@@ -13,11 +13,12 @@
   "documents": [
     {
       "kind": "cv",
-      "contentHash": "sha256:3333333333333333333333333333333333333333333333333333333333333333"
+      "path": "examples/demo-profile/source.md",
+      "contentHash": "sha256:439fab98379b83f22dffb779fb5588dea0d3861ac9b65d6b2a99d5f88687188e"
     }
   ],
   "tosCompliant": true,
   "generatedAt": "2026-07-04T00:00:00.000Z",
-  "packetHash": "sha256:155770d7865aeba94c1254cba2aaf81ef2081ac8251ad11e204ae9017859d6d0",
+  "packetHash": "sha256:1921ca3510ab4def368839587bf83cbb23a9b9d722bf492031f196ad8fd5c0c9",
   "approvalRequired": true
 }

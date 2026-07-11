@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
-import type { ApplicationPacket } from "./types.js";
+import type { ApplicationPacket, ReversibilityTag } from "./types.js";
 
 export function normalizeClaimText(text: string): string {
   return text.trim().replace(/\s+/g, " ");
@@ -14,7 +14,7 @@ export function computeClaimTextHash(text: string): string {
   return sha256(normalizeClaimText(text));
 }
 
-function stableStringify(value: unknown): string {
+export function stableStringify(value: unknown): string {
   if (value === null || typeof value !== "object") {
     return JSON.stringify(value);
   }
@@ -38,4 +38,16 @@ export function computePacketHash(packet: ApplicationPacket): string {
 
 export function computeFileHash(filePath: string): string {
   return sha256(readFileSync(filePath));
+}
+
+export interface ActionIntentBinding {
+  operation: "auto-apply" | "forced-score";
+  opportunityId: string;
+  packetHash: string;
+  adapterId: string;
+  reversibilityTag: ReversibilityTag;
+}
+
+export function computeActionIntentHash(binding: ActionIntentBinding): string {
+  return sha256(stableStringify(binding));
 }

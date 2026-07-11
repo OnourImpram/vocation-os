@@ -35,7 +35,8 @@
         "/risk-register",
         "/application-packet",
         "/auto-apply-config",
-        "/post-action-review"
+        "/post-action-review",
+        "/skill-coach"
       ]
     },
     "reversibilityTag": {

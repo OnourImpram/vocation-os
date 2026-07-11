@@ -63,14 +63,15 @@
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["kind"],
+        "required": ["kind", "path", "contentHash"],
         "properties": {
           "kind": {
             "type": "string",
             "enum": ["cv", "cover-letter", "outreach", "other"]
           },
           "path": {
-            "type": "string"
+            "type": "string",
+            "minLength": 1
           },
           "contentHash": {
             "type": "string",

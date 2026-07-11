@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { decideAutoApply, engageKillSwitch } from "../../src/auto-apply.js";
-import { demoApprovalReference, demoGraph, demoPacket, enabledConfig, noRiskSignals } from "../fixtures.js";
+import { demoApprovalReference, demoAutoApplyContext, demoGraph, demoPacket, enabledConfig, noHighStakesFlags, noRiskSignals } from "../fixtures.js";
 
 describe("auto apply", () => {
   it("blocks first when kill switch is engaged", () => {
@@ -9,7 +9,8 @@ describe("auto apply", () => {
       packet: demoPacket("unverified"),
       claimGraph: demoGraph(),
       reversibilityTag: "R4",
-      adapterId: "unknown"
+      adapterId: "unknown",
+      ...demoAutoApplyContext()
     });
     expect(decision.allowed).toBe(false);
     expect(decision.blockedBy).toBe("kill-switch-engaged");
@@ -24,7 +25,7 @@ describe("auto apply", () => {
       adapterId: "local-fixture",
       approvalReference: demoApprovalReference(),
       riskSignals: noRiskSignals(),
-      dailyUsageCount: 0
+      ...demoAutoApplyContext()
     });
     expect(decision.allowed).toBe(false);
     expect(decision.blockedBy).toBe("packet-evidence-not-verified");
@@ -39,7 +40,7 @@ describe("auto apply", () => {
       adapterId: "local-fixture",
       approvalReference: demoApprovalReference(),
       riskSignals: noRiskSignals(),
-      dailyUsageCount: 0
+      ...demoAutoApplyContext()
     });
     expect(decision.blockedBy).toBe("r4-not-auto-submittable");
   });
@@ -55,8 +56,8 @@ describe("auto apply", () => {
       adapterId: "local-fixture",
       approvalReference: demoApprovalReference(),
       riskSignals: noRiskSignals(),
-      dailyUsageCount: 0,
-      highStakesFlags: { licensingSensitive: true }
+      ...demoAutoApplyContext(),
+      highStakesFlags: { ...noHighStakesFlags(), licensingSensitive: true }
     });
     expect(decision.blockedBy).toBe("high-stakes-requires-manual-review");
   });
@@ -69,7 +70,20 @@ describe("auto apply", () => {
       reversibilityTag: "R3",
       adapterId: "local-fixture",
       riskSignals: noRiskSignals(),
-      dailyUsageCount: 0
+      ...demoAutoApplyContext()
+    });
+    expect(decision.blockedBy).toBe("approval-required");
+  });
+
+  it("requires scoped approval even for a lower reversibility auto action", () => {
+    const decision = decideAutoApply({
+      config: enabledConfig(),
+      packet: demoPacket("verified", { approvalRequired: false }),
+      claimGraph: demoGraph(),
+      reversibilityTag: "R1",
+      adapterId: "local-fixture",
+      riskSignals: noRiskSignals(),
+      ...demoAutoApplyContext()
     });
     expect(decision.blockedBy).toBe("approval-required");
   });
@@ -82,7 +96,7 @@ describe("auto apply", () => {
       reversibilityTag: "R3",
       adapterId: "local-fixture",
       approvalReference: demoApprovalReference(),
-      dailyUsageCount: 0
+      ...demoAutoApplyContext()
     });
     expect(decision.blockedBy).toBe("risk-signals-missing");
   });

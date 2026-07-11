@@ -1,4 +1,6 @@
 import { createHash } from "node:crypto";
+import { validateApprovalReference, type TrustedApprover } from "./approval.js";
+import { sha256, stableStringify } from "./hash.js";
 import { assertSchema } from "./schema.js";
 import type { ApprovalReference, Confidence, EvidenceStatus, OpportunityScore, RubricDimension } from "./types.js";
 
@@ -52,6 +54,9 @@ export interface ScoreInput {
   dimensions: RubricDimension[];
   forced?: boolean;
   approvalReference?: ApprovalReference;
+  opportunityId?: string;
+  trustedApprovers?: readonly TrustedApprover[];
+  now?: Date;
 }
 
 function getScore(dimensions: RubricDimension[], id: string): number | null {
@@ -194,6 +199,26 @@ export function scoreOpportunity(input: ScoreInput): OpportunityScore {
   }
 
   validateDimensions(input.dimensions, forced);
+  if (forced && input.approvalReference) {
+    if (!input.opportunityId) throw new Error("Forced score requires an opportunity id");
+    const subjectHash = sha256(stableStringify(input.dimensions));
+    const validation = validateApprovalReference(
+      input.approvalReference,
+      {
+        operation: "forced-score",
+        opportunityId: input.opportunityId,
+        packetHash: subjectHash,
+        adapterId: "rubric",
+        reversibilityTag: "R0",
+        requiredField: "forced-score",
+        now: input.now ?? new Date()
+      },
+      input.trustedApprovers ?? []
+    );
+    if (!validation.valid) {
+      throw new Error(`${validation.blockedBy ?? "approval-invalid"}: ${validation.reasons.join(", ")}`);
+    }
+  }
   const { score, capReasons } = computeComposite(input.dimensions);
   const confidence = confidenceFromEvidence(input.dimensions, forced);
   const result: OpportunityScore = {

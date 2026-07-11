@@ -1,7 +1,7 @@
 import { assertSchema } from "./schema.js";
-import type { ApplicationPacket, Claim, ClaimGraph } from "./types.js";
+import type { ApplicationPacket, Claim, ClaimGraph, RecencyPolicyId } from "./types.js";
 import { computeClaimTextHash, computeFileHash, computePacketHash, normalizeClaimText } from "./hash.js";
-import { existsSync } from "node:fs";
+import { existsSync, realpathSync, statSync } from "node:fs";
 import path from "node:path";
 
 export interface PacketValidationResult {
@@ -9,17 +9,58 @@ export interface PacketValidationResult {
   reasons: string[];
 }
 
+export interface PacketValidationOptions {
+  documentRoot?: string;
+  now?: Date;
+}
+
+export const RECENCY_POLICY_MAX_AGE_DAYS: Record<RecencyPolicyId, number> = {
+  "job-liveness": 3,
+  "salary-market": 30,
+  "legal-regulatory": 30,
+  "organization-contact": 90,
+  "credential-status": 365
+};
+
 function indexClaims(graph: ClaimGraph): Map<string, Claim> {
   return new Map(graph.claims.map((claim) => [claim.claimId, claim]));
 }
 
-export function validateClaimGraph(graph: ClaimGraph): PacketValidationResult {
+function validateRecency(claim: Claim, now: Date): string[] {
+  if (!claim.recencyRequired) {
+    return [];
+  }
+  if (claim.evidenceStatus !== "verified") {
+    return [`current-source-required:${claim.claimId}`];
+  }
+  if (!claim.verifiedDate) {
+    return [`verified-claim-missing-date:${claim.claimId}`];
+  }
+  if (!claim.recencyPolicyId) {
+    return [`recency-policy-missing:${claim.claimId}`];
+  }
+  const verifiedAt = Date.parse(`${claim.verifiedDate}T00:00:00.000Z`);
+  if (!Number.isFinite(verifiedAt)) {
+    return [`verified-date-invalid:${claim.claimId}`];
+  }
+  const ageDays = (now.getTime() - verifiedAt) / 86_400_000;
+  if (ageDays < -1) {
+    return [`verified-date-in-future:${claim.claimId}`];
+  }
+  if (ageDays > RECENCY_POLICY_MAX_AGE_DAYS[claim.recencyPolicyId]) {
+    return [`stale-evidence:${claim.claimId}:${claim.recencyPolicyId}`];
+  }
+  return [];
+}
+
+export function validateClaimGraph(graph: ClaimGraph, options: Pick<PacketValidationOptions, "now"> = {}): PacketValidationResult {
   assertSchema("claim-graph", graph);
   const ids = new Set<string>();
   const reasons: string[] = [];
   let verifiedClaims = 0;
   let unverifiedClaims = 0;
   let privateClaims = 0;
+  const now = options.now ?? new Date();
 
   for (const claim of graph.claims) {
     if (ids.has(claim.claimId)) {
@@ -41,9 +82,7 @@ export function validateClaimGraph(graph: ClaimGraph): PacketValidationResult {
     if (!claim.publiclyAssertable) {
       privateClaims += 1;
     }
-    if (claim.recencyRequired && claim.evidenceStatus !== "verified") {
-      reasons.push(`current-source-required:${claim.claimId}`);
-    }
+    reasons.push(...validateRecency(claim, now));
   }
 
   if (graph.validationSummary.verifiedClaims !== verifiedClaims) {
@@ -62,9 +101,50 @@ export function validateClaimGraph(graph: ClaimGraph): PacketValidationResult {
   };
 }
 
-export function validateApplicationPacket(packet: ApplicationPacket, graph: ClaimGraph): PacketValidationResult {
+function isWithinRoot(root: string, candidate: string): boolean {
+  const relative = path.relative(root, candidate);
+  return relative === "" || (!relative.startsWith("..") && !path.isAbsolute(relative));
+}
+
+function validateDocument(
+  document: ApplicationPacket["documents"][number],
+  documentRoot: string | undefined
+): string[] {
+  if (!document.path) {
+    return [`document-path-missing:${document.kind}`];
+  }
+  if (!documentRoot) {
+    return [`document-root-required:${document.kind}`];
+  }
+  const resolvedRoot = path.resolve(documentRoot);
+  const candidate = path.isAbsolute(document.path) ? path.resolve(document.path) : path.resolve(resolvedRoot, document.path);
+  if (!isWithinRoot(resolvedRoot, candidate)) {
+    return [`document-outside-root:${document.kind}`];
+  }
+  if (!existsSync(candidate)) {
+    return [`document-not-found:${document.kind}`];
+  }
+  const realRoot = realpathSync(resolvedRoot);
+  const realCandidate = realpathSync(candidate);
+  if (!isWithinRoot(realRoot, realCandidate)) {
+    return [`document-outside-root:${document.kind}`];
+  }
+  if (!statSync(realCandidate).isFile()) {
+    return [`document-not-file:${document.kind}`];
+  }
+  if (computeFileHash(realCandidate) !== document.contentHash) {
+    return [`document-hash-mismatch:${document.kind}`];
+  }
+  return [];
+}
+
+export function validateApplicationPacket(
+  packet: ApplicationPacket,
+  graph: ClaimGraph,
+  options: PacketValidationOptions = {}
+): PacketValidationResult {
   assertSchema("application-packet", packet);
-  const graphValidation = validateClaimGraph(graph);
+  const graphValidation = validateClaimGraph(graph, options);
   const reasons = [...graphValidation.reasons];
   const claimIndex = indexClaims(graph);
   const packetClaimIds = new Set<string>();
@@ -106,22 +186,10 @@ export function validateApplicationPacket(packet: ApplicationPacket, graph: Clai
     if (packetClaim.sourcePointer !== graphClaim.sourcePointer) {
       reasons.push(`claim-source-mismatch:${packetClaim.claimId}`);
     }
-    if (graphClaim.recencyRequired && graphClaim.evidenceStatus !== "verified") {
-      reasons.push(`current-source-required:${packetClaim.claimId}`);
-    }
-    if (graphClaim.evidenceStatus === "verified" && !graphClaim.verifiedDate) {
-      reasons.push(`verified-claim-missing-date:${packetClaim.claimId}`);
-    }
   }
 
   for (const document of packet.documents) {
-    if (!document.path || !document.contentHash) {
-      continue;
-    }
-    const documentPath = path.isAbsolute(document.path) ? document.path : path.resolve(process.cwd(), document.path);
-    if (existsSync(documentPath) && computeFileHash(documentPath) !== document.contentHash) {
-      reasons.push(`document-hash-mismatch:${document.kind}`);
-    }
+    reasons.push(...validateDocument(document, options.documentRoot));
   }
 
   return {

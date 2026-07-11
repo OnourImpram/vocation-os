@@ -1,8 +1,7 @@
 import { existsSync, mkdirSync, readFileSync, readdirSync, renameSync, writeFileSync } from "node:fs";
 import path from "node:path";
+import { defaultRuntimeRoot } from "./paths.js";
 import { assertSchema, validateAgainstSchema, type SchemaName } from "./schema.js";
-
-const STATE_ROOT = ".vocationos";
 
 export function encodeStateKey(key: string): string {
   if (key.length === 0) {
@@ -81,7 +80,7 @@ export function readState<T>(baseDir: string, key: string): T {
 }
 
 export function defaultStateDir(): string {
-  return path.join(process.cwd(), STATE_ROOT, "_state");
+  return path.join(defaultRuntimeRoot(), "_state");
 }
 
 export function stateExists(baseDir: string, key: string): boolean {

@@ -1,0 +1,87 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://vocation-os.dev/schemas/approval-reference.schema.json",
+  "title": "ApprovalReference",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "approvalId",
+    "operation",
+    "approvedBy",
+    "keyId",
+    "approvedAt",
+    "expiresAt",
+    "approvalTextHash",
+    "opportunityId",
+    "packetHash",
+    "adapterId",
+    "actionIntentHash",
+    "allowedFields",
+    "signatureAlgorithm",
+    "signature"
+  ],
+  "properties": {
+    "approvalId": {
+      "type": "string",
+      "pattern": "^APR-[A-Z0-9-]+$"
+    },
+    "operation": {
+      "type": "string",
+      "enum": ["auto-apply", "forced-score"]
+    },
+    "approvedBy": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+    },
+    "keyId": {
+      "type": "string",
+      "pattern": "^KEY-[A-Z0-9-]+$"
+    },
+    "approvedAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "expiresAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "approvalTextHash": {
+      "type": "string",
+      "pattern": "^sha256:[a-f0-9]{64}$"
+    },
+    "opportunityId": {
+      "type": "string",
+      "pattern": "^OPP-[A-Z0-9-]+$"
+    },
+    "packetHash": {
+      "type": "string",
+      "pattern": "^sha256:[a-f0-9]{64}$"
+    },
+    "adapterId": {
+      "type": "string",
+      "minLength": 1
+    },
+    "actionIntentHash": {
+      "type": "string",
+      "pattern": "^sha256:[a-f0-9]{64}$"
+    },
+    "allowedFields": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "signatureAlgorithm": {
+      "const": "Ed25519"
+    },
+    "signature": {
+      "type": "string",
+      "minLength": 80,
+      "maxLength": 120,
+      "pattern": "^[A-Za-z0-9_-]+$"
+    }
+  }
+}

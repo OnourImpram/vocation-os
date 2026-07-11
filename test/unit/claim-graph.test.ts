@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { validateApplicationPacket, validateClaimGraph } from "../../src/claim-graph.js";
-import { demoGraph, demoPacket } from "../fixtures.js";
+import { DEMO_DOCUMENT_ROOT, demoGraph, demoPacket } from "../fixtures.js";
 
 describe("claim graph validation", () => {
   it("rejects validation summary mismatch", () => {
@@ -23,7 +23,8 @@ describe("claim graph validation", () => {
         {
           ...demoGraph().claims[0]!,
           evidenceStatus: "current_source_required",
-          recencyRequired: true
+          recencyRequired: true,
+          recencyPolicyId: "legal-regulatory"
         }
       ],
       validationSummary: {
@@ -32,7 +33,7 @@ describe("claim graph validation", () => {
         privateClaims: 0
       }
     });
-    const result = validateApplicationPacket(demoPacket(), graph);
+    const result = validateApplicationPacket(demoPacket(), graph, { documentRoot: DEMO_DOCUMENT_ROOT });
     expect(result.valid).toBe(false);
     expect(result.reasons).toContain("current-source-required:CLM-DEMO-001");
   });
