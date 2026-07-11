@@ -18,6 +18,16 @@ This mapping targets NIST AI RMF 1.0. Because NIST states that AI RMF 1.0 is bei
 
 Release validation notes are maintained in `docs/RELEASE_VALIDATION.md`. They record engineering evidence gates and do not constitute legal, clinical, financial, immigration, licensing, employment, or standards compliance certification.
 
+## Runtime Governance
+
+The deterministic Safety Kernel, not an LLM response, owns consequential action policy.
+
+Worker generation, independent evaluation, human approval, execution, and completion verification are distinct phases.
+
+Employer side ranking, candidate filtering, rejection, performance evaluation, and hiring decisions remain outside the public product scope.
+
+Governance references were checked against the official EU AI Act, NIST AI RMF, and ISO/IEC 42001 pages on 2026-07-11. Major releases require a new source review.
+
 ## Management System Reference
 
 ISO/IEC 42001 is a reference point for mature AI management systems. VocationOS does not claim certification.

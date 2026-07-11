@@ -4,79 +4,136 @@ Evidence grounded career decision safety for high agency operators.
 
 ![VocationOS decision control room banner](assets/vocationos-banner.png)
 
-![CI](https://img.shields.io/badge/CI-configured-informational)
+![CI](https://img.shields.io/badge/CI-safe%20publish%20gate-informational)
 ![TypeScript](https://img.shields.io/badge/TypeScript-strict-blue)
-![Safety](https://img.shields.io/badge/safety-red--team--tested-informational)
+![Safety](https://img.shields.io/badge/safety-adversarially%20tested-informational)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
-VocationOS is not a faster auto apply bot. It is a career decision safety system that makes automation conditional on evidence, reversibility, stakes, and human authorization.
+VocationOS is a local first career decision safety system. It makes consequential automation conditional on evidence, reversibility, stakes, scoped human authorization, and verifiable completion evidence.
 
 Website: https://onourimpram.github.io/vocation-os/
 
+## Current Release
+
+Version 0.3.1 is the safety and platform foundation release.
+
+It includes a deterministic safety kernel, claim and packet integrity, persistent kill switch state, scoped approvals, trusted submission collectors, an encrypted SQLite event store foundation, a temporal Career Digital Twin contract, opportunity provenance, theory grounded advisory tools, claim first document structures, portfolio analysis, outcome contracts, and VocationBench.
+
+The encrypted event store is implemented and tested, but legacy CLI state has not yet been migrated to it as the single canonical backend. Desktop workbench, browser extension, twelve discovery adapters, full interview and offer labs, production approver and collector key custody, and production execution adapters remain roadmap work.
+
+Version 0.3.1 ships no production auto apply adapter. Its compiled execution boundary permits only `local-fixture` with a synthetic profile. Adding an adapter string to config cannot grant production execution authority.
+
 ## Why It Exists
 
-Career decisions can look operationally simple while carrying hidden risk. A draft, a score, a profile statement, and a submitted application do not have the same reversibility. VocationOS keeps those differences explicit.
+A draft, a public claim, an outreach message, a submitted application, a licensing decision, and an international relocation do not have the same reversibility.
 
-It helps an operator structure decisions, validate claims, score opportunities, generate evidence aware outputs, block unsafe automation, and preserve audit trails.
+Most career tooling optimizes output volume. VocationOS optimizes decision quality and prevents unsupported claims, stale evidence, replayed approvals, unsafe automation, and false completion records.
 
-## What Makes It Different
+## Implemented Controls
 
-| Pillar | Runtime control |
+| Control | Runtime behavior |
 | --- | --- |
-| Evidence | Claims carry evidence status and source pointers. Weak evidence cannot become precise public claims. |
-| Reversibility | Actions use R0 to R4 tags so drafts, disclosures, submissions, and irreversible decisions are gated differently. |
-| High stakes gates | Immigration, licensing, clinical, financial, research integrity, conflict, reputation, and relocation flags trigger certainty brakes. |
-| Human authorization | Consequential actions require explicit approval and append only audit records. |
+| Claim integrity | Canonical claim hashes and packet hashes are recomputed before automation. |
+| Document integrity | Every packet document must exist inside an explicit root and match its content hash. |
+| Recency | Time sensitive claims use explicit policy windows and stale evidence blocks action. |
+| Reversibility | Every Approved Auto action requires scoped approval. R3 cannot be downgraded. R4 never auto submits. |
+| High stakes | Every high stakes flag requires an explicit boolean assessment. Any positive flag blocks auto mode. |
+| Risk observations | CAPTCHA, anti bot, payment, identity, ToS, license, and fabrication signals must all be observed. |
+| Authorization | Ed25519 approval binds a trusted approver, opportunity, packet, adapter, action intent, allowed field, and expiry. |
+| Rate limit | Usage is calculated only from the authoritative ledger. Caller counters are ignored. |
+| Kill switch | Kill, rearm, and enable are separate persistent operations under `VOCATION_HOME` or the user home runtime root. |
+| Completion proof | Only a trusted Ed25519 collector receipt bound to attempt, action intent, packet, and adapter can confirm submission. |
+| Local privacy | Sensitive event payloads and the chain head are encrypted with AES 256 GCM and authenticated before read. |
+| Agent separation | Registered worker manifests enforce phase capabilities. Execute scopes are distinct. A generator cannot self-evaluate and only a human can approve. |
 
 ## Quick Start
 
 ```bash
 npm ci
-npm run ci
-npx tsx src/cli.ts help
-npx tsx src/cli.ts demo-score
-npx tsx src/cli.ts demo-auto-apply-decision
-npx tsx src/cli.ts demo-auto-apply-allowed
+npm run typecheck
+npm run test
+npm run validate:schemas
+npx tsx src/cli.ts doctor
+npx tsx src/cli.ts benchmark
 ```
 
-## One Screen Architecture
+Run the complete release candidate gate:
+
+```bash
+npm run safe:publish-check
+```
+
+## Decision Architecture
 
 ```text
-Operator intent
-  -> Mode
-  -> Evidence and claim graph
-  -> Reversibility gate
-  -> High stakes gate and specialist questions
-  -> Packet hash and claim hash validation
-  -> Human approval
-  -> Action ledger
+Career Digital Twin
+  -> Opportunity provenance and labor market graph
+  -> Deterministic intake and hard gates
+  -> Theory grounded planning
+  -> Claim first document AST
+  -> Independent evaluation
+  -> Scoped human ApprovalReference
+  -> Allowlisted application operator
+  -> Trusted collector SubmissionProof
+  -> Encrypted event and outcome history
+  -> Calibrated learning
 ```
 
-## Safety Architecture
+The agent controller follows:
 
-VocationOS uses packet level claim validation before any allowed automation. A single unverified, private, or disallowed claim blocks an application packet. A kill switch blocks auto apply before every other gate. R4 actions never submit automatically.
+```text
+Observe -> Normalize -> Gate -> Plan -> Generate
+        -> Evaluate -> Approve -> Execute -> Verify -> Learn
+```
 
-Packet claims are bound to canonical claim text hashes. Stale packet hashes, changed claim text, duplicate packet claims, and missing automation risk signals block automation.
+No LLM, plugin, adapter, or worker owns the final side effect boundary. The deterministic controller and human approval gate do.
 
-The public repository includes only synthetic examples. Real private profile data belongs in ignored local state.
+## Career Intelligence Foundation
 
-## Release Validation
+### Career Digital Twin
 
-The v0.2 public release candidate was checked against claim text inflation, stale packet hashes, duplicate ledger ids, package execution, state validation, structured authorization, and hidden automation bypass classes.
+Temporal facts carry validity windows, evidence status, source pointers, confidence, sensitivity, and allowed uses. Sensitive facts cannot be exposed through public profile use.
 
-See `docs/RELEASE_VALIDATION.md` for the release validation surface.
+### Opportunity Graph
 
-## What This Is Not
+Greenhouse, Lever, and Ashby payloads have pure normalization adapters. Opportunity records retain canonical URLs, source payload hashes, description hashes, fingerprints, freshness, remote eligibility, and extraction confidence.
 
-VocationOS is not an autonomous hiring system.
+O*NET, ESCO, and local occupation concepts can be attached with taxonomy version provenance. Current matching is a deterministic foundation, not a learned labor market model.
 
-VocationOS is not a legal, immigration, clinical, financial, or licensing authority.
+### Portfolio Analysis
 
-VocationOS does not rank, reject, or screen candidates for employers.
+Jobs, fellowships, postdocs, grants, consulting, teaching, speaking, publishing, and venture routes share a multi objective evaluation surface. Hard gated options are excluded before utility scoring. Pareto efficiency and weighted regret remain visible.
 
-VocationOS does not fabricate credentials or convert weak evidence into precise claims.
+### Claim First Documents
 
-VocationOS prepares, structures, critiques, and audits. The operator decides and authorizes.
+Every body sentence in the v0.3.1 Document AST uses `verbatim-claim` binding to exactly one claim ID. Its normalized text must match the verified claim text. Missing, inflated, unverified, private, or disallowed claims prevent rendering. Hidden Unicode text is rejected. Human-approved synthesis over multiple claims remains a later, separately gated contract.
+
+## CLI
+
+```bash
+npx tsx src/cli.ts demo-career-twin
+npx tsx src/cli.ts demo-opportunity-intake
+npx tsx src/cli.ts demo-portfolio
+npx tsx src/cli.ts demo-skill-coach
+npx tsx src/cli.ts demo-advisory
+npx tsx src/cli.ts demo-auto-apply-decision
+npx tsx src/cli.ts benchmark
+npx tsx src/cli.ts list-workers
+```
+
+Validate an existing encrypted store without printing its passphrase:
+
+```bash
+VOCATION_STORE_PASSPHRASE="provided locally" vocation store-doctor /path/to/vocation.db
+```
+
+## VocationBench
+
+VocationBench materializes deterministic synthetic stubs for 500 profiles, 1,000 opportunities, 200 adversarial cases, and 100 completion proof cases. Full synthetic Career Digital Twins and executable baseline adapters remain part of the benchmark expansion.
+
+The harness implements NDCG, Brier score, expected calibration error, F1, false allow rate, and false confirmation rate. Current code establishes the benchmark protocol and metric engine. A public competitor leaderboard requires reproducible baseline runs and is not yet claimed.
+
+See [docs/VOCATIONBENCH.md](docs/VOCATIONBENCH.md).
 
 ## Metrics
 
@@ -84,32 +141,35 @@ The values below are checked by `npm run docs:check`.
 
 | Metric | Count |
 | --- | ---: |
-| Modes | 20 |
-| Theories | 25 |
+| Modes | 21 |
+| Theories | 28 |
 | Rubric dimensions | 20 |
-| Schemas | 8 |
-| CLI commands | 21 |
-| Evaluator tests | 14 |
+| Schemas | 17 |
+| CLI commands | 29 |
+| Evaluator tests | 19 |
 
-## Demo
+## What This Is Not
 
-```bash
-npx tsx src/cli.ts demo-score
-npx tsx src/cli.ts demo-steelman
-npx tsx src/cli.ts demo-auto-apply-decision
-npx tsx src/cli.ts demo-auto-apply-allowed
-```
+VocationOS is not an autonomous hiring system.
 
-The auto apply demo is intentionally blocked because it includes a packet claim that is not verified. This proves the gate, not a failure.
+It is not a legal, immigration, clinical, financial, tax, or licensing authority.
 
-The allowed local fixture demo shows the shape of an allowed decision after claim hash validation, packet hash validation, risk signal checks, rate limit checks, and structured approval.
+It does not rank, reject, or filter candidates for employers.
 
-## Governance Scope
+It does not bypass CAPTCHA, anti bot controls, identity checks, platform terms, or application rules.
 
-VocationOS is designed for individual career decision support. It is not designed for employer side candidate ranking, filtering, rejection, or hiring decisions. Employer or platform deployment requires a separate compliance review.
+It does not treat an application as complete from caller supplied text or tracker status.
 
-Governance references are maintained in `GOVERNANCE.md` and `docs/NIST_AI_RMF_MAPPING.md`.
+It is not yet a finished v1 desktop product. Version 0.3.1 is a tested foundation for that product.
+
+## Governance
+
+VocationOS is scoped to individual career decision support. Employer side ranking, filtering, rejection, and hiring decisions remain out of scope.
+
+See [SAFETY.md](SAFETY.md), [GOVERNANCE.md](GOVERNANCE.md), [PRIVACY.md](PRIVACY.md), [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), and [docs/THREAT_MODEL.md](docs/THREAT_MODEL.md).
 
 ## Contributing
 
-Every new mode requires schema, tests, docs, evaluator coverage, and high stakes assessment. Tests must never use real personal data. Guardrails must not be weakened to make tests pass.
+Every new mode requires a schema, unit tests, adversarial tests, evaluator coverage, documentation, and a high stakes assessment.
+
+Public fixtures must remain synthetic. Safety policy changes require dedicated review and cannot be hidden inside feature work.
