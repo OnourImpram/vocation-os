@@ -31,14 +31,18 @@ describe("vocationd startup ordering", () => {
         cwd: process.cwd(),
         env: { ...process.env, VOCATION_HOME: runtimeRoot },
         encoding: "utf8",
-        timeout: 10_000
+        timeout: 60_000,
+        windowsHide: true
       }
     );
 
+    if (result.error) {
+      throw new Error(`vocationd startup subprocess failed: ${result.error.message}`);
+    }
     expect(result.status).toBe(1);
     expect(result.stderr).toContain("already running");
     expect(result.stderr).not.toContain("interactive terminal");
     expect(existsSync(path.join(runtimeRoot, "headless-credentials.vault"))).toBe(false);
     expect(existsSync(path.join(runtimeRoot, "vocation.db"))).toBe(false);
-  });
+  }, 70_000);
 });

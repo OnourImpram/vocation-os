@@ -15,13 +15,13 @@ Website: https://onourimpram.github.io/vocation-os/
 
 ## Current Release
 
-Version 0.4.0 is the canonical local runtime and authority release.
+Version 0.4.1 is the canonical local runtime and authority maintenance release.
 
 It includes the deterministic safety kernel, claim and packet integrity, persistent kill switch state, scoped approvals, trusted submission collectors, a migrated encrypted SQLite event store, checksummed schema migrations, encrypted backup and restore, a temporal Career Digital Twin contract, opportunity provenance, theory grounded advisory tools, claim first document structures, portfolio analysis, outcome contracts, and VocationBench.
 
 `vocationd` is the shipped single writer for consequential local runtime mutations. CLI commands that change auto apply state, import legacy state, create audit checkpoints, manage approvers, or export authority state go through authenticated IPC with request idempotency. Desktop workbench, browser extension, twelve discovery adapters, full interview and offer labs, production collector key custody, and production execution adapters remain roadmap work.
 
-Version 0.4.0 ships no production auto apply adapter. Its compiled execution boundary permits only `local-fixture` with a synthetic profile. Adding an adapter string to config cannot grant production execution authority.
+Version 0.4.1 ships no production auto apply adapter. Its compiled execution boundary permits only `local-fixture` with a synthetic profile. Adding an adapter string to config cannot grant production execution authority.
 
 ## Why It Exists
 
@@ -191,7 +191,7 @@ It does not bypass CAPTCHA, anti bot controls, identity checks, platform terms, 
 
 It does not treat an application as complete from caller supplied text or tracker status.
 
-It is not yet a finished v1 desktop product. Version 0.4.0 is a tested local runtime foundation for that product.
+It is not yet a finished v1 desktop product. Version 0.4.1 is a tested local runtime foundation for that product.
 
 ## Governance
 

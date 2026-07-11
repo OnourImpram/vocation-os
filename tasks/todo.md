@@ -87,3 +87,60 @@
 - 2026-07-11: adversarial Windows binary smoke removed the live daemon lock, verified that a second daemon failed closed on the reachable endpoint, and confirmed that the first daemon retained authenticated authority.
 - 2026-07-11: GitHub Git Data API published 56 verified file blobs in commit `7146316efeeb49a8886025651ba742e43ab3e2ba` on `release/v0.4`. The remote recursive tree matched every local canonical blob hash.
 - 2026-07-11: pull request `#5` opened without automatic merge or npm publication. GitHub Actions run `29157345842` passed on Ubuntu in 46 seconds and Windows in 1 minute 37 seconds.
+
+## Product Maturity Program
+
+### Phase 0, v0.4.1 Product Engineering Baseline
+
+- [x] Start from a fresh `origin/main` checkout and preserve previous dirty worktrees.
+- [x] Remove GitHub Actions runtime deprecation warnings.
+- [x] Add npm workspace boundaries without changing the `vocation` or `vocationd` contracts.
+- [x] Add durable coverage, CLI subprocess, migration, packaging, and cross-platform release gates.
+- [x] Publish a reviewed v0.4.1 maintenance pull request without npm publication.
+
+### Phase 1, v0.5 Product Foundation
+
+- [ ] Add domain repositories for profiles, opportunities, documents, campaigns, applications, tasks, and outcomes behind `vocationd`.
+- [ ] Add a content-addressed encrypted artifact vault for CV, PDF, DOCX, and generated artifacts.
+- [ ] Add resumable and idempotent `vocation init` onboarding with demo, headless, resume, and declarative config modes.
+- [ ] Add safe PDF, DOCX, Markdown, and supported export import planning with exact approval binding.
+- [ ] Add Document AST v2, claim-bound rendering, PDF and DOCX output, parse-back verification, and answer memory.
+- [ ] Add an event-sourced application tracker and end-to-end synthetic user journey.
+
+### Phase 2, v0.6 Discovery and Company Catalog
+
+- [ ] Add a centrally governed fetch broker and typed provider SDK.
+- [ ] Ship 24 GA discovery connectors and keep dynamic high-maintenance connectors assist-only until contract gates pass.
+- [ ] Add a versioned catalog with at least 150 verified company entries and domain-specific source packs.
+- [ ] Add provider health, liveness, pagination, retry, cache, provenance, dedupe, and campaign controls.
+
+### Phase 3, v0.7 Product Workbench
+
+- [ ] Add a TypeScript TUI backed only by the typed daemon SDK.
+- [ ] Add a secure loopback web gateway and production React workbench.
+- [ ] Add Today, Discovery, Opportunity Review, Documents, Pipeline, Evidence, Approvals, Audit, Provider Health, and Settings views.
+- [ ] Pass keyboard, WCAG 2.2 AA, responsive, recovery, and state parity gates.
+
+### Phase 4, v0.8 Agent Ecosystem
+
+- [ ] Add a read-first local MCP server and canonical Open Agent Skill.
+- [ ] Add install, update, doctor, and uninstall flows for Codex, Claude Code, OpenCode, Gemini or Antigravity, Qwen Code, Kimi CLI, Grok Build, and GitHub Copilot CLI.
+- [ ] Separate discovered, invocable, and verified support levels with conformance tests.
+- [ ] Keep every mutating agent operation behind daemon capability and scoped approval.
+
+### Phase 5, v0.9 to v1.0 Stable Product
+
+- [ ] Add Interview Studio, Network Intelligence, Offer Lab, outcome learning, English and Turkish parity, and portable encrypted vault migration.
+- [ ] Publish VocationBench baseline results and meet all safety, discovery, document, UI, and calibration targets.
+- [ ] Ship signed Windows, macOS, and Linux releases with stable migrations, recovery drills, SBOM, provenance, and no unresolved P0 or P1 findings.
+
+### Product Program Evidence
+
+- 2026-07-11: fresh product checkout created from merged `origin/main` at `17e94a74bd80d85ae4404bfd7711398ec6f89f55`.
+- 2026-07-11: `npm ci` completed with zero reported vulnerabilities. The existing native addon emitted a non-blocking `prebuild-install` deprecation warning.
+- 2026-07-11: the first local typecheck exceeded the 120 second command wrapper. Remote `main` CI remained green, and the local typecheck must be rerun with a wider bound before edits are accepted.
+- 2026-07-11: strict TypeScript passed with the SDK workspace built before the root project.
+- 2026-07-11: focused SDK, onboarding, and encrypted artifact tests passed with 21 tests.
+- 2026-07-11: compiled `vocation help` and `vocation doctor` passed from an external temporary working directory.
+- 2026-07-12: isolated maintenance clone passed 42 test files and 220 tests with 82.57 percent statement, 70.80 percent branch, 92.44 percent function, and 85.11 percent line coverage.
+- 2026-07-12: isolated maintenance clone passed schemas, selfcheck, evaluator, privacy, brand, citation, SBOM, site, subprocess, and package gates without npm publication.

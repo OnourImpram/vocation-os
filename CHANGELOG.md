@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.4.1
+
+Product engineering maintenance release candidate.
+
+### Added
+
+1. A real npm workspace boundary with the transport independent `@vocation-os/sdk` package.
+2. Coverage thresholds for statements, branches, functions, and lines.
+3. A compiled CLI subprocess smoke test that runs from outside the repository working directory.
+
+### Changed
+
+1. GitHub Actions use current checkout, Node setup, and artifact upload major versions.
+2. Vitest and its V8 coverage provider are pinned to the same current major and exact version.
+3. CI now builds the SDK before the root package and verifies the compiled CLI contract on Windows and Linux.
+
 ## 0.4.0
 
 Canonical local runtime and authority release candidate.
