@@ -1,0 +1,36 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://vocation-os.dev/schemas/submission-proof.schema.json",
+  "title": "SubmissionProof",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "proofId", "collectorId", "collectorVersion", "keyId", "attemptId", "actionIntentHash", "opportunityId", "packetHash", "adapterId",
+    "kind", "capturedAt", "sourceDomain", "sourcePointer", "indicators", "recipientDomain", "attachmentCount",
+    "referenceId", "sentAt", "payloadHash", "receiptHash", "signatureAlgorithm", "signature"
+  ],
+  "properties": {
+    "proofId": { "type": "string", "pattern": "^PRF-[A-F0-9]{20}$" },
+    "collectorId": { "type": "string", "pattern": "^COL-[A-Z0-9-]+$" },
+    "collectorVersion": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$" },
+    "keyId": { "type": "string", "pattern": "^KEY-[A-Z0-9-]+$" },
+    "attemptId": { "type": "string", "pattern": "^ATT-\\d{4}-[0-9a-f-]{36}$" },
+    "actionIntentHash": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+    "opportunityId": { "type": "string", "pattern": "^OPP-[A-Z0-9-]+$" },
+    "packetHash": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+    "adapterId": { "type": "string", "minLength": 1 },
+    "kind": { "type": "string", "enum": ["confirmation-page", "ats-dashboard", "sent-items", "receipt-email"] },
+    "capturedAt": { "type": "string", "format": "date-time" },
+    "sourceDomain": { "type": "string", "pattern": "^[a-z0-9.-]+$" },
+    "sourcePointer": { "type": "string", "minLength": 1, "maxLength": 200, "pattern": "^(redacted|local|proof):[A-Za-z0-9._:/-]+$" },
+    "indicators": { "type": "array", "maxItems": 20, "uniqueItems": true, "items": { "type": "string", "minLength": 1, "maxLength": 200 } },
+    "recipientDomain": { "oneOf": [{ "type": "string", "pattern": "^[a-z0-9.-]+$" }, { "type": "null" }] },
+    "attachmentCount": { "oneOf": [{ "type": "integer", "minimum": 0 }, { "type": "null" }] },
+    "referenceId": { "oneOf": [{ "type": "string", "minLength": 1, "maxLength": 64, "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,63}$" }, { "type": "null" }] },
+    "sentAt": { "oneOf": [{ "type": "string", "format": "date-time" }, { "type": "null" }] },
+    "payloadHash": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+    "receiptHash": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+    "signatureAlgorithm": { "const": "Ed25519" },
+    "signature": { "type": "string", "minLength": 80, "maxLength": 120, "pattern": "^[A-Za-z0-9_-]+$" }
+  }
+}

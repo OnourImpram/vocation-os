@@ -1,0 +1,60 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://vocation-os.dev/schemas/document-ast.schema.json",
+  "title": "DocumentAst",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["documentId", "kind", "profileId", "opportunityId", "generatedAt", "sections"],
+  "properties": {
+    "documentId": { "type": "string", "pattern": "^DOC-[A-Z0-9-]+$" },
+    "kind": { "type": "string", "enum": ["cv", "cover-letter", "outreach", "interview-story", "public-profile"] },
+    "profileId": { "type": "string", "pattern": "^(DEMO|LOCAL|PRIVATE)-[A-Z0-9-]+$" },
+    "opportunityId": { "oneOf": [{ "type": "string", "pattern": "^OPP-[A-Z0-9-]+$" }, { "type": "null" }] },
+    "generatedAt": { "type": "string", "format": "date-time" },
+    "sections": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["sectionId", "label", "nodes"],
+        "properties": {
+          "sectionId": { "type": "string", "pattern": "^SEC-[A-Z0-9-]+$" },
+          "label": { "type": "string", "minLength": 1 },
+          "nodes": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "oneOf": [
+                {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": ["nodeId", "type", "level", "text", "claimIds"],
+                  "properties": {
+                    "nodeId": { "type": "string", "pattern": "^NODE-[A-Z0-9-]+$" },
+                    "type": { "const": "heading" },
+                    "level": { "type": "integer", "minimum": 1, "maximum": 3 },
+                    "text": { "type": "string", "minLength": 1 },
+                    "claimIds": { "type": "array", "maxItems": 0 }
+                  }
+                },
+                {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": ["nodeId", "type", "bindingMode", "text", "claimIds"],
+                  "properties": {
+                    "nodeId": { "type": "string", "pattern": "^NODE-[A-Z0-9-]+$" },
+                    "type": { "const": "sentence" },
+                    "bindingMode": { "const": "verbatim-claim" },
+                    "text": { "type": "string", "minLength": 1 },
+                    "claimIds": { "type": "array", "maxItems": 1, "uniqueItems": true, "items": { "type": "string", "pattern": "^CLM-[A-Z0-9-]+$" } }
+                  }
+                }
+              ]
+            }
+          }
+        }
+      }
+    }
+  }
+}

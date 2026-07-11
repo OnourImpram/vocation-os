@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { demoDimensions, scoreOpportunity } from "../../src/rubric.js";
-import { demoApprovalReference } from "../fixtures.js";
+import { demoForcedScoreApproval, demoTrustedApprovers } from "../fixtures.js";
 
 describe("rubric", () => {
   it("rejects duplicate dimension ids", () => {
@@ -20,13 +20,29 @@ describe("rubric", () => {
   });
 
   it("keeps forced score confidence low", () => {
+    const dimensions = demoDimensions();
     const score = scoreOpportunity({
-      dimensions: demoDimensions(),
+      dimensions,
       forced: true,
-      approvalReference: demoApprovalReference()
+      opportunityId: "OPP-DEMO-001",
+      approvalReference: demoForcedScoreApproval(dimensions),
+      trustedApprovers: demoTrustedApprovers()
     });
     expect(score.confidence).toBe("Low");
     expect(score.auditReference).toMatch(/^approval:sha256:/);
+  });
+
+  it("binds forced approval to the exact rubric input", () => {
+    const approvedDimensions = demoDimensions();
+    const changedDimensions = demoDimensions();
+    changedDimensions[0] = { ...changedDimensions[0]!, score: 99 };
+    expect(() => scoreOpportunity({
+      dimensions: changedDimensions,
+      forced: true,
+      opportunityId: "OPP-DEMO-001",
+      approvalReference: demoForcedScoreApproval(approvedDimensions),
+      trustedApprovers: demoTrustedApprovers()
+    })).toThrow("approval-scope-mismatch");
   });
 
   it("applies ethical cap", () => {

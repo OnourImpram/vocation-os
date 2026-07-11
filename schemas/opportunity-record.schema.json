@@ -1,0 +1,115 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://vocation-os.dev/schemas/opportunity-record.schema.json",
+  "title": "OpportunityRecord",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "opportunityId",
+    "source",
+    "sourceId",
+    "sourceUrl",
+    "canonicalUrl",
+    "applyUrl",
+    "company",
+    "roleTitle",
+    "locationText",
+    "remotePolicy",
+    "applicantLocationRequirements",
+    "compensationText",
+    "descriptionText",
+    "descriptionHash",
+    "sourcePayloadHash",
+    "fingerprint",
+    "postedAt",
+    "capturedAt",
+    "extractionConfidence"
+  ],
+  "properties": {
+    "opportunityId": {
+      "type": "string",
+      "pattern": "^OPP-[A-Z0-9-]+$"
+    },
+    "source": {
+      "type": "string",
+      "enum": ["greenhouse", "lever", "ashby", "manual"]
+    },
+    "sourceId": {
+      "type": "string",
+      "minLength": 1
+    },
+    "sourceUrl": {
+      "type": "string",
+      "format": "uri"
+    },
+    "canonicalUrl": {
+      "type": "string",
+      "format": "uri"
+    },
+    "applyUrl": {
+      "oneOf": [
+        { "type": "string", "format": "uri" },
+        { "type": "null" }
+      ]
+    },
+    "company": {
+      "type": "string",
+      "minLength": 1
+    },
+    "roleTitle": {
+      "type": "string",
+      "minLength": 1
+    },
+    "locationText": {
+      "type": "string"
+    },
+    "remotePolicy": {
+      "type": "string",
+      "enum": ["remote", "hybrid", "on-site", "unspecified"]
+    },
+    "applicantLocationRequirements": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "compensationText": {
+      "oneOf": [
+        { "type": "string", "minLength": 1 },
+        { "type": "null" }
+      ]
+    },
+    "descriptionText": {
+      "type": "string"
+    },
+    "descriptionHash": {
+      "type": "string",
+      "pattern": "^sha256:[a-f0-9]{64}$"
+    },
+    "sourcePayloadHash": {
+      "type": "string",
+      "pattern": "^sha256:[a-f0-9]{64}$"
+    },
+    "fingerprint": {
+      "type": "string",
+      "pattern": "^sha256:[a-f0-9]{64}$"
+    },
+    "postedAt": {
+      "oneOf": [
+        { "type": "string", "format": "date-time" },
+        { "type": "null" }
+      ]
+    },
+    "capturedAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "extractionConfidence": {
+      "type": "string",
+      "enum": ["high", "medium", "low"]
+    }
+  }
+}
+

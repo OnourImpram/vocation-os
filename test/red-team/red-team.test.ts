@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { decideAutoApply } from "../../src/auto-apply.js";
 import { computeClaimTextHash } from "../../src/hash.js";
-import { demoApprovalReference, demoGraph, demoPacket, enabledConfig, noRiskSignals } from "../fixtures.js";
+import { demoApprovalReference, demoAutoApplyContext, demoGraph, demoPacket, enabledConfig, noHighStakesFlags, noRiskSignals } from "../fixtures.js";
 
 describe("red team gates", () => {
   it("blocks visa sensitive auto apply even with approval reference", () => {
@@ -13,8 +13,8 @@ describe("red team gates", () => {
       adapterId: "local-fixture",
       approvalReference: demoApprovalReference(),
       riskSignals: noRiskSignals(),
-      dailyUsageCount: 0,
-      highStakesFlags: { immigrationSensitive: true }
+      ...demoAutoApplyContext(),
+      highStakesFlags: { ...noHighStakesFlags(), immigrationSensitive: true }
     });
     expect(decision.blockedBy).toBe("high-stakes-requires-manual-review");
   });
@@ -32,7 +32,7 @@ describe("red team gates", () => {
       adapterId: "local-fixture",
       approvalReference: demoApprovalReference(),
       riskSignals: noRiskSignals(),
-      dailyUsageCount: 0
+      ...demoAutoApplyContext()
     });
     expect(decision.blockedBy).toBe("claim-not-publicly-assertable");
   });
@@ -49,7 +49,7 @@ describe("red team gates", () => {
       adapterId: "local-fixture",
       approvalReference: demoApprovalReference(),
       riskSignals: noRiskSignals(),
-      dailyUsageCount: 0
+      ...demoAutoApplyContext()
     });
     expect(decision.allowed).toBe(false);
     expect(decision.blockedBy).toBe("missing-claim");
@@ -72,7 +72,7 @@ describe("red team gates", () => {
       adapterId: "local-fixture",
       approvalReference: demoApprovalReference(),
       riskSignals: noRiskSignals(),
-      dailyUsageCount: 0
+      ...demoAutoApplyContext()
     });
     expect(decision.allowed).toBe(false);
     expect(decision.blockedBy).toBe("claim-text-mismatch");
@@ -95,7 +95,7 @@ describe("red team gates", () => {
       adapterId: "local-fixture",
       approvalReference: demoApprovalReference(),
       riskSignals: noRiskSignals(),
-      dailyUsageCount: 0
+      ...demoAutoApplyContext()
     });
     expect(decision.blockedBy).toBe("claim-text-mismatch");
   });
@@ -112,7 +112,7 @@ describe("red team gates", () => {
       adapterId: "local-fixture",
       approvalReference: demoApprovalReference(),
       riskSignals: noRiskSignals(),
-      dailyUsageCount: 0
+      ...demoAutoApplyContext()
     });
     expect(decision.blockedBy).toBe("packet-hash-mismatch");
   });
@@ -130,7 +130,7 @@ describe("red team gates", () => {
       adapterId: "local-fixture",
       approvalReference: demoApprovalReference(),
       riskSignals: noRiskSignals(),
-      dailyUsageCount: 0
+      ...demoAutoApplyContext()
     });
     expect(decision.blockedBy).toBe("duplicate-packet-claim");
   });
@@ -152,7 +152,7 @@ describe("red team gates", () => {
       adapterId: "local-fixture",
       approvalReference: demoApprovalReference(),
       riskSignals: { ...noRiskSignals(), ...signal },
-      dailyUsageCount: 0
+      ...demoAutoApplyContext()
     });
     expect(decision.blockedBy).toBe(expected);
   });

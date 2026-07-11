@@ -21,7 +21,8 @@ export const MODE_NAMES = [
   "/risk-register",
   "/application-packet",
   "/auto-apply-config",
-  "/post-action-review"
+  "/post-action-review",
+  "/skill-coach"
 ] as const;
 
 export const CLI_COMMANDS = [
@@ -45,7 +46,15 @@ export const CLI_COMMANDS = [
   "list-theories",
   "list-dimensions",
   "privacy-guidance",
-  "governance-scope"
+  "governance-scope",
+  "demo-career-twin",
+  "demo-portfolio",
+  "demo-opportunity-intake",
+  "demo-skill-coach",
+  "demo-advisory",
+  "benchmark",
+  "list-workers",
+  "store-doctor"
 ] as const;
 
 export type ModeName = (typeof MODE_NAMES)[number];
@@ -64,6 +73,16 @@ export type SourceSearchOutcome =
   | "conflicting-sources"
   | "search-not-run"
   | "search-failed";
+
+export const RECENCY_POLICY_IDS = [
+  "job-liveness",
+  "salary-market",
+  "legal-regulatory",
+  "organization-contact",
+  "credential-status"
+] as const;
+
+export type RecencyPolicyId = (typeof RECENCY_POLICY_IDS)[number];
 
 export type ReversibilityTag = "R0" | "R1" | "R2" | "R3" | "R4";
 export type Confidence = "High" | "Medium" | "Low";
@@ -103,6 +122,7 @@ export interface Claim {
   sourcePointer: string;
   verifiedDate?: string;
   recencyRequired: boolean;
+  recencyPolicyId?: RecencyPolicyId;
   publiclyAssertable: boolean;
   allowedInCv: boolean;
   allowedInOutreach: boolean;
@@ -136,8 +156,8 @@ export interface ApplicationPacket {
   claims: ApplicationPacketClaim[];
   documents: Array<{
     kind: "cv" | "cover-letter" | "outreach" | "other";
-    path?: string;
-    contentHash?: string;
+    path: string;
+    contentHash: string;
   }>;
   tosCompliant: boolean;
   generatedAt: string;
@@ -168,19 +188,29 @@ export interface AutoApplyConfig {
 
 export interface ApprovalReference {
   approvalId: string;
+  operation: "auto-apply" | "forced-score";
   approvedBy: string;
+  keyId: string;
   approvedAt: string;
+  expiresAt: string;
   approvalTextHash: string;
+  opportunityId: string;
+  packetHash: string;
+  adapterId: string;
+  actionIntentHash: string;
+  allowedFields: string[];
+  signatureAlgorithm: "Ed25519";
+  signature: string;
 }
 
 export interface AutomationRiskSignals {
-  captchaPresent?: boolean;
-  antiBotDetected?: boolean;
-  paymentRequired?: boolean;
-  identityCheckRequired?: boolean;
-  tosUnclear?: boolean;
-  unsupportedLicenseClaim?: boolean;
-  credentialFabricationRequested?: boolean;
+  captchaPresent: boolean;
+  antiBotDetected: boolean;
+  paymentRequired: boolean;
+  identityCheckRequired: boolean;
+  tosUnclear: boolean;
+  unsupportedLicenseClaim: boolean;
+  credentialFabricationRequested: boolean;
 }
 
 export interface AutoApplyDecision {

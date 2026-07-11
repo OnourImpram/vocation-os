@@ -1,17 +1,29 @@
 #!/usr/bin/env node
-import { readFileSync } from "node:fs";
+import { generateKeyPairSync } from "node:crypto";
+import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
+import { WORKER_ROLES } from "./agent-controller.js";
 import { defaultLedgerPath, summarizeLedger } from "./action-ledger.js";
+import { createApprovalReference, type TrustedApprover } from "./approval.js";
+import { defaultAutoApplyConfigPath, loadAutoApplyConfig, saveAutoApplyConfig } from "./auto-apply-config.js";
 import { decideAutoApply, defaultAutoApplyConfig, enableAutoApply, engageKillSwitch, rearmAutoApply } from "./auto-apply.js";
+import { OfflineTemplateClient, generateAdvisoryNote } from "./advisor.js";
+import { createVocationBenchManifest } from "./benchmark/vocation-bench.js";
+import { createCareerTwin } from "./career-twin.js";
 import { validateApplicationPacket, validateClaimGraph } from "./claim-graph.js";
+import { buildCoachingPlan, PHT_SKILLS } from "./coach.js";
 import { runEvaluator } from "./evaluator.js";
+import { computeActionIntentHash } from "./hash.js";
 import { runDeepFit, runMode } from "./modes.js";
-import { EXAMPLES_DIR } from "./paths.js";
+import { createOpportunityRecord, evaluateOpportunityIntake } from "./opportunity.js";
+import { EXAMPLES_DIR, PACKAGE_ROOT } from "./paths.js";
+import { evaluateCareerPortfolio, PORTFOLIO_OBJECTIVES, type PortfolioWeights } from "./portfolio.js";
 import { demoDimensions, DIMENSION_IDS, scoreOpportunity } from "./rubric.js";
 import { SCHEMA_NAMES, validateAllSchemaFiles, validateAgainstSchema } from "./schema.js";
 import { defaultStateDir, readState, validateStateDirectory, writeState } from "./state.js";
+import { EncryptedEventStore } from "./storage/encrypted-event-store.js";
 import { THEORY_NAMES } from "./theory.js";
-import { CLI_COMMANDS, MODE_NAMES, PRODUCT_NAME, TAGLINE, type ApplicationPacket, type ClaimGraph } from "./types.js";
+import { CLI_COMMANDS, HIGH_STAKES_FLAGS, MODE_NAMES, PRODUCT_NAME, TAGLINE, type ApplicationPacket, type ClaimGraph, type HighStakesFlags } from "./types.js";
 
 function printJson(value: unknown): void {
   console.log(JSON.stringify(value, null, 2));
@@ -22,13 +34,34 @@ function readExample<T>(fileName: string): T {
   return JSON.parse(readFileSync(filePath, "utf8")) as T;
 }
 
-function demoApprovalReference() {
-  return {
+const demoApproverKeyPair = generateKeyPairSync("ed25519");
+const demoTrustedApprover: TrustedApprover = {
+  approvedBy: "demo-operator",
+  keyId: "KEY-DEMO-APPROVER-001",
+  publicKeyPem: demoApproverKeyPair.publicKey.export({ type: "spki", format: "pem" }).toString()
+};
+
+function demoApprovalReference(packet: ApplicationPacket, now: Date) {
+  return createApprovalReference({
     approvalId: "APR-DEMO-001",
-    approvedBy: "demo-operator",
-    approvedAt: "2026-07-04T00:00:00.000Z",
-    approvalTextHash: "sha256:5555555555555555555555555555555555555555555555555555555555555555"
-  };
+    operation: "auto-apply",
+    approvedBy: demoTrustedApprover.approvedBy,
+    keyId: demoTrustedApprover.keyId,
+    approvedAt: new Date(now.getTime() - 60_000).toISOString(),
+    expiresAt: new Date(now.getTime() + 3_600_000).toISOString(),
+    approvalTextHash: "sha256:5555555555555555555555555555555555555555555555555555555555555555",
+    opportunityId: packet.opportunityId,
+    packetHash: packet.packetHash,
+    adapterId: "local-fixture",
+    actionIntentHash: computeActionIntentHash({
+      operation: "auto-apply",
+      opportunityId: packet.opportunityId,
+      packetHash: packet.packetHash,
+      adapterId: "local-fixture",
+      reversibilityTag: "R3"
+    }),
+    allowedFields: ["application-packet"]
+  }, demoApproverKeyPair.privateKey);
 }
 
 function noRiskSignals() {
@@ -41,6 +74,10 @@ function noRiskSignals() {
     unsupportedLicenseClaim: false,
     credentialFabricationRequested: false
   };
+}
+
+function noHighStakesFlags(): HighStakesFlags {
+  return Object.fromEntries(HIGH_STAKES_FLAGS.map((flag) => [flag, false])) as HighStakesFlags;
 }
 
 function metrics(): Record<string, number> {
@@ -149,16 +186,20 @@ function demoAutoApplyDecision(): void {
     enabled: true,
     mode: "auto" as const
   };
+  const now = new Date();
   const decision = decideAutoApply({
     config,
     packet,
     claimGraph: graph,
     reversibilityTag: "R3",
     adapterId: "local-fixture",
-    approvalReference: demoApprovalReference(),
+    approvalReference: demoApprovalReference(packet, now),
+    trustedApprovers: [demoTrustedApprover],
     riskSignals: noRiskSignals(),
-    dailyUsageCount: 0,
-    ledgerPath: defaultLedgerPath()
+    highStakesFlags: noHighStakesFlags(),
+    documentRoot: PACKAGE_ROOT,
+    ledgerPath: defaultLedgerPath(),
+    now
   });
   printJson(decision);
 }
@@ -171,31 +212,120 @@ function demoAutoApplyAllowed(): void {
     enabled: true,
     mode: "auto" as const
   };
+  const now = new Date();
   const decision = decideAutoApply({
     config,
     packet,
     claimGraph: graph,
     reversibilityTag: "R3",
     adapterId: "local-fixture",
-    approvalReference: demoApprovalReference(),
+    approvalReference: demoApprovalReference(packet, now),
+    trustedApprovers: [demoTrustedApprover],
     riskSignals: noRiskSignals(),
-    dailyUsageCount: 0
+    highStakesFlags: noHighStakesFlags(),
+    documentRoot: PACKAGE_ROOT,
+    ledgerPath: defaultLedgerPath(),
+    now
   });
   printJson(decision);
 }
 
 function autoApplyStatus(): void {
-  printJson(defaultAutoApplyConfig());
+  printJson({ path: defaultAutoApplyConfigPath(), config: loadAutoApplyConfig() });
+}
+
+function demoCareerTwin(): void {
+  printJson(createCareerTwin("synthetic", [], [
+    { goalId: "GOAL-DEMO-001", label: "Preserve optionality while testing a new role family", horizon: "one-year", priority: 80, status: "active" }
+  ]));
+}
+
+function demoPortfolio(): void {
+  const scores = (value: number) => Object.fromEntries(PORTFOLIO_OBJECTIVES.map((objective) => [objective, value])) as Record<(typeof PORTFOLIO_OBJECTIVES)[number], number>;
+  const weights = Object.fromEntries(PORTFOLIO_OBJECTIVES.map((objective) => [objective, 1])) as PortfolioWeights;
+  printJson(evaluateCareerPortfolio([
+    { optionId: "ROUTE-REMOTE-AI", label: "Remote AI role", routeType: "job", scores: scores(78), uncertaintyBand: [68, 84], failedGates: [] },
+    { optionId: "ROUTE-FELLOWSHIP", label: "Research fellowship", routeType: "fellowship", scores: { ...scores(70), prestige: 90, "immigration-evidence": 88 }, uncertaintyBand: [60, 82], failedGates: [] },
+    { optionId: "ROUTE-BLOCKED", label: "License gated role", routeType: "job", scores: scores(92), uncertaintyBand: [75, 95], failedGates: ["license-not-verified"] }
+  ], weights));
+}
+
+function demoOpportunityIntake(): void {
+  const opportunity = createOpportunityRecord({
+    source: "manual",
+    sourceId: "DEMO-REMOTE-001",
+    sourceUrl: "https://example.test/jobs/demo-remote-001",
+    applyUrl: "https://example.test/jobs/demo-remote-001/apply",
+    company: "Synthetic Research Lab",
+    roleTitle: "Responsible AI Researcher",
+    locationText: "Remote worldwide",
+    remotePolicy: "remote",
+    applicantLocationRequirements: ["worldwide"],
+    descriptionText: "A synthetic opportunity used to test evidence grounded opportunity intake and remote eligibility gates.",
+    postedAt: new Date().toISOString(),
+    extractionConfidence: "high",
+    sourcePayload: { fixture: true }
+  });
+  printJson({ opportunity, decision: evaluateOpportunityIntake(opportunity, {
+    requiresRemote: true,
+    requireExplicitApplicantLocation: true,
+    candidateRegions: ["worldwide"],
+    maxAgeDays: 14,
+    minimumDescriptionCharacters: 60,
+    existingFingerprints: [],
+    evaluatedAt: new Date().toISOString()
+  }) });
+}
+
+function demoSkillCoach(): void {
+  printJson(buildCoachingPlan({
+    ratings: PHT_SKILLS.map((skill, index) => ({ skill, rating: Math.min(4, index) as 0 | 1 | 2 | 3 | 4 }))
+  }));
+}
+
+async function demoAdvisory(): Promise<void> {
+  const claimGraph = readExample<ClaimGraph>("claim-graph.json");
+  printJson(await generateAdvisoryNote(new OfflineTemplateClient(), {
+    mode: "/deep-fit",
+    opportunityId: "OPP-DEMO-001",
+    opportunitySummary: "Synthetic remote research role requiring evidence grounded evaluation.",
+    claimGraph,
+    reversibilityTag: "R0",
+    dataClassification: "public",
+    remoteEgressApproved: false
+  }));
+}
+
+function benchmark(): void {
+  printJson(createVocationBenchManifest());
+}
+
+async function storeDoctor(): Promise<void> {
+  const databasePath = process.argv[3];
+  const passphrase = process.env["VOCATION_STORE_PASSPHRASE"];
+  if (!databasePath || !existsSync(databasePath)) throw new Error("store-doctor requires an existing database path");
+  if (!passphrase) throw new Error("VOCATION_STORE_PASSPHRASE is required and is never printed");
+  const store = await EncryptedEventStore.open(databasePath, passphrase);
+  try {
+    const events = await store.readAll();
+    printJson({ valid: true, path: path.resolve(databasePath), eventCount: events.length });
+  } finally {
+    await store.close();
+  }
 }
 
 function autoApplyKill(): void {
-  printJson(engageKillSwitch(defaultAutoApplyConfig(), "operator", "manual kill command"));
+  const updated = engageKillSwitch(loadAutoApplyConfig(), "operator", "manual kill command");
+  saveAutoApplyConfig(updated);
+  printJson(updated);
 }
 
 function autoApplyRearm(): void {
   const token = process.argv[3] ?? "";
   try {
-    printJson(rearmAutoApply(engageKillSwitch(defaultAutoApplyConfig(), "operator", "test"), token));
+    const updated = rearmAutoApply(loadAutoApplyConfig(), token);
+    saveAutoApplyConfig(updated);
+    printJson(updated);
   } catch (error) {
     console.error(error instanceof Error ? error.message : String(error));
     process.exitCode = 1;
@@ -205,7 +335,9 @@ function autoApplyRearm(): void {
 function autoApplyEnable(): void {
   const mode = process.argv[3] === "auto" ? "auto" : "draft-only";
   try {
-    printJson(enableAutoApply(defaultAutoApplyConfig(), mode));
+    const updated = enableAutoApply(loadAutoApplyConfig(), mode);
+    saveAutoApplyConfig(updated);
+    printJson(updated);
   } catch (error) {
     console.error(error instanceof Error ? error.message : String(error));
     process.exitCode = 1;
@@ -309,6 +441,30 @@ switch (command) {
     break;
   case "governance-scope":
     governanceScope();
+    break;
+  case "demo-career-twin":
+    demoCareerTwin();
+    break;
+  case "demo-portfolio":
+    demoPortfolio();
+    break;
+  case "demo-opportunity-intake":
+    demoOpportunityIntake();
+    break;
+  case "demo-skill-coach":
+    demoSkillCoach();
+    break;
+  case "demo-advisory":
+    await demoAdvisory();
+    break;
+  case "benchmark":
+    benchmark();
+    break;
+  case "list-workers":
+    printJson(WORKER_ROLES);
+    break;
+  case "store-doctor":
+    await storeDoctor();
     break;
   default:
     console.error(`Unknown command: ${command}`);

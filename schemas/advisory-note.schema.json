@@ -1,0 +1,89 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://vocation-os.dev/schemas/advisory-note.schema.json",
+  "title": "AdvisoryNote",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "noteId",
+    "mode",
+    "advisoryOnly",
+    "reversibilityTag",
+    "narrative",
+    "theoryIds",
+    "citedClaimIds",
+    "disclaimers",
+    "generatedAt"
+  ],
+  "properties": {
+    "noteId": {
+      "type": "string",
+      "pattern": "^ADV-[A-Za-z0-9-]+$"
+    },
+    "mode": {
+      "type": "string",
+      "enum": [
+        "/decision-intake",
+        "/profile-audit",
+        "/opportunity-ingest",
+        "/deep-fit",
+        "/route-map",
+        "/cv-tailor",
+        "/cover-letter",
+        "/outreach",
+        "/interview-brief",
+        "/negotiation",
+        "/fellowship-watch",
+        "/phd-strategy",
+        "/founder-route",
+        "/public-profile",
+        "/evidence-gap",
+        "/steelman",
+        "/risk-register",
+        "/application-packet",
+        "/auto-apply-config",
+        "/post-action-review",
+        "/skill-coach"
+      ]
+    },
+    "advisoryOnly": {
+      "type": "boolean",
+      "const": true
+    },
+    "reversibilityTag": {
+      "type": "string",
+      "const": "R0"
+    },
+    "narrative": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 2000
+    },
+    "theoryIds": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "uniqueItems": true
+    },
+    "citedClaimIds": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "uniqueItems": true
+    },
+    "disclaimers": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "minItems": 1
+    },
+    "generatedAt": {
+      "type": "string",
+      "format": "date-time"
+    }
+  }
+}
+

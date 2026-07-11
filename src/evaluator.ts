@@ -1,11 +1,20 @@
-import { decideAutoApply, defaultAutoApplyConfig, engageKillSwitch } from "./auto-apply.js";
+import { generateKeyPairSync, randomUUID } from "node:crypto";
+import { rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import path from "node:path";
+import { decideAutoApply, defaultAutoApplyConfig, engageKillSwitch, type AutoApplyInput } from "./auto-apply.js";
+import { createApprovalReference, type TrustedApprover } from "./approval.js";
+import { createVocationBenchManifest } from "./benchmark/vocation-bench.js";
+import { createCareerTwin } from "./career-twin.js";
 import { validateApplicationPacket } from "./claim-graph.js";
-import { computeClaimTextHash, computePacketHash } from "./hash.js";
+import { computeActionIntentHash, computeClaimTextHash, computeFileHash, computePacketHash, sha256, stableStringify } from "./hash.js";
 import { runDeepFit } from "./modes.js";
+import { EXAMPLES_DIR, PACKAGE_ROOT } from "./paths.js";
 import { demoDimensions, scoreOpportunity } from "./rubric.js";
 import { validateAllSchemaFiles } from "./schema.js";
 import { encodeStateKey } from "./state.js";
-import { MODE_NAMES, PRODUCT_NAME, type ApplicationPacket, type ClaimGraph } from "./types.js";
+import { validateTheoryRegistry } from "./theory.js";
+import { HIGH_STAKES_FLAGS, MODE_NAMES, PRODUCT_NAME, type ApplicationPacket, type ClaimGraph, type HighStakesFlags } from "./types.js";
 
 export interface EvaluatorCase {
   id: string;
@@ -59,7 +68,11 @@ function packet(status: "verified" | "unverified" = "verified"): ApplicationPack
         publiclyAssertable: true
       }
     ],
-    documents: [{ kind: "cv", contentHash: "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" }],
+    documents: [{
+      kind: "cv",
+      path: path.join(EXAMPLES_DIR, "demo-profile", "source.md"),
+      contentHash: computeFileHash(path.join(EXAMPLES_DIR, "demo-profile", "source.md"))
+    }],
     tosCompliant: true,
     generatedAt: "2026-07-04T00:00:00.000Z",
     packetHash: "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
@@ -71,13 +84,60 @@ function packet(status: "verified" | "unverified" = "verified"): ApplicationPack
   };
 }
 
-function approvalReference() {
-  return {
+const EVALUATOR_NOW = new Date("2026-07-04T01:00:00.000Z");
+const evaluatorApproverKeyPair = generateKeyPairSync("ed25519");
+const evaluatorTrustedApprover: TrustedApprover = {
+  approvedBy: "evaluator",
+  keyId: "KEY-EVALUATOR-001",
+  publicKeyPem: evaluatorApproverKeyPair.publicKey.export({ type: "spki", format: "pem" }).toString()
+};
+
+function approvalReference(packetValue = packet()) {
+  return createApprovalReference({
     approvalId: "APR-EVAL-001",
-    approvedBy: "evaluator",
-    approvedAt: "2026-07-04T00:00:00.000Z",
-    approvalTextHash: "sha256:5555555555555555555555555555555555555555555555555555555555555555"
-  };
+    operation: "auto-apply",
+    approvedBy: evaluatorTrustedApprover.approvedBy,
+    keyId: evaluatorTrustedApprover.keyId,
+    approvedAt: "2026-07-04T00:30:00.000Z",
+    expiresAt: "2026-07-04T02:00:00.000Z",
+    approvalTextHash: "sha256:5555555555555555555555555555555555555555555555555555555555555555",
+    opportunityId: packetValue.opportunityId,
+    packetHash: packetValue.packetHash,
+    adapterId: "local-fixture",
+    actionIntentHash: computeActionIntentHash({
+      operation: "auto-apply",
+      opportunityId: packetValue.opportunityId,
+      packetHash: packetValue.packetHash,
+      adapterId: "local-fixture",
+      reversibilityTag: "R3"
+    }),
+    allowedFields: ["application-packet"]
+  }, evaluatorApproverKeyPair.privateKey);
+}
+
+function forcedScoreApproval(dimensions: ReturnType<typeof demoDimensions>) {
+  const opportunityId = "OPP-DEMO-001";
+  const subjectHash = sha256(stableStringify(dimensions));
+  return createApprovalReference({
+    approvalId: "APR-EVAL-FORCED-SCORE",
+    operation: "forced-score",
+    approvedBy: evaluatorTrustedApprover.approvedBy,
+    keyId: evaluatorTrustedApprover.keyId,
+    approvedAt: "2026-07-04T00:30:00.000Z",
+    expiresAt: "2026-07-04T02:00:00.000Z",
+    approvalTextHash: "sha256:6666666666666666666666666666666666666666666666666666666666666666",
+    opportunityId,
+    packetHash: subjectHash,
+    adapterId: "rubric",
+    actionIntentHash: computeActionIntentHash({
+      operation: "forced-score",
+      opportunityId,
+      packetHash: subjectHash,
+      adapterId: "rubric",
+      reversibilityTag: "R0"
+    }),
+    allowedFields: ["forced-score"]
+  }, evaluatorApproverKeyPair.privateKey);
 }
 
 function noRiskSignals() {
@@ -90,6 +150,26 @@ function noRiskSignals() {
     unsupportedLicenseClaim: false,
     credentialFabricationRequested: false
   };
+}
+
+function noHighStakesFlags(): HighStakesFlags {
+  return Object.fromEntries(HIGH_STAKES_FLAGS.map((flag) => [flag, false])) as HighStakesFlags;
+}
+
+function evaluateAutoApply(input: Omit<AutoApplyInput, "documentRoot" | "highStakesFlags" | "ledgerPath" | "now" | "trustedApprovers">) {
+  const ledgerPath = path.join(tmpdir(), `vocation-evaluator-${process.pid}-${randomUUID()}.jsonl`);
+  try {
+    return decideAutoApply({
+      ...input,
+      documentRoot: PACKAGE_ROOT,
+      highStakesFlags: noHighStakesFlags(),
+      ledgerPath,
+      trustedApprovers: [evaluatorTrustedApprover],
+      now: EVALUATOR_NOW
+    });
+  } finally {
+    rmSync(ledgerPath, { force: true });
+  }
 }
 
 export const EVALUATOR_TESTS: EvaluatorCase[] = [
@@ -129,7 +209,17 @@ export const EVALUATOR_TESTS: EvaluatorCase[] = [
   {
     id: "EV-005",
     name: "forced score remains low confidence",
-    run: () => scoreOpportunity({ dimensions: demoDimensions(), forced: true, approvalReference: approvalReference() }).confidence === "Low"
+    run: () => {
+      const dimensions = demoDimensions();
+      return scoreOpportunity({
+        dimensions,
+        forced: true,
+        opportunityId: "OPP-DEMO-001",
+        approvalReference: forcedScoreApproval(dimensions),
+        trustedApprovers: [evaluatorTrustedApprover],
+        now: EVALUATOR_NOW
+      }).confidence === "Low";
+    }
   },
   {
     id: "EV-006",
@@ -141,20 +231,20 @@ export const EVALUATOR_TESTS: EvaluatorCase[] = [
     name: "kill switch blocks first",
     run: () => {
       const config = engageKillSwitch({ ...defaultAutoApplyConfig(), enabled: true, mode: "auto" }, "tester", "test");
-      return decideAutoApply({ config, packet: packet(), claimGraph: demoGraph(), reversibilityTag: "R3", adapterId: "local-fixture", approvalReference: approvalReference(), riskSignals: noRiskSignals(), dailyUsageCount: 0 }).blockedBy === "kill-switch-engaged";
+      return evaluateAutoApply({ config, packet: packet(), claimGraph: demoGraph(), reversibilityTag: "R3", adapterId: "local-fixture", approvalReference: approvalReference(), riskSignals: noRiskSignals() }).blockedBy === "kill-switch-engaged";
     }
   },
   {
     id: "EV-008",
     name: "unverified packet claim blocks",
-    run: () => !validateApplicationPacket(packet("unverified"), demoGraph()).valid
+    run: () => !validateApplicationPacket(packet("unverified"), demoGraph(), { documentRoot: PACKAGE_ROOT, now: EVALUATOR_NOW }).valid
   },
   {
     id: "EV-009",
     name: "R4 blocks auto apply",
     run: () => {
       const config = { ...defaultAutoApplyConfig(), enabled: true, mode: "auto" as const };
-      return decideAutoApply({ config, packet: packet(), claimGraph: demoGraph(), reversibilityTag: "R4", adapterId: "local-fixture", approvalReference: approvalReference(), riskSignals: noRiskSignals(), dailyUsageCount: 0 }).blockedBy === "r4-not-auto-submittable";
+      return evaluateAutoApply({ config, packet: packet(), claimGraph: demoGraph(), reversibilityTag: "R4", adapterId: "local-fixture", approvalReference: approvalReference(), riskSignals: noRiskSignals() }).blockedBy === "r4-not-auto-submittable";
     }
   },
   {
@@ -190,15 +280,52 @@ export const EVALUATOR_TESTS: EvaluatorCase[] = [
     name: "approval is required for allowed auto apply",
     run: () => {
       const config = { ...defaultAutoApplyConfig(), enabled: true, mode: "auto" as const };
-      return decideAutoApply({ config, packet: packet(), claimGraph: demoGraph(), reversibilityTag: "R3", adapterId: "local-fixture", riskSignals: noRiskSignals(), dailyUsageCount: 0 }).blockedBy === "approval-required";
+      return evaluateAutoApply({ config, packet: packet(), claimGraph: demoGraph(), reversibilityTag: "R3", adapterId: "local-fixture", riskSignals: noRiskSignals() }).blockedBy === "approval-required";
     }
   },
   {
     id: "EV-014",
-    name: "adapter allowlist blocks unknown adapter",
+    name: "unshipped execution adapter blocks before config allowlist",
     run: () => {
       const config = { ...defaultAutoApplyConfig(), enabled: true, mode: "auto" as const };
-      return decideAutoApply({ config, packet: packet(), claimGraph: demoGraph(), reversibilityTag: "R3", adapterId: "unknown", approvalReference: approvalReference(), riskSignals: noRiskSignals(), dailyUsageCount: 0 }).blockedBy === "adapter-not-allowlisted";
+      return evaluateAutoApply({ config, packet: packet(), claimGraph: demoGraph(), reversibilityTag: "R3", adapterId: "unknown", approvalReference: approvalReference(), riskSignals: noRiskSignals() }).blockedBy === "execution-adapter-not-shipped";
+    }
+  },
+  {
+    id: "EV-015",
+    name: "theory registry is internally consistent",
+    run: () => validateTheoryRegistry().valid
+  },
+  {
+    id: "EV-016",
+    name: "VocationBench materializes the committed fixture scale",
+    run: () => {
+      const manifest = createVocationBenchManifest(EVALUATOR_NOW);
+      return manifest.profileCount === 500 && manifest.opportunityCount === 1000 && manifest.adversarialCaseCount === 200 && manifest.proofCaseCount === 100;
+    }
+  },
+  {
+    id: "EV-017",
+    name: "Career Digital Twin validates synthetic state",
+    run: () => createCareerTwin("synthetic", [], [], EVALUATOR_NOW).profileScope === "synthetic"
+  },
+  {
+    id: "EV-018",
+    name: "R3 packet cannot opt out of approval",
+    run: () => {
+      const base = packet();
+      const packetWithoutApproval = { ...base, approvalRequired: false };
+      packetWithoutApproval.packetHash = computePacketHash(packetWithoutApproval);
+      const config = { ...defaultAutoApplyConfig(), enabled: true, mode: "auto" as const };
+      return evaluateAutoApply({ config, packet: packetWithoutApproval, claimGraph: demoGraph(), reversibilityTag: "R3", adapterId: "local-fixture", riskSignals: noRiskSignals() }).blockedBy === "approval-required";
+    }
+  },
+  {
+    id: "EV-019",
+    name: "incomplete risk observations fail closed",
+    run: () => {
+      const config = { ...defaultAutoApplyConfig(), enabled: true, mode: "auto" as const };
+      return evaluateAutoApply({ config, packet: packet(), claimGraph: demoGraph(), reversibilityTag: "R3", adapterId: "local-fixture", approvalReference: approvalReference(), riskSignals: {} as ReturnType<typeof noRiskSignals> }).blockedBy === "risk-signals-incomplete";
     }
   }
 ];

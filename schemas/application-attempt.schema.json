@@ -1,0 +1,30 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://vocation-os.dev/schemas/application-attempt.schema.json",
+  "title": "ApplicationAttempt",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "attemptId", "opportunityId", "packetHash", "adapterId", "channel", "reversibilityTag",
+    "highStakesGatePassed", "actionIntentHash", "status", "createdAt", "updatedAt",
+    "approvalId", "proofId", "proofReceiptHash", "collectorId", "blocker"
+  ],
+  "properties": {
+    "attemptId": { "type": "string", "pattern": "^ATT-\\d{4}-[0-9a-f-]{36}$" },
+    "opportunityId": { "type": "string", "pattern": "^OPP-[A-Z0-9-]+$" },
+    "packetHash": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+    "adapterId": { "type": "string", "minLength": 1 },
+    "channel": { "type": "string", "enum": ["ats-form", "official-email", "platform-profile", "other"] },
+    "reversibilityTag": { "type": "string", "enum": ["R0", "R1", "R2", "R3", "R4"] },
+    "highStakesGatePassed": { "type": "boolean" },
+    "actionIntentHash": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+    "status": { "type": "string", "enum": ["prepared", "approved", "submitted_unconfirmed", "confirmed", "blocked"] },
+    "createdAt": { "type": "string", "format": "date-time" },
+    "updatedAt": { "type": "string", "format": "date-time" },
+    "approvalId": { "oneOf": [{ "type": "string", "pattern": "^APR-[A-Z0-9-]+$" }, { "type": "null" }] },
+    "proofId": { "oneOf": [{ "type": "string", "pattern": "^PRF-[A-F0-9]{20}$" }, { "type": "null" }] },
+    "proofReceiptHash": { "oneOf": [{ "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" }, { "type": "null" }] },
+    "collectorId": { "oneOf": [{ "type": "string", "pattern": "^COL-[A-Z0-9-]+$" }, { "type": "null" }] },
+    "blocker": { "oneOf": [{ "type": "string", "minLength": 1 }, { "type": "null" }] }
+  }
+}

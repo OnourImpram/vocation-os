@@ -1,6 +1,7 @@
 import { appendFileSync, existsSync, mkdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { assertSchema } from "./schema.js";
+import { defaultRuntimeRoot } from "./paths.js";
 import type { ActionLedgerEntry } from "./types.js";
 import { randomUUID } from "node:crypto";
 
@@ -10,7 +11,7 @@ export function createActionId(date = new Date()): string {
 }
 
 export function defaultLedgerPath(): string {
-  return path.join(process.cwd(), ".vocationos", "action-ledger.jsonl");
+  return path.join(defaultRuntimeRoot(), "action-ledger.jsonl");
 }
 
 export function appendLedgerEntry(filePath: string, entry: ActionLedgerEntry): void {
