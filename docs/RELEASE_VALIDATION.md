@@ -49,6 +49,8 @@ The initial bounded architecture reviews identified preauthentication migration,
 | Package | Build and pack surface check passed |
 | Windows binary smoke | `vocationd` reached healthy state, applied 2 migrations, rejected a second daemon after lock deletion, retained authority, and persisted the manual kill state |
 
+GitHub pull request [#5](https://github.com/OnourImpram/vocation-os/pull/5) publishes the verified `release/v0.4` tree for review. GitHub Actions run `29157345842` passed on both platforms. Ubuntu completed in 46 seconds and Windows completed in 1 minute 37 seconds.
+
 No npm publish, registry deprecation, production signing key creation, or automatic merge is part of this release pass.
 
 ## v0.3.1 Release Candidate

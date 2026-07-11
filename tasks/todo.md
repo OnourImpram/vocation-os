@@ -62,7 +62,7 @@
 - [x] Add migration, import, backup, restore, daemon, IPC, checkpoint, and rollback adversarial tests.
 - [x] Update CLI contracts, schemas, threat model, roadmap, changelog, and release evidence.
 - [x] Pass the full release gate and independent P0/P1 review.
-- [ ] Publish a reviewable `release/v0.4` branch and PR without automatic merge.
+- [x] Publish a reviewable `release/v0.4` branch and PR without automatic merge.
 
 ### v0.4 Baseline Evidence
 
@@ -85,3 +85,5 @@
 - 2026-07-11: a second fresh read only review found two release blocking P1 boundaries involving a missing daemon lock record and malformed evaluation data reaching the event store. Publication was stopped and the final gate was reopened.
 - 2026-07-11: both final P1 remediations passed focused tests, the complete release gate, and independent focused rechecks with no remaining P0 or P1 issue.
 - 2026-07-11: adversarial Windows binary smoke removed the live daemon lock, verified that a second daemon failed closed on the reachable endpoint, and confirmed that the first daemon retained authenticated authority.
+- 2026-07-11: GitHub Git Data API published 56 verified file blobs in commit `7146316efeeb49a8886025651ba742e43ab3e2ba` on `release/v0.4`. The remote recursive tree matched every local canonical blob hash.
+- 2026-07-11: pull request `#5` opened without automatic merge or npm publication. GitHub Actions run `29157345842` passed on Ubuntu in 46 seconds and Windows in 1 minute 37 seconds.
