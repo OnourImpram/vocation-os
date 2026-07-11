@@ -2,6 +2,55 @@
 
 This document records the VocationOS release engineering evidence. It is not a compliance certification.
 
+## v0.4.0 Release Candidate
+
+Date: 2026-07-11
+
+Status: local release gate passed after independent P0 and P1 remediation review.
+
+Base: clean `origin/main` checkout at `bcf30d67b4b9b96a2bc067ada543f679075a55e6`.
+
+The previous dirty checkout was not modified.
+
+## v0.4.0 Runtime Authority Evidence
+
+The v0.4.0 pass moves consequential local runtime mutation behind `vocationd` and authenticated IPC. The shipped CLI still exposes read only, demo, validation, and backup or restore operations where direct store access is required under an exclusive local lock.
+
+| Boundary | Evidence |
+| --- | --- |
+| Migration | Checksummed SQLite migrations replace implicit schema creation. |
+| Legacy import | Dry run and apply paths are content bound, idempotent, and rollback backed. |
+| Backup and restore | Encrypted envelope restore requires explicit overwrite approval and rolls back on failed verification. |
+| Credentials | OS keyring and headless passphrase providers are separated and validated. |
+| Authority | `vocationd` is a single writer with authenticated IPC, request MACs, request idempotency, and single instance locking. |
+| Runtime policy | Caller supplied config, approver registries, ledger paths, document roots, and adapter allowlists do not override canonical authority state. |
+| Checkpoints | Ed25519 signed event chain checkpoints detect rollback, deletion, tampering, and external digest mismatch. |
+| Release truth | Package metadata, README metrics, architecture, threat model, roadmap, changelog, and pack surface now describe v0.4.0. |
+
+The initial bounded architecture reviews identified preauthentication migration, split authority, idempotency, key custody, rollback, and checkpoint risks. The implementation and focused adversarial tests address those findings. A later read only review identified two additional P1 boundaries involving missing lock records and malformed evaluation inputs. Endpoint ownership now fails closed when a live daemon has no lock record, Unix active sockets cannot be replaced, evaluation contracts are validated before authoritative writes, and ledger entries are validated again at the write boundary. Independent focused rechecks found no remaining P0 or P1 issue.
+
+## v0.4.0 Final Local Evidence
+
+`npm run ci` passed after the final P1 remediation on 2026-07-11.
+
+| Check | Result |
+| --- | --- |
+| Privacy scan | PASS |
+| Brand scan | PASS |
+| Strict TypeScript | PASS |
+| Vitest | 41 files, 218 tests passed |
+| JSON Schema | 20 schemas valid |
+| Selfcheck | PASS |
+| Evaluator | 19 of 19 passed |
+| Documentation metrics | PASS |
+| Citation contract | 23 records passed offline validation |
+| SBOM | 411 components parsed |
+| Astro | 2 pages built |
+| Package | Build and pack surface check passed |
+| Windows binary smoke | `vocationd` reached healthy state, applied 2 migrations, rejected a second daemon after lock deletion, retained authority, and persisted the manual kill state |
+
+No npm publish, registry deprecation, production signing key creation, or automatic merge is part of this release pass.
+
 ## v0.3.1 Release Candidate
 
 Date: 2026-07-11

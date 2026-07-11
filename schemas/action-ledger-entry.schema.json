@@ -50,7 +50,7 @@
     },
     "result": {
       "type": "string",
-      "enum": ["blocked", "draft_generated", "submitted", "confirmed"]
+      "enum": ["blocked", "decision_allowed", "draft_generated", "submitted", "confirmed"]
     },
     "blockedBy": {
       "type": "string"

@@ -19,6 +19,7 @@
 5. A forged success message or altered proof.
 6. A local database mutation.
 7. Accidental publication of private profile artifacts.
+8. A stale process, replayed IPC request, or second local writer.
 
 ## Enforced Mitigations
 
@@ -36,6 +37,10 @@ Collector receipts are signed, source constrained, attempt bound, action intent 
 
 Encrypted events are hash chained and authenticated. An encrypted chain head detects suffix truncation. Snapshots must bind to an aggregate event checkpoint.
 
+Existing stores authenticate the key, SQLite image, event hashes, payload tags, and chain head before migrations can write. Migration checksums are verified on every open.
+
+Daemon connections use challenge response HMAC, per connection message authentication, monotonic request sequences, bounded frames, durable request receipts, and an exclusive process lock.
+
 Worker phase advancement requires a registered actor manifest and the phase specific read, write, or execute capability.
 
 Privacy and brand scans operate as release gates.
@@ -48,10 +53,12 @@ Opaque identifiers and operational metadata remain visible in the SQLite file.
 
 The current local event chain has no independent external timestamp.
 
-Full database deletion, replacement, or replay of both an old database and its encrypted chain head requires an external checkpoint to detect. Signed device checkpoints and OS credential storage remain roadmap work.
+Full database deletion, replacement, or replay of both an old database and its encrypted chain head requires an external checkpoint copy or retained signing context to detect. Signed checkpoints and credential provider boundaries now exist, but external archival and recovery drills remain required for full device compromise.
 
-The v0.3.1 pure policy API is not an isolation boundary against malicious code in the same process. Consequential adapters are therefore compile blocked. The planned daemon must own authoritative config, ledger paths, approver registries, and adapter capabilities before production execution ships.
+Administrator access, root access, compromised OS credentials, malicious code already executing as the same operating system user, and simultaneous rollback of both SQLite and its external credential state remain outside the local daemon guarantee.
+
+The pure policy API is not an isolation boundary against malicious code in the same process. Consequential adapters are therefore compile blocked. `vocationd` now owns authoritative config, ledger paths, approver registries, and adapter capabilities before production execution ships.
 
 The initial opportunity concept matcher is deterministic and limited.
 
-Desktop keychain, daemon isolation, plugin process sandboxing, production browser collectors, and recovery drills remain future work.
+Desktop workbench integration, plugin process sandboxing, production browser collectors, external checkpoint archival, and recovery drills remain future work.

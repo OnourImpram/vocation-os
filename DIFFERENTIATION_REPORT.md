@@ -8,12 +8,12 @@ VocationOS is differentiated by conditional, evidence bound automation and longi
 | --- | --- |
 | Claim and packet integrity | Implemented and tested |
 | Reversibility and high stakes gates | Implemented and tested |
-| Signed, scoped ApprovalReference | Implemented and tested with synthetic keys. Production key custody remains roadmap. |
+| Signed, scoped ApprovalReference | Implemented and tested. Trusted approver registry authority and local key custody are behind `vocationd`. Production collector key custody remains roadmap. |
 | Complete risk observations and ledger rate limits | Implemented and tested |
 | Attempt and action bound trusted collector receipt model | Implemented and tested with synthetic keys |
 | Production ATS collector keys | Roadmap |
 | Encrypted SQLite event store and authenticated chain head | Implemented and tested |
-| Canonical migration of every CLI state path | Roadmap |
+| Canonical migration of legacy CLI state | Implemented and tested with deterministic plan hashes, source preservation, encrypted rollback backup, and idempotent receipts. |
 | Temporal Career Digital Twin contract | Implemented and tested |
 | Claim first Document AST | Implemented and tested for exact, single-claim `verbatim-claim` rendering. Human-approved synthesis remains roadmap. |
 | Multi objective portfolio analysis | Implemented and tested |
@@ -25,7 +25,7 @@ VocationOS is differentiated by conditional, evidence bound automation and longi
 | VocationBench fixture and metric engine | Implemented and tested |
 | Reproducible competitor benchmark results | Roadmap |
 | Desktop workbench and browser copilot | Roadmap |
-| Production execution adapter authority behind `vocationd` | Roadmap. v0.3.1 is compile limited to a synthetic local fixture. |
+| Runtime adapter authority behind `vocationd` | Implemented and tested. v0.4.0 remains compile limited to a synthetic local fixture and ships no production execution adapter. |
 
 ## Positioning
 

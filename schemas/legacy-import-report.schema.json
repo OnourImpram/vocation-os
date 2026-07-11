@@ -1,0 +1,50 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://vocation-os.dev/schemas/legacy-import-report.schema.json",
+  "title": "LegacyImportPlanSummary",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version", "valid", "planHash", "sourceCounts", "candidates", "warnings", "errors"],
+  "properties": {
+    "version": { "const": 1 },
+    "valid": { "type": "boolean" },
+    "planHash": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+    "sourceCounts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["state", "auto-apply-config", "action-ledger"],
+      "properties": {
+        "state": { "type": "integer", "minimum": 0 },
+        "auto-apply-config": { "type": "integer", "minimum": 0 },
+        "action-ledger": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "candidates": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "sourceKind",
+          "sourceDigest",
+          "sourceLocatorHash",
+          "eventId",
+          "aggregateType",
+          "aggregateId",
+          "eventType"
+        ],
+        "properties": {
+          "sourceKind": { "enum": ["state", "auto-apply-config", "action-ledger"] },
+          "sourceDigest": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+          "sourceLocatorHash": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+          "eventId": { "type": "string", "pattern": "^EVT-LEGACY-[a-f0-9]{64}$" },
+          "aggregateType": { "type": "string", "minLength": 1 },
+          "aggregateId": { "type": "string", "minLength": 1 },
+          "eventType": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "warnings": { "type": "array", "items": { "type": "string" } },
+    "errors": { "type": "array", "items": { "type": "string" } }
+  }
+}

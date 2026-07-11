@@ -8,11 +8,13 @@ Synthetic examples are stored under `examples/demo-profile/`. Real data belongs 
 
 ## Local Store
 
-The encrypted event store protects event and snapshot payloads with AES 256 GCM. A headless passphrase is derived with `scrypt` and is never written to the database.
+The encrypted event store protects event and snapshot payloads with AES 256 GCM. Native runtime secrets use the OS credential store. The headless credential vault uses a masked master passphrase with `scrypt` and AES 256 GCM. Passphrases are not accepted through arguments, environment variables, shell fallbacks, or plaintext files.
 
 Opaque aggregate identifiers, event types, timestamps, sequence numbers, and hashes remain operational metadata and are not encrypted.
 
-Desktop OS credential integration is not yet implemented. There is no plaintext fallback.
+Legacy import reports redact payload values and decoded state keys. They still expose deterministic hashes. Hashes are integrity bindings, not anonymization, and low entropy values may remain susceptible to local dictionary testing.
+
+The headless credential vault and encrypted database normally share one runtime root. Whole directory rollback can replay both the database and its retained checkpoint digest. The native OS credential route provides a stronger separation boundary. External checkpoint archival remains roadmap work.
 
 ## Remote Advisory
 

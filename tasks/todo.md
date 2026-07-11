@@ -49,3 +49,39 @@
 - 2026-07-11: existing dirty checkout was left unchanged.
 - 2026-07-11: baseline typecheck, 45 tests, schemas, selfcheck, evaluator, privacy, brand, and docs checks passed.
 - 2026-07-11: full release gate exceeded the initial 300 second wrapper, so component timings are tracked separately.
+
+## v0.4 Encrypted Runtime and Authority
+
+- [x] Replace implicit schema creation with checksummed, versioned SQLite migrations.
+- [x] Add idempotent dry-run and execute paths for legacy state, config, and ledger import.
+- [x] Add encrypted, authenticated database backup and crash-safe restore with explicit overwrite approval.
+- [x] Add strict credential-provider boundaries for OS keyring and headless passphrase operation.
+- [x] Add `vocationd` as the single-writer local authority with authenticated IPC and request idempotency.
+- [x] Route consequential config mutations through the authority while retaining documented compatibility behavior.
+- [x] Add Ed25519-signed event-chain checkpoints and an exportable audit bundle.
+- [x] Add migration, import, backup, restore, daemon, IPC, checkpoint, and rollback adversarial tests.
+- [x] Update CLI contracts, schemas, threat model, roadmap, changelog, and release evidence.
+- [x] Pass the full release gate and independent P0/P1 review.
+- [ ] Publish a reviewable `release/v0.4` branch and PR without automatic merge.
+
+### v0.4 Baseline Evidence
+
+- 2026-07-11: fresh checkout created from merged `origin/main` at `bcf30d67b4b9b96a2bc067ada543f679075a55e6`.
+- 2026-07-11: `npm ci` completed with zero reported vulnerabilities.
+- 2026-07-11: baseline `npm run safe:publish-check` passed with 157 tests, 17 schemas, and 19 evaluator cases.
+- 2026-07-11: local git ref creation was denied by the runtime policy. The validated tree will be published through the GitHub Git Data API.
+- 2026-07-11: resumed after archived-task recovery from the v0.4 CLI authority handoff point.
+- 2026-07-11: `npm run typecheck` passed after daemon, IPC, credential, checkpoint, migration, import, and backup additions.
+- 2026-07-11: `npm test` passed with 34 test files and 185 tests, including daemon authority, IPC, single-instance, checkpoint, encrypted backup, and legacy import coverage.
+- 2026-07-11: `npm run build`, `npm run validate:schemas`, `npm run selfcheck`, and `npm run evaluate` passed.
+- 2026-07-11: `node dist\cli.js daemon-status` failed closed when `vocationd` credentials were not initialized, as expected.
+- 2026-07-11: Initial bounded architecture reviews identified preauthentication migration, split authority, idempotency, rollback, key custody, and external checkpoint risks. Final bounded P0/P1 review found no P0 issue. Valid release truth and docs metric blockers were fixed.
+- 2026-07-11: `npm test -- test/unit/action-ledger.test.ts` passed after the rate limit fixture was aligned with signed approver verification and submitted ledger usage.
+- 2026-07-11: `npm test -- test/unit/runtime-policy-authority.test.ts` passed with 6 tests for canonical config, approver registry, ledger path, document root, adapter allowlist, and idempotent authority behavior.
+- 2026-07-11: a focused remediation pass closed early-lock ordering, interrupted restore recovery, mandatory checkpoint verification, physical schema drift detection, chain-bound import backups, and headless credential rollback findings.
+- 2026-07-11: final `npm run ci` passed with 41 test files, 218 tests, 20 schemas, 19 evaluator cases, 23 citation records, a 411-component SBOM, 2 Astro pages, and a clean package surface.
+- 2026-07-11: a fresh independent read only P0/P1 review returned PASS with no remaining blocker.
+- 2026-07-11: real Windows binary smoke reached healthy daemon state, applied 2 migrations, accepted authenticated CLI requests, and persisted `killSwitch.engaged=true`, `enabled=false`, and `mode=manual` before cleanup.
+- 2026-07-11: a second fresh read only review found two release blocking P1 boundaries involving a missing daemon lock record and malformed evaluation data reaching the event store. Publication was stopped and the final gate was reopened.
+- 2026-07-11: both final P1 remediations passed focused tests, the complete release gate, and independent focused rechecks with no remaining P0 or P1 issue.
+- 2026-07-11: adversarial Windows binary smoke removed the live daemon lock, verified that a second daemon failed closed on the reachable endpoint, and confirmed that the first daemon retained authenticated authority.

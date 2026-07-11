@@ -4,7 +4,7 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { appendLedgerEntry, createActionId, readLedger } from "../../src/action-ledger.js";
 import { decideAutoApply } from "../../src/auto-apply.js";
-import { DEMO_DOCUMENT_ROOT, demoApprovalReference, demoGraph, demoPacket, enabledConfig, noHighStakesFlags, noRiskSignals } from "../fixtures.js";
+import { DEMO_DOCUMENT_ROOT, demoApprovalReference, demoGraph, demoPacket, demoTrustedApprovers, enabledConfig, noHighStakesFlags, noRiskSignals } from "../fixtures.js";
 
 describe("action ledger", () => {
   it("records blocked auto apply attempts when a ledger path is provided", () => {
@@ -17,7 +17,8 @@ describe("action ledger", () => {
         claimGraph: demoGraph(),
         reversibilityTag: "R3",
         adapterId: "local-fixture",
-        approvalReference: demoApprovalReference(),
+        approvalReference: demoApprovalReference({ now: new Date("2026-07-04T00:00:00.000Z") }),
+        trustedApprovers: demoTrustedApprovers(),
         riskSignals: noRiskSignals(),
         highStakesFlags: noHighStakesFlags(),
         documentRoot: DEMO_DOCUMENT_ROOT,
@@ -78,7 +79,7 @@ describe("action ledger", () => {
         approvalRequired: true,
         approvalReceived: true,
         highStakesGatePassed: true,
-        result: "draft_generated"
+        result: "submitted"
       });
       const config = enabledConfig();
       config.rateLimit.maxPerDay = 1;
@@ -88,7 +89,8 @@ describe("action ledger", () => {
         claimGraph: demoGraph(),
         reversibilityTag: "R3",
         adapterId: "local-fixture",
-        approvalReference: demoApprovalReference(),
+        approvalReference: demoApprovalReference({ now: new Date("2026-07-04T02:00:00.000Z") }),
+        trustedApprovers: demoTrustedApprovers(),
         riskSignals: noRiskSignals(),
         highStakesFlags: noHighStakesFlags(),
         documentRoot: DEMO_DOCUMENT_ROOT,

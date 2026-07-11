@@ -60,9 +60,9 @@ describe("encrypted event store", () => {
     sqlite.prepare("UPDATE events SET payload_ciphertext = ? WHERE sequence = 1").run("AAAA");
     sqlite.close();
 
-    const reopened = await EncryptedEventStore.open(databasePath, "correct horse battery staple");
-    await expect(reopened.readAll()).rejects.toThrow("Event hash is invalid");
-    await reopened.close();
+    await expect(EncryptedEventStore.open(databasePath, "correct horse battery staple")).rejects.toThrow(
+      "Event hash is invalid"
+    );
   });
 
   it("chains consecutive events", async () => {
@@ -152,8 +152,8 @@ describe("encrypted event store", () => {
     sqlite.prepare("DELETE FROM events WHERE sequence = 2").run();
     sqlite.close();
 
-    const reopened = await EncryptedEventStore.open(databasePath, "correct horse battery staple");
-    await expect(reopened.readAll()).rejects.toThrow("authenticated chain head");
-    await reopened.close();
+    await expect(EncryptedEventStore.open(databasePath, "correct horse battery staple")).rejects.toThrow(
+      "authenticated chain head"
+    );
   });
 });
