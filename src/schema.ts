@@ -23,7 +23,10 @@ export const SCHEMA_NAMES = [
   "opportunity-intake",
   "opportunity-record",
   "opportunity-score",
-  "submission-proof"
+  "submission-proof",
+  "backup-manifest",
+  "legacy-import-report",
+  "store-verification-report"
 ] as const;
 
 export type SchemaName = (typeof SCHEMA_NAMES)[number];

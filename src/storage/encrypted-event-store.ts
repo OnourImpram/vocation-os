@@ -1,9 +1,15 @@
-import { chmodSync, mkdirSync } from "node:fs";
+import { chmodSync, existsSync, mkdirSync, statSync } from "node:fs";
 import path from "node:path";
 import { createCipheriv, createDecipheriv, randomBytes, randomUUID, scryptSync } from "node:crypto";
 import BetterSqlite3 from "better-sqlite3";
 import { Generated, Kysely, SqliteDialect } from "kysely";
 import { sha256, stableStringify } from "../hash.js";
+import {
+  applyStoreMigrations,
+  LATEST_STORE_MIGRATION,
+  listStoreMigrations,
+  type AppliedMigration
+} from "./migrations.js";
 
 interface EventRow {
   sequence: Generated<number>;
@@ -48,12 +54,44 @@ interface EncryptedPayload {
   tag: string;
 }
 
-interface ChainHead {
+export interface ChainHead {
   eventCount: number;
   headHash: string;
 }
 
+export interface LegacyImportReceipt {
+  sourceDigest: string;
+  sourceKind: string;
+  sourceLocatorHash: string;
+  eventId: string;
+  importedAt: string;
+}
+
+export interface AuthorityReceipt {
+  requestId: string;
+  requestHash: string;
+  operation: string;
+  eventId: string | null;
+  responseHash: string;
+  completedAt: string;
+}
+
+export interface SignedCheckpointRecord {
+  checkpointId: string;
+  databaseId: string;
+  schemaVersion: number;
+  eventCount: number;
+  headHash: string;
+  createdAt: string;
+  deviceId: string;
+  keyId: string;
+  previousCheckpointDigest: string;
+  publicKeyPem: string;
+  signature: string;
+}
+
 export interface AppendEventInput<T> {
+  eventId?: string;
   aggregateType: string;
   aggregateId: string;
   eventType: string;
@@ -170,6 +208,111 @@ function decodeChainHead(key: Buffer, value: string): ChainHead {
   }
 }
 
+function readExistingMetadata(sqlite: BetterSqlite3.Database): Map<string, string> {
+  try {
+    const rows = sqlite.prepare(`
+      SELECT key, value FROM metadata
+      WHERE key IN (
+        'encryption_salt',
+        'key_check_ciphertext',
+        'key_check_nonce',
+        'key_check_tag',
+        'event_chain_head',
+        'database_id'
+      )
+    `).all() as MetadataRow[];
+    return new Map(rows.map((row) => [row.key, row.value]));
+  } catch {
+    throw new Error("Existing database is not a recognizable encrypted VocationOS store");
+  }
+}
+
+function databaseIdFromSalt(salt: string): string {
+  const hex = sha256(`vocation-os:database-id:${salt}`).slice("sha256:".length, "sha256:".length + 32);
+  return `DB-${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20, 32)}`;
+}
+
+function authenticateExistingStore(sqlite: BetterSqlite3.Database, passphrase: string): Buffer {
+  const integrity = sqlite.pragma("integrity_check", { simple: true });
+  if (integrity !== "ok") {
+    throw new Error(`SQLite integrity check failed before migration: ${String(integrity)}`);
+  }
+  const metadata = readExistingMetadata(sqlite);
+  const salt = metadata.get("encryption_salt");
+  const chainHeadValue = metadata.get("event_chain_head");
+  if (!salt || !chainHeadValue) {
+    throw new Error("Existing encrypted store metadata is incomplete");
+  }
+  const key = deriveKey(passphrase, Buffer.from(salt, "base64url"));
+  try {
+    const keyCheck = decrypt(key, {
+      ciphertext: metadata.get("key_check_ciphertext") ?? "",
+      nonce: metadata.get("key_check_nonce") ?? "",
+      tag: metadata.get("key_check_tag") ?? ""
+    }, KEY_CHECK_AAD);
+    if (keyCheck !== KEY_CHECK_VALUE) throw new Error("invalid key check value");
+  } catch {
+    key.fill(0);
+    throw new Error("Unable to unlock the local store with the supplied passphrase");
+  }
+
+  const chainHead = decodeChainHead(key, chainHeadValue);
+  let rows: EventRow[];
+  try {
+    rows = sqlite.prepare("SELECT * FROM events ORDER BY sequence").all() as EventRow[];
+  } catch {
+    key.fill(0);
+    throw new Error("Existing encrypted store event table is missing or unreadable");
+  }
+  let expectedPreviousHash = GENESIS_HASH;
+  for (const row of rows) {
+    if (row.previous_hash !== expectedPreviousHash) {
+      key.fill(0);
+      throw new Error(`Event chain is broken at sequence ${row.sequence}`);
+    }
+    const rowWithoutHash: Omit<EventRow, "sequence" | "event_hash"> = {
+      event_id: row.event_id,
+      aggregate_type: row.aggregate_type,
+      aggregate_id: row.aggregate_id,
+      event_type: row.event_type,
+      schema_version: row.schema_version,
+      occurred_at: row.occurred_at,
+      payload_ciphertext: row.payload_ciphertext,
+      payload_nonce: row.payload_nonce,
+      payload_tag: row.payload_tag,
+      previous_hash: row.previous_hash
+    };
+    if (computeEventHash(rowWithoutHash) !== row.event_hash) {
+      key.fill(0);
+      throw new Error(`Event hash is invalid at sequence ${row.sequence}`);
+    }
+    try {
+      const aad = eventAad({
+        eventId: row.event_id,
+        aggregateType: row.aggregate_type,
+        aggregateId: row.aggregate_id,
+        eventType: row.event_type,
+        schemaVersion: row.schema_version,
+        occurredAt: row.occurred_at
+      });
+      JSON.parse(decrypt(key, {
+        ciphertext: row.payload_ciphertext,
+        nonce: row.payload_nonce,
+        tag: row.payload_tag
+      }, aad));
+    } catch {
+      key.fill(0);
+      throw new Error(`Encrypted event payload cannot be authenticated at sequence ${row.sequence}`);
+    }
+    expectedPreviousHash = row.event_hash;
+  }
+  if (chainHead.eventCount !== rows.length || chainHead.headHash !== expectedPreviousHash) {
+    key.fill(0);
+    throw new Error("Event history does not match the authenticated chain head");
+  }
+  return key;
+}
+
 export class EncryptedEventStore {
   private constructor(
     private readonly databasePath: string,
@@ -180,114 +323,103 @@ export class EncryptedEventStore {
 
   public static async open(databasePath: string, passphrase: string): Promise<EncryptedEventStore> {
     const resolvedPath = path.resolve(databasePath);
+    const existingStore = existsSync(resolvedPath) && statSync(resolvedPath).size > 0;
+    if (passphrase.length < 12) {
+      throw new Error("Local store passphrase must contain at least 12 characters");
+    }
     mkdirSync(path.dirname(resolvedPath), { recursive: true });
     const sqlite = new BetterSqlite3(resolvedPath);
-    sqlite.pragma("journal_mode = WAL");
-    sqlite.pragma("foreign_keys = ON");
-    sqlite.pragma("synchronous = FULL");
-    sqlite.pragma("busy_timeout = 5000");
-    sqlite.exec(`
-      CREATE TABLE IF NOT EXISTS metadata (
-        key TEXT PRIMARY KEY,
-        value TEXT NOT NULL
-      );
-      CREATE TABLE IF NOT EXISTS events (
-        sequence INTEGER PRIMARY KEY AUTOINCREMENT,
-        event_id TEXT NOT NULL UNIQUE,
-        aggregate_type TEXT NOT NULL,
-        aggregate_id TEXT NOT NULL,
-        event_type TEXT NOT NULL,
-        schema_version INTEGER NOT NULL,
-        occurred_at TEXT NOT NULL,
-        payload_ciphertext TEXT NOT NULL,
-        payload_nonce TEXT NOT NULL,
-        payload_tag TEXT NOT NULL,
-        previous_hash TEXT NOT NULL,
-        event_hash TEXT NOT NULL UNIQUE
-      );
-      CREATE INDEX IF NOT EXISTS idx_events_aggregate ON events(aggregate_type, aggregate_id, sequence);
-      CREATE TABLE IF NOT EXISTS snapshots (
-        aggregate_type TEXT NOT NULL,
-        aggregate_id TEXT NOT NULL,
-        version INTEGER NOT NULL,
-        created_at TEXT NOT NULL,
-        last_event_hash TEXT NOT NULL,
-        payload_ciphertext TEXT NOT NULL,
-        payload_nonce TEXT NOT NULL,
-        payload_tag TEXT NOT NULL,
-        PRIMARY KEY (aggregate_type, aggregate_id)
-      );
-    `);
+    let key: Buffer | null = null;
+    let db: Kysely<StoreDatabase> | null = null;
+    let adoptedDatabaseId: string | null = null;
     try {
-      chmodSync(resolvedPath, 0o600);
-    } catch {
-      // Windows ACLs are managed by the operating system rather than POSIX mode bits.
-    }
+      if (existingStore) {
+        key = authenticateExistingStore(sqlite, passphrase);
+        const metadata = readExistingMetadata(sqlite);
+        const salt = metadata.get("encryption_salt")!;
+        adoptedDatabaseId = metadata.get("database_id") ?? databaseIdFromSalt(salt);
+        if (!/^DB-[0-9a-f-]{36}$/.test(adoptedDatabaseId)) {
+          throw new Error("Existing encrypted store database id is invalid");
+        }
+        const appliedBeforeMigration = listStoreMigrations(sqlite);
+        const migrationVersions = appliedBeforeMigration.length > 0
+          ? appliedBeforeMigration.map((migration) => migration.version)
+          : [1];
+        if ((migrationVersions.at(-1) ?? 0) < LATEST_STORE_MIGRATION) {
+          const chainHead = decodeChainHead(key, metadata.get("event_chain_head")!);
+          const image = sqlite.serialize();
+          try {
+            const timestamp = new Date().toISOString().replace(/[:.]/g, "");
+            const backupPath = path.join(
+              path.dirname(resolvedPath),
+              "backups",
+              `pre-migration-v${migrationVersions.at(-1)}-to-v${LATEST_STORE_MIGRATION}-${timestamp}-${randomUUID()}.vocationbak`
+            );
+            const { createEncryptedBackupFromImage } = await import("./encrypted-backup.js");
+            createEncryptedBackupFromImage({
+              database: image,
+              backupPath,
+              backupPassphrase: passphrase,
+              databaseId: adoptedDatabaseId,
+              eventCount: chainHead.eventCount,
+              eventChainHead: chainHead.headHash,
+              migrationVersions
+            });
+          } finally {
+            image.fill(0);
+          }
+        }
+      }
 
-    const db = new Kysely<StoreDatabase>({ dialect: new SqliteDialect({ database: sqlite }) });
-    let saltValue = await db.selectFrom("metadata").select("value").where("key", "=", "encryption_salt").executeTakeFirst();
-    if (!saltValue) {
-      const salt = randomBytes(16).toString("base64url");
-      await db.insertInto("metadata").values({ key: "encryption_salt", value: salt }).execute();
-      saltValue = { value: salt };
-    }
-    const key = deriveKey(passphrase, Buffer.from(saltValue.value, "base64url"));
+      applyStoreMigrations(sqlite);
+      sqlite.pragma("journal_mode = WAL");
+      sqlite.pragma("foreign_keys = ON");
+      sqlite.pragma("synchronous = FULL");
+      sqlite.pragma("busy_timeout = 5000");
+      db = new Kysely<StoreDatabase>({ dialect: new SqliteDialect({ database: sqlite }) });
 
-    const checkRows = await db
-      .selectFrom("metadata")
-      .select(["key", "value"])
-      .where("key", "in", ["key_check_ciphertext", "key_check_nonce", "key_check_tag"])
-      .execute();
-    const checks = new Map(checkRows.map((row) => [row.key, row.value]));
-    const newKeyCheck = checks.size === 0;
-    if (newKeyCheck) {
-      const check = encrypt(key, KEY_CHECK_VALUE, KEY_CHECK_AAD);
-      await db.insertInto("metadata").values([
-        { key: "key_check_ciphertext", value: check.ciphertext },
-        { key: "key_check_nonce", value: check.nonce },
-        { key: "key_check_tag", value: check.tag }
-      ]).execute();
-    } else {
-      try {
-        const value = decrypt(
-          key,
+      if (!existingStore) {
+        const salt = randomBytes(16);
+        key = deriveKey(passphrase, salt);
+        const check = encrypt(key, KEY_CHECK_VALUE, KEY_CHECK_AAD);
+        await db.insertInto("metadata").values([
+          { key: "encryption_salt", value: salt.toString("base64url") },
+          { key: "key_check_ciphertext", value: check.ciphertext },
+          { key: "key_check_nonce", value: check.nonce },
+          { key: "key_check_tag", value: check.tag },
+          { key: "database_id", value: `DB-${randomUUID()}` },
           {
-            ciphertext: checks.get("key_check_ciphertext") ?? "",
-            nonce: checks.get("key_check_nonce") ?? "",
-            tag: checks.get("key_check_tag") ?? ""
-          },
-          KEY_CHECK_AAD
-        );
-        if (value !== KEY_CHECK_VALUE) throw new Error("invalid key check value");
-      } catch {
-        key.fill(0);
-        await db.destroy();
-        throw new Error("Unable to unlock the local store with the supplied passphrase");
+            key: "event_chain_head",
+            value: encodeChainHead(key, { eventCount: 0, headHash: GENESIS_HASH })
+          }
+        ]).execute();
+      } else {
+        const databaseId = await db.selectFrom("metadata").select("value")
+          .where("key", "=", "database_id")
+          .executeTakeFirst();
+        if (!databaseId) {
+          await db.insertInto("metadata").values({
+            key: "database_id",
+            value: adoptedDatabaseId ?? `DB-${randomUUID()}`
+          }).execute();
+        }
       }
-    }
 
-    const chainHeadRow = await db.selectFrom("metadata").select("value").where("key", "=", "event_chain_head").executeTakeFirst();
-    if (!chainHeadRow) {
-      const countRow = await db.selectFrom("events").select(({ fn }) => fn.countAll<number>().as("count")).executeTakeFirstOrThrow();
-      if (!newKeyCheck || Number(countRow.count) !== 0) {
-        key.fill(0);
-        await db.destroy();
-        throw new Error("Encrypted event chain head is missing");
-      }
-      await db.insertInto("metadata").values({
-        key: "event_chain_head",
-        value: encodeChainHead(key, { eventCount: 0, headHash: GENESIS_HASH })
-      }).execute();
-    } else {
       try {
-        decodeChainHead(key, chainHeadRow.value);
-      } catch (error) {
-        key.fill(0);
-        await db.destroy();
-        throw error;
+        chmodSync(resolvedPath, 0o600);
+      } catch {
+        // Windows ACLs are managed by the operating system rather than POSIX mode bits.
       }
+      return new EncryptedEventStore(resolvedPath, sqlite, db, key!);
+    } catch (error) {
+      key?.fill(0);
+      if (db) {
+        await db.destroy();
+      } else if (sqlite.open) {
+        sqlite.close();
+      }
+      throw error;
     }
-    return new EncryptedEventStore(resolvedPath, sqlite, db, key);
   }
 
   public path(): string {
@@ -300,7 +432,8 @@ export class EncryptedEventStore {
     assertIdentifier(input.eventType, "Event type");
     assertSchemaVersion(input.schemaVersion);
     const occurredAt = (input.occurredAt ?? new Date()).toISOString();
-    const eventId = `EVT-${randomUUID()}`;
+    const eventId = input.eventId ?? `EVT-${randomUUID()}`;
+    assertIdentifier(eventId, "Event id");
     const aadInput = {
       eventId,
       aggregateType: input.aggregateType,
@@ -503,6 +636,171 @@ export class EncryptedEventStore {
     } catch {
       throw new Error(`Encrypted snapshot cannot be authenticated for ${aggregateType}:${aggregateId}`);
     }
+  }
+
+  public async readEvent<T = unknown>(eventId: string): Promise<StoredEvent<T> | null> {
+    assertIdentifier(eventId, "Event id");
+    return (await this.readAll<T>()).find((event) => event.eventId === eventId) ?? null;
+  }
+
+  public migrations(): AppliedMigration[] {
+    return listStoreMigrations(this.sqlite);
+  }
+
+  public async chainHead(): Promise<ChainHead> {
+    const row = await this.db.selectFrom("metadata").select("value")
+      .where("key", "=", "event_chain_head")
+      .executeTakeFirst();
+    if (!row) throw new Error("Encrypted event chain head is missing");
+    return decodeChainHead(this.key, row.value);
+  }
+
+  public async databaseId(): Promise<string> {
+    const row = await this.db.selectFrom("metadata").select("value")
+      .where("key", "=", "database_id")
+      .executeTakeFirst();
+    if (!row || !/^DB-[0-9a-f-]{36}$/.test(row.value)) {
+      throw new Error("Encrypted store database id is missing or invalid");
+    }
+    return row.value;
+  }
+
+  public async hasEvent(eventId: string): Promise<boolean> {
+    assertIdentifier(eventId, "Event id");
+    const row = await this.db.selectFrom("events").select("event_id")
+      .where("event_id", "=", eventId)
+      .executeTakeFirst();
+    return row !== undefined;
+  }
+
+  public findLegacyImportReceipt(sourceDigest: string): LegacyImportReceipt | null {
+    const row = this.sqlite.prepare(`
+      SELECT
+        source_digest AS sourceDigest,
+        source_kind AS sourceKind,
+        source_locator_hash AS sourceLocatorHash,
+        event_id AS eventId,
+        imported_at AS importedAt
+      FROM legacy_import_receipts
+      WHERE source_digest = ?
+    `).get(sourceDigest) as LegacyImportReceipt | undefined;
+    return row ?? null;
+  }
+
+  public recordLegacyImportReceipt(receipt: LegacyImportReceipt): void {
+    this.sqlite.prepare(`
+      INSERT INTO legacy_import_receipts(
+        source_digest, source_kind, source_locator_hash, event_id, imported_at
+      ) VALUES (?, ?, ?, ?, ?)
+      ON CONFLICT(source_digest) DO UPDATE SET
+        source_kind = excluded.source_kind,
+        source_locator_hash = excluded.source_locator_hash,
+        event_id = excluded.event_id,
+        imported_at = excluded.imported_at
+    `).run(
+      receipt.sourceDigest,
+      receipt.sourceKind,
+      receipt.sourceLocatorHash,
+      receipt.eventId,
+      receipt.importedAt
+    );
+  }
+
+  public findAuthorityReceipt(requestId: string): AuthorityReceipt | null {
+    assertIdentifier(requestId, "Authority request id");
+    const row = this.sqlite.prepare(`
+      SELECT
+        request_id AS requestId,
+        request_hash AS requestHash,
+        operation,
+        event_id AS eventId,
+        response_hash AS responseHash,
+        completed_at AS completedAt
+      FROM authority_receipts
+      WHERE request_id = ?
+    `).get(requestId) as AuthorityReceipt | undefined;
+    return row ?? null;
+  }
+
+  public recordAuthorityReceipt(receipt: AuthorityReceipt): void {
+    assertIdentifier(receipt.requestId, "Authority request id");
+    this.sqlite.prepare(`
+      INSERT INTO authority_receipts(
+        request_id, request_hash, operation, event_id, response_hash, completed_at
+      ) VALUES (?, ?, ?, ?, ?, ?)
+    `).run(
+      receipt.requestId,
+      receipt.requestHash,
+      receipt.operation,
+      receipt.eventId,
+      receipt.responseHash,
+      receipt.completedAt
+    );
+  }
+
+  public saveSignedCheckpoint(checkpoint: SignedCheckpointRecord): void {
+    this.sqlite.prepare(`
+      INSERT INTO signed_checkpoints(
+        checkpoint_id, database_id, schema_version, event_count, head_hash, created_at, device_id, key_id,
+        previous_checkpoint_digest, public_key_pem, signature
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(
+      checkpoint.checkpointId,
+      checkpoint.databaseId,
+      checkpoint.schemaVersion,
+      checkpoint.eventCount,
+      checkpoint.headHash,
+      checkpoint.createdAt,
+      checkpoint.deviceId,
+      checkpoint.keyId,
+      checkpoint.previousCheckpointDigest,
+      checkpoint.publicKeyPem,
+      checkpoint.signature
+    );
+  }
+
+  public listSignedCheckpoints(): SignedCheckpointRecord[] {
+    return this.sqlite.prepare(`
+      SELECT
+        checkpoint_id AS checkpointId,
+        database_id AS databaseId,
+        schema_version AS schemaVersion,
+        event_count AS eventCount,
+        head_hash AS headHash,
+        created_at AS createdAt,
+        device_id AS deviceId,
+        key_id AS keyId,
+        previous_checkpoint_digest AS previousCheckpointDigest,
+        public_key_pem AS publicKeyPem,
+        signature
+      FROM signed_checkpoints
+      ORDER BY event_count, created_at
+    `).all() as SignedCheckpointRecord[];
+  }
+
+  public async createDatabaseSnapshot(destinationPath: string): Promise<void> {
+    const resolvedDestination = path.resolve(destinationPath);
+    if (resolvedDestination === this.databasePath) {
+      throw new Error("Database snapshot destination must differ from the active store");
+    }
+    mkdirSync(path.dirname(resolvedDestination), { recursive: true });
+    await this.sqlite.backup(resolvedDestination);
+    try {
+      chmodSync(resolvedDestination, 0o600);
+    } catch {
+      // Windows ACLs are managed by the operating system rather than POSIX mode bits.
+    }
+  }
+
+  public serializeDatabase(): Buffer {
+    return this.sqlite.serialize();
+  }
+
+  public async verifyIntegrity(): Promise<{ valid: true; eventCount: number; head: ChainHead }> {
+    const row = this.sqlite.pragma("integrity_check", { simple: true });
+    if (row !== "ok") throw new Error(`SQLite integrity check failed: ${String(row)}`);
+    const events = await this.readAll();
+    return { valid: true, eventCount: events.length, head: await this.chainHead() };
   }
 
   public async close(): Promise<void> {

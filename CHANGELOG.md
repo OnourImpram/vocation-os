@@ -1,5 +1,26 @@
 # Changelog
 
+## 0.4.0
+
+Canonical local runtime and authority release candidate.
+
+### Added
+
+1. `vocationd` package binary as the authenticated single writer for consequential local runtime mutations.
+2. Authenticated IPC with request idempotency and replay safe command receipts.
+3. Checksummed SQLite migrations and idempotent legacy import planning and execution.
+4. Encrypted backup and crash safe restore with explicit overwrite approval.
+5. Credential provider boundaries for OS keyring and headless passphrase operation.
+6. Ed25519 signed event chain checkpoints and exportable audit bundles.
+7. Adversarial coverage for migrations, imports, backup, restore, daemon IPC, single instance locking, checkpoints, and rollback detection.
+
+### Changed
+
+1. Package version advanced to 0.4.0.
+2. Auto apply config mutations, legacy import, checkpoint creation, approver registry changes, and audit export now route through `vocationd`.
+3. Release documentation now treats the encrypted event store as the canonical local runtime backend.
+4. Production execution adapters remain compile blocked. Only a synthetic local fixture is enabled in v0.4.0.
+
 ## 0.3.1
 
 Safety and platform foundation release candidate.

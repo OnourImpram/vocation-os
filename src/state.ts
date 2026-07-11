@@ -11,7 +11,14 @@ export function encodeStateKey(key: string): string {
 }
 
 export function decodeStateKey(encoded: string): string {
-  return Buffer.from(encoded, "base64url").toString("utf8");
+  if (!/^[A-Za-z0-9_-]+$/.test(encoded)) {
+    throw new Error("State filename is not canonical Base64URL");
+  }
+  const decoded = Buffer.from(encoded, "base64url").toString("utf8");
+  if (decoded.length === 0 || encodeStateKey(decoded) !== encoded) {
+    throw new Error("State filename is not a canonical encoded state key");
+  }
+  return decoded;
 }
 
 export function statePathForKey(baseDir: string, key: string): string {

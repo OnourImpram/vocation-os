@@ -15,11 +15,11 @@
 
 ## v0.4 Canonical Local Runtime
 
-1. Migrate legacy JSON state and action ledger into the encrypted event store.
-2. Add versioned SQL migrations, encrypted backups, restore, and rollback CLI.
-3. Add OS credential store adapters for Windows, macOS, and Linux.
-4. Run `vocationd` as the single writer and authority for CLI, desktop, and extension config, ledger, approver registry, and adapter capabilities.
-5. Add signed ledger checkpoints and exportable audit bundles.
+1. Shipped legacy JSON state and action ledger import into the encrypted event store.
+2. Shipped versioned SQL migrations, encrypted backups, restore, and rollback protection.
+3. Shipped credential provider boundaries for OS keyring and headless passphrase operation.
+4. Shipped `vocationd` as the single writer and authority for CLI config, ledger, approver registry, and adapter capability decisions.
+5. Shipped signed ledger checkpoints and exportable audit bundles.
 
 ## v0.5 Profile and Document Intelligence
 

@@ -3,10 +3,9 @@ import { generateKeyPairSync } from "node:crypto";
 import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { WORKER_ROLES } from "./agent-controller.js";
-import { defaultLedgerPath, summarizeLedger } from "./action-ledger.js";
+import { defaultLedgerPath } from "./action-ledger.js";
 import { createApprovalReference, type TrustedApprover } from "./approval.js";
-import { defaultAutoApplyConfigPath, loadAutoApplyConfig, saveAutoApplyConfig } from "./auto-apply-config.js";
-import { decideAutoApply, defaultAutoApplyConfig, enableAutoApply, engageKillSwitch, rearmAutoApply } from "./auto-apply.js";
+import { decideAutoApply, defaultAutoApplyConfig } from "./auto-apply.js";
 import { OfflineTemplateClient, generateAdvisoryNote } from "./advisor.js";
 import { createVocationBenchManifest } from "./benchmark/vocation-bench.js";
 import { createCareerTwin } from "./career-twin.js";
@@ -16,17 +15,92 @@ import { runEvaluator } from "./evaluator.js";
 import { computeActionIntentHash } from "./hash.js";
 import { runDeepFit, runMode } from "./modes.js";
 import { createOpportunityRecord, evaluateOpportunityIntake } from "./opportunity.js";
-import { EXAMPLES_DIR, PACKAGE_ROOT } from "./paths.js";
+import {
+  EXAMPLES_DIR,
+  PACKAGE_ROOT,
+  defaultDaemonEndpoint,
+  defaultDaemonLockPath,
+  defaultDatabasePath,
+  defaultRuntimeRoot
+} from "./paths.js";
 import { evaluateCareerPortfolio, PORTFOLIO_OBJECTIVES, type PortfolioWeights } from "./portfolio.js";
 import { demoDimensions, DIMENSION_IDS, scoreOpportunity } from "./rubric.js";
-import { SCHEMA_NAMES, validateAllSchemaFiles, validateAgainstSchema } from "./schema.js";
+import { SCHEMA_NAMES, assertSchema, validateAllSchemaFiles, validateAgainstSchema } from "./schema.js";
 import { defaultStateDir, readState, validateStateDirectory, writeState } from "./state.js";
 import { EncryptedEventStore } from "./storage/encrypted-event-store.js";
+import { createEncryptedBackup, restoreEncryptedBackup } from "./storage/encrypted-backup.js";
+import { acquireSingleInstanceLock } from "./runtime/single-instance.js";
+import { callAuthority, daemonEndpointReachable } from "./ipc/client.js";
+import {
+  CREDENTIAL_ACCOUNTS,
+  credentialServiceName,
+  EncryptedFileCredentialStore,
+  OsCredentialStore,
+  type CredentialStore
+} from "./security/credential-store.js";
+import type { AuthorityOperation } from "./ipc/protocol.js";
+import { readMaskedSecret } from "./security/secret-input.js";
+import { verifyCheckpointChain, verifyCheckpointRecords } from "./security/audit-checkpoint.js";
+import { recoverInterruptedRestore } from "./storage/encrypted-backup.js";
 import { THEORY_NAMES } from "./theory.js";
 import { CLI_COMMANDS, HIGH_STAKES_FLAGS, MODE_NAMES, PRODUCT_NAME, TAGLINE, type ApplicationPacket, type ClaimGraph, type HighStakesFlags } from "./types.js";
 
 function printJson(value: unknown): void {
   console.log(JSON.stringify(value, null, 2));
+}
+
+async function cliCredentialStore(): Promise<CredentialStore> {
+  if (process.argv.includes("--headless")) {
+    const passphrase = await readMaskedSecret("Headless master passphrase: ");
+    return EncryptedFileCredentialStore.open(
+      path.join(defaultRuntimeRoot(), "headless-credentials.vault"),
+      passphrase
+    );
+  }
+  return OsCredentialStore.create(credentialServiceName(defaultRuntimeRoot()));
+}
+
+async function callDaemon(operation: AuthorityOperation, payload: unknown = {}): Promise<unknown> {
+  const credentials = await cliCredentialStore();
+  try {
+    const ipcSecret = await credentials.get(CREDENTIAL_ACCOUNTS.ipcSecret);
+    if (!ipcSecret) throw new Error("Daemon credentials are not initialized. Start vocationd first");
+    return await callAuthority({
+      endpoint: defaultDaemonEndpoint(),
+      ipcSecret,
+      operation,
+      payload
+    });
+  } finally {
+    await credentials.close?.();
+  }
+}
+
+async function withExclusiveStore<T>(operation: (store: EncryptedEventStore) => Promise<T>): Promise<T> {
+  const lock = await acquireSingleInstanceLock({
+    lockPath: defaultDaemonLockPath(),
+    endpoint: defaultDaemonEndpoint(),
+    endpointReachable: daemonEndpointReachable
+  });
+  let store: EncryptedEventStore | null = null;
+  let credentials: CredentialStore | null = null;
+  try {
+    credentials = await cliCredentialStore();
+    const databasePassphrase = await credentials.get(CREDENTIAL_ACCOUNTS.databasePassphrase);
+    if (!databasePassphrase) throw new Error("Database credential is not initialized. Start vocationd first");
+    await recoverInterruptedRestore({
+      journalPath: `${defaultDatabasePath()}.restore-journal.json`,
+      databasePath: defaultDatabasePath(),
+      storePassphrase: databasePassphrase
+    });
+    store = await EncryptedEventStore.open(defaultDatabasePath(), databasePassphrase);
+    await verifyCheckpointChain(store, credentials);
+    return await operation(store);
+  } finally {
+    if (store) await store.close();
+    await credentials?.close?.();
+    lock.release();
+  }
 }
 
 function readExample<T>(fileName: string): T {
@@ -230,10 +304,6 @@ function demoAutoApplyAllowed(): void {
   printJson(decision);
 }
 
-function autoApplyStatus(): void {
-  printJson({ path: defaultAutoApplyConfigPath(), config: loadAutoApplyConfig() });
-}
-
 function demoCareerTwin(): void {
   printJson(createCareerTwin("synthetic", [], [
     { goalId: "GOAL-DEMO-001", label: "Preserve optionality while testing a new role family", horizon: "one-year", priority: 80, status: "active" }
@@ -300,48 +370,43 @@ function benchmark(): void {
   printJson(createVocationBenchManifest());
 }
 
-async function storeDoctor(): Promise<void> {
-  const databasePath = process.argv[3];
-  const passphrase = process.env["VOCATION_STORE_PASSPHRASE"];
-  if (!databasePath || !existsSync(databasePath)) throw new Error("store-doctor requires an existing database path");
-  if (!passphrase) throw new Error("VOCATION_STORE_PASSPHRASE is required and is never printed");
-  const store = await EncryptedEventStore.open(databasePath, passphrase);
-  try {
-    const events = await store.readAll();
-    printJson({ valid: true, path: path.resolve(databasePath), eventCount: events.length });
-  } finally {
-    await store.close();
-  }
+async function storeVerify(): Promise<void> {
+  if (!existsSync(defaultDatabasePath())) throw new Error("Canonical encrypted store does not exist");
+  const report = await withExclusiveStore(async (store) => ({
+    ...(await store.verifyIntegrity()),
+    databaseId: await store.databaseId(),
+    migrations: store.migrations()
+  }));
+  assertSchema("store-verification-report", report);
+  printJson(report);
 }
 
-function autoApplyKill(): void {
-  const updated = engageKillSwitch(loadAutoApplyConfig(), "operator", "manual kill command");
-  saveAutoApplyConfig(updated);
-  printJson(updated);
+async function daemonStatus(): Promise<void> {
+  printJson(await callDaemon("health"));
 }
 
-function autoApplyRearm(): void {
-  const token = process.argv[3] ?? "";
-  try {
-    const updated = rearmAutoApply(loadAutoApplyConfig(), token);
-    saveAutoApplyConfig(updated);
-    printJson(updated);
-  } catch (error) {
-    console.error(error instanceof Error ? error.message : String(error));
-    process.exitCode = 1;
-  }
+async function autoApplyStatus(): Promise<void> {
+  printJson(await callDaemon("auto-apply-status"));
 }
 
-function autoApplyEnable(): void {
+async function autoApplyKill(): Promise<void> {
+  printJson(await callDaemon("auto-apply-kill", { reason: "operator kill command" }));
+}
+
+async function autoApplyRearm(): Promise<void> {
+  printJson(await callDaemon("auto-apply-rearm"));
+}
+
+async function autoApplyEnable(): Promise<void> {
   const mode = process.argv[3] === "auto" ? "auto" : "draft-only";
-  try {
-    const updated = enableAutoApply(loadAutoApplyConfig(), mode);
-    saveAutoApplyConfig(updated);
-    printJson(updated);
-  } catch (error) {
-    console.error(error instanceof Error ? error.message : String(error));
-    process.exitCode = 1;
-  }
+  printJson(await callDaemon("auto-apply-enable", { mode }));
+}
+
+async function autoApplyEvaluate(): Promise<void> {
+  const filePath = process.argv[3];
+  if (!filePath) throw new Error("auto-apply-evaluate requires a JSON input file");
+  const value = JSON.parse(readFileSync(path.resolve(filePath), "utf8")) as unknown;
+  printJson(await callDaemon("auto-apply-evaluate", value));
 }
 
 function validateState(): void {
@@ -352,8 +417,173 @@ function validateState(): void {
   }
 }
 
-function exportAudit(): void {
-  printJson(summarizeLedger(defaultLedgerPath()));
+async function exportAudit(): Promise<void> {
+  printJson(await callDaemon("audit-export"));
+}
+
+async function legacyImportPlan(): Promise<void> {
+  printJson(await callDaemon("legacy-import-plan"));
+}
+
+async function legacyImportApply(): Promise<void> {
+  const planHash = process.argv[3];
+  if (!planHash) throw new Error("legacy-import-apply requires the approved plan hash");
+  printJson(await callDaemon("legacy-import-apply", { planHash }));
+}
+
+async function checkpointCreate(): Promise<void> {
+  printJson(await callDaemon("checkpoint-create"));
+}
+
+async function checkpointVerify(): Promise<void> {
+  printJson(await callDaemon("checkpoint-verify"));
+}
+
+async function approverList(): Promise<void> {
+  printJson(await callDaemon("approver-list"));
+}
+
+async function approverRegister(): Promise<void> {
+  const filePath = process.argv[3];
+  if (!filePath) throw new Error("approver-register requires a JSON file containing approvedBy, keyId, and publicKeyPem");
+  const value = JSON.parse(readFileSync(path.resolve(filePath), "utf8")) as unknown;
+  printJson(await callDaemon("approver-register", value));
+}
+
+async function approverRevoke(): Promise<void> {
+  const keyId = process.argv[3];
+  if (!keyId) throw new Error("approver-revoke requires a key id");
+  printJson(await callDaemon("approver-revoke", { keyId }));
+}
+
+async function storeBackup(): Promise<void> {
+  const backupPath = process.argv[3];
+  if (!backupPath) throw new Error("store-backup requires a destination path");
+  const passphrase = await readMaskedSecret("Backup passphrase: ");
+  const confirmation = await readMaskedSecret("Confirm backup passphrase: ");
+  if (passphrase !== confirmation) throw new Error("Backup passphrase confirmation does not match");
+  printJson(await withExclusiveStore((store) => createEncryptedBackup(store, backupPath, passphrase)));
+}
+
+async function storeRestore(): Promise<void> {
+  const backupPath = process.argv[3];
+  if (!backupPath) throw new Error("store-restore requires a backup path");
+  const backupPassphrase = await readMaskedSecret("Backup passphrase: ");
+  const credentials = await cliCredentialStore();
+  const storePassphrase = await credentials.get(CREDENTIAL_ACCOUNTS.databasePassphrase);
+  if (!storePassphrase) throw new Error("Database credential is not initialized. Start vocationd first");
+  const lock = await acquireSingleInstanceLock({
+    lockPath: defaultDaemonLockPath(),
+    endpoint: defaultDaemonEndpoint(),
+    endpointReachable: daemonEndpointReachable
+  });
+  const reanchorCheckpoint = process.argv.includes("--reanchor-checkpoint");
+  const previousCheckpointDigest = await credentials.get(CREDENTIAL_ACCOUNTS.latestCheckpointDigest);
+  try {
+    await recoverInterruptedRestore({
+      journalPath: `${defaultDatabasePath()}.restore-journal.json`,
+      databasePath: defaultDatabasePath(),
+      storePassphrase
+    });
+    printJson(await restoreEncryptedBackup({
+      backupPath,
+      backupPassphrase,
+      databasePath: defaultDatabasePath(),
+      storePassphrase,
+      replaceExisting: process.argv.includes("--replace"),
+      validateStaged: reanchorCheckpoint
+        ? (store) => verifyCheckpointRecords(store).then(() => undefined)
+        : (store) => verifyCheckpointChain(store, credentials).then(() => undefined),
+      afterSwapValidated: async (store) => {
+        if (reanchorCheckpoint) {
+          const records = await verifyCheckpointRecords(store);
+          if (records.latestDigest) {
+            await credentials.set(CREDENTIAL_ACCOUNTS.latestCheckpointDigest, records.latestDigest);
+          } else {
+            await credentials.delete(CREDENTIAL_ACCOUNTS.latestCheckpointDigest);
+          }
+        }
+        await verifyCheckpointChain(store, credentials);
+      }
+    }));
+  } catch (error) {
+    if (reanchorCheckpoint) {
+      if (previousCheckpointDigest) {
+        await credentials.set(CREDENTIAL_ACCOUNTS.latestCheckpointDigest, previousCheckpointDigest);
+      } else {
+        await credentials.delete(CREDENTIAL_ACCOUNTS.latestCheckpointDigest);
+      }
+    }
+    throw error;
+  } finally {
+    lock.release();
+    await credentials.close?.();
+  }
+}
+
+async function storeRollback(): Promise<void> {
+  const backupArgument = process.argv[3];
+  if (!backupArgument) throw new Error("store-rollback requires an automatic rollback backup path");
+  if (!process.argv.includes("--replace")) {
+    throw new Error("store-rollback requires explicit --replace approval");
+  }
+  const backupPath = path.resolve(backupArgument);
+  const allowedRoot = path.resolve(defaultRuntimeRoot(), "backups");
+  const relative = path.relative(allowedRoot, backupPath);
+  if (relative.startsWith("..") || path.isAbsolute(relative)) {
+    throw new Error("store-rollback accepts only backups from the canonical runtime backup directory");
+  }
+  const credentials = await cliCredentialStore();
+  const storePassphrase = await credentials.get(CREDENTIAL_ACCOUNTS.databasePassphrase);
+  const rollbackPassphrase = await credentials.get(CREDENTIAL_ACCOUNTS.rollbackBackupPassphrase);
+  if (!storePassphrase || !rollbackPassphrase) throw new Error("Rollback credentials are not initialized");
+  const lock = await acquireSingleInstanceLock({
+    lockPath: defaultDaemonLockPath(),
+    endpoint: defaultDaemonEndpoint(),
+    endpointReachable: daemonEndpointReachable
+  });
+  const reanchorCheckpoint = process.argv.includes("--reanchor-checkpoint");
+  const previousCheckpointDigest = await credentials.get(CREDENTIAL_ACCOUNTS.latestCheckpointDigest);
+  try {
+    await recoverInterruptedRestore({
+      journalPath: `${defaultDatabasePath()}.restore-journal.json`,
+      databasePath: defaultDatabasePath(),
+      storePassphrase
+    });
+    printJson(await restoreEncryptedBackup({
+      backupPath,
+      backupPassphrase: rollbackPassphrase,
+      databasePath: defaultDatabasePath(),
+      storePassphrase,
+      replaceExisting: true,
+      validateStaged: reanchorCheckpoint
+        ? (store) => verifyCheckpointRecords(store).then(() => undefined)
+        : (store) => verifyCheckpointChain(store, credentials).then(() => undefined),
+      afterSwapValidated: async (store) => {
+        if (reanchorCheckpoint) {
+          const records = await verifyCheckpointRecords(store);
+          if (records.latestDigest) {
+            await credentials.set(CREDENTIAL_ACCOUNTS.latestCheckpointDigest, records.latestDigest);
+          } else {
+            await credentials.delete(CREDENTIAL_ACCOUNTS.latestCheckpointDigest);
+          }
+        }
+        await verifyCheckpointChain(store, credentials);
+      }
+    }));
+  } catch (error) {
+    if (reanchorCheckpoint) {
+      if (previousCheckpointDigest) {
+        await credentials.set(CREDENTIAL_ACCOUNTS.latestCheckpointDigest, previousCheckpointDigest);
+      } else {
+        await credentials.delete(CREDENTIAL_ACCOUNTS.latestCheckpointDigest);
+      }
+    }
+    throw error;
+  } finally {
+    lock.release();
+    await credentials.close?.();
+  }
 }
 
 function listModes(): void {
@@ -376,9 +606,9 @@ function governanceScope(): void {
   console.log("Individual decision support only. Employer side ranking, filtering, rejection, or hiring decisions are out of scope.");
 }
 
-const command = process.argv[2] ?? "help";
-
-switch (command) {
+async function main(): Promise<void> {
+  const command = process.argv[2] ?? "help";
+  switch (command) {
   case "help":
     help();
     break;
@@ -413,19 +643,22 @@ switch (command) {
     demoAutoApplyAllowed();
     break;
   case "export-audit":
-    exportAudit();
+    await exportAudit();
     break;
   case "auto-apply-status":
-    autoApplyStatus();
+    await autoApplyStatus();
     break;
   case "auto-apply-kill":
-    autoApplyKill();
+    await autoApplyKill();
     break;
   case "auto-apply-rearm":
-    autoApplyRearm();
+    await autoApplyRearm();
     break;
   case "auto-apply-enable":
-    autoApplyEnable();
+    await autoApplyEnable();
+    break;
+  case "auto-apply-evaluate":
+    await autoApplyEvaluate();
     break;
   case "list-modes":
     listModes();
@@ -463,10 +696,52 @@ switch (command) {
   case "list-workers":
     printJson(WORKER_ROLES);
     break;
+  case "daemon-status":
+    await daemonStatus();
+    break;
+  case "legacy-import-plan":
+    await legacyImportPlan();
+    break;
+  case "legacy-import-apply":
+    await legacyImportApply();
+    break;
+  case "checkpoint-create":
+    await checkpointCreate();
+    break;
+  case "checkpoint-verify":
+    await checkpointVerify();
+    break;
+  case "approver-list":
+    await approverList();
+    break;
+  case "approver-register":
+    await approverRegister();
+    break;
+  case "approver-revoke":
+    await approverRevoke();
+    break;
+  case "store-backup":
+    await storeBackup();
+    break;
+  case "store-restore":
+    await storeRestore();
+    break;
+  case "store-rollback":
+    await storeRollback();
+    break;
+  case "store-verify":
   case "store-doctor":
-    await storeDoctor();
+    await storeVerify();
     break;
   default:
     console.error(`Unknown command: ${command}`);
     process.exitCode = 1;
+  }
+}
+
+try {
+  await main();
+} catch (error) {
+  process.stderr.write(`${error instanceof Error ? error.message : String(error)}\n`);
+  process.exitCode = 1;
 }

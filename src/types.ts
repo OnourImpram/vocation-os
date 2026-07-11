@@ -42,6 +42,7 @@ export const CLI_COMMANDS = [
   "auto-apply-kill",
   "auto-apply-rearm",
   "auto-apply-enable",
+  "auto-apply-evaluate",
   "list-modes",
   "list-theories",
   "list-dimensions",
@@ -54,6 +55,18 @@ export const CLI_COMMANDS = [
   "demo-advisory",
   "benchmark",
   "list-workers",
+  "daemon-status",
+  "legacy-import-plan",
+  "legacy-import-apply",
+  "checkpoint-create",
+  "checkpoint-verify",
+  "approver-list",
+  "approver-register",
+  "approver-revoke",
+  "store-backup",
+  "store-restore",
+  "store-rollback",
+  "store-verify",
   "store-doctor"
 ] as const;
 
@@ -233,7 +246,7 @@ export interface ActionLedgerEntry {
   approvalRequired: boolean;
   approvalReceived: boolean;
   highStakesGatePassed: boolean;
-  result: "blocked" | "draft_generated" | "submitted" | "confirmed";
+  result: "blocked" | "decision_allowed" | "draft_generated" | "submitted" | "confirmed";
   blockedBy?: string;
   confirmationEvidencePointer?: string;
 }

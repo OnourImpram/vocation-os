@@ -18,6 +18,8 @@ export interface AutoApplyInput {
   riskSignals?: AutomationRiskSignals;
   documentRoot?: string;
   ledgerPath?: string;
+  authoritativeLedgerEntries?: readonly ActionLedgerEntry[];
+  actionId?: string;
   now?: Date;
 }
 
@@ -122,15 +124,16 @@ function hasCompleteRiskSignals(signals: AutomationRiskSignals | undefined): sig
 }
 
 function dailyUsage(input: AutoApplyInput, now: Date): { usage: number | null; error?: string } {
-  if (!input.ledgerPath) {
+  if (!input.authoritativeLedgerEntries && !input.ledgerPath) {
     return { usage: null };
   }
   try {
     const day = now.toISOString().slice(0, 10);
+    const entries = input.authoritativeLedgerEntries ?? readLedger(input.ledgerPath!);
     const opportunityIds = new Set(
-      readLedger(input.ledgerPath)
+      entries
         .filter((entry) => {
-          const resultCounts = entry.result === "draft_generated" || entry.result === "submitted" || entry.result === "confirmed";
+          const resultCounts = entry.result === "submitted" || entry.result === "confirmed";
           return resultCounts && entry.timestamp.slice(0, 10) === day;
         })
         .map((entry) => entry.opportunityId)
@@ -142,7 +145,7 @@ function dailyUsage(input: AutoApplyInput, now: Date): { usage: number | null; e
 }
 
 export function decideAutoApply(input: AutoApplyInput): AutoApplyDecision {
-  const actionId = createActionId(input.now ?? new Date());
+  const actionId = input.actionId ?? createActionId(input.now ?? new Date());
   const finalize = (decision: AutoApplyDecision): AutoApplyDecision => recordDecision(input, decision);
   const configValidation = validateAgainstSchema("auto-apply-config", input.config);
   if (!configValidation.valid) {
@@ -319,6 +322,10 @@ export function rearmAutoApply(config: AutoApplyConfig, token: string): AutoAppl
   if (token !== REARM_TOKEN) {
     throw new Error("Invalid rearm token");
   }
+  return rearmAutoApplyAuthorized(config);
+}
+
+export function rearmAutoApplyAuthorized(config: AutoApplyConfig): AutoApplyConfig {
   return {
     ...config,
     enabled: false,

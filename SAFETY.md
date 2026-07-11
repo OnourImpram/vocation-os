@@ -42,15 +42,19 @@ Negative signals such as verification code, incomplete application, resubmit, or
 
 A local signature provides origin and tamper evidence within the configured trust boundary. It is not an independent public notarization.
 
-Version 0.3.1 compiles only the synthetic `local-fixture` execution adapter. A config or plugin cannot enable a production ATS execution adapter. Production adapter authority waits for the isolated `vocationd` runtime.
+Version 0.4.0 compiles only the synthetic `local-fixture` execution adapter. A config, caller, or plugin cannot enable a production ATS execution adapter. `vocationd` owns the runtime adapter decision, but no production execution adapter ships in this release.
 
 ## Local Data Security
 
-The encrypted event store uses SQLite WAL and FULL synchronous mode. Sensitive event and snapshot payloads and the canonical chain head use AES 256 GCM. Keys are derived with `scrypt` in the headless implementation. Snapshots must reference a checkpoint in the same aggregate event chain and cannot roll back to an older stored version.
+The encrypted event store uses SQLite WAL and FULL synchronous mode. Sensitive event and snapshot payloads and the canonical chain head use AES 256 GCM. Native installations keep separated secrets in the OS credential store. Headless installations use an AES 256 GCM credential vault whose key is derived with `scrypt` from a masked interactive passphrase. Plaintext, shell, argument, and environment variable secret fallbacks are not supported.
+
+Checksummed migrations authenticate an existing store before writing and create a standard encrypted rollback backup before applying a newer schema. Legacy imports require a deterministic dry run plan hash, preserve source files, and create another encrypted rollback backup before mutation. Restore verifies the SQLite image, migration history, database identity, event count, and event chain head before an atomic swap.
+
+Signed Ed25519 checkpoints bind the database identity, schema version, event count, chain head, prior checkpoint digest, device, and key. The latest digest is retained in the credential store to detect rollback of SQLite together with its internal chain head. This is tamper evidence, not an independent timestamp or remote notarization service.
 
 The database retains opaque aggregate identifiers and operational metadata in plaintext. Sensitive profile payloads are encrypted.
 
-Desktop OS credential storage is roadmap work. Until that integration is complete, the headless store requires a passphrase and has no plaintext fallback.
+Native OS credential storage is available through the optional `@napi-rs/keyring` binding. Headless use requires a masked interactive master passphrase and stores credentials only in an authenticated encrypted vault. Neither route has a plaintext fallback.
 
 ## Remaining Safety Boundaries
 

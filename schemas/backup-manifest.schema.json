@@ -1,0 +1,32 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://vocation-os.dev/schemas/backup-manifest.schema.json",
+  "title": "BackupManifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "format",
+    "version",
+    "createdAt",
+    "databaseId",
+    "databaseHash",
+    "eventCount",
+    "eventChainHead",
+    "migrationVersions"
+  ],
+  "properties": {
+    "format": { "const": "vocation-os-sqlite" },
+    "version": { "const": 1 },
+    "createdAt": { "type": "string", "format": "date-time" },
+    "databaseId": { "type": "string", "pattern": "^DB-[0-9a-f-]{36}$" },
+    "databaseHash": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+    "eventCount": { "type": "integer", "minimum": 0 },
+    "eventChainHead": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+    "migrationVersions": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "type": "integer", "minimum": 1 }
+    }
+  }
+}

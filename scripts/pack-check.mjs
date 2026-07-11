@@ -17,6 +17,9 @@ const failures = [];
 if (!files.has("dist/cli.js")) {
   failures.push("dist/cli.js is missing from package");
 }
+if (!files.has("dist/vocationd.js")) {
+  failures.push("dist/vocationd.js is missing from package");
+}
 
 for (const file of files) {
   if (file.startsWith("dist/test/")) {
