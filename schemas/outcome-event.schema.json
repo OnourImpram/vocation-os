@@ -1,0 +1,20 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://vocation-os.dev/schemas/outcome-event.schema.json",
+  "title": "CareerOutcomeEvent",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["outcomeId", "opportunityId", "stage", "occurredAt", "source", "modelVersion", "policyVersion", "documentVariantId", "messageVariantId", "evidencePointer"],
+  "properties": {
+    "outcomeId": { "type": "string", "pattern": "^OUT-[0-9a-f-]{36}$" },
+    "opportunityId": { "type": "string", "pattern": "^OPP-[A-Z0-9-]+$" },
+    "stage": { "enum": ["discovered", "shortlisted", "applied", "screen", "interview", "offer", "accepted", "rejected", "withdrawn"] },
+    "occurredAt": { "type": "string", "format": "date-time" },
+    "source": { "enum": ["operator", "ats-receipt", "email-receipt", "platform"] },
+    "modelVersion": { "type": "string", "minLength": 1, "maxLength": 100 },
+    "policyVersion": { "type": "string", "minLength": 1, "maxLength": 100 },
+    "documentVariantId": { "oneOf": [{ "type": "string", "minLength": 1, "maxLength": 160 }, { "type": "null" }] },
+    "messageVariantId": { "oneOf": [{ "type": "string", "minLength": 1, "maxLength": 160 }, { "type": "null" }] },
+    "evidencePointer": { "type": "string", "minLength": 1, "maxLength": 1000 }
+  }
+}

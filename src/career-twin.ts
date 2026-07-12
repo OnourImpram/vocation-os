@@ -67,6 +67,11 @@ export interface CareerTwin {
   updatedAt: string;
   facts: TemporalCareerFact[];
   goals: CareerGoal[];
+  importProvenance?: {
+    planHash: string;
+    sourceContentHash: string;
+    sourceLocator: string;
+  };
 }
 
 export interface CareerTwinValidation {

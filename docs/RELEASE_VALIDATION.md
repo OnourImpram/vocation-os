@@ -1,5 +1,44 @@
 # Release Validation
 
+## v0.5.0 Product Foundation Evidence
+
+Version 0.5.0 adds product operations without enabling production auto apply. The release gate covers the following executable contracts.
+
+1. Resumable onboarding uses immutable hashed events, optimistic concurrency, idempotent request replay, and persisted projection validation.
+2. The encrypted artifact vault uses a dedicated credential, HKDF separated keys, authenticated content deduplication, bounded reads, durable writes, and source path minimization.
+3. PDF, DOCX, Markdown, and UTF-8 profile sources parse in a bounded child process without plaintext disk fallback or inherited secret environment variables. PDF and DOCX inputs pass structural resource preflight. The built parser runs with read-only Node permissions, a pinned native canvas allowance required by PDF.js, network deny guards, a bounded heap, and confirmed timeout termination.
+4. Profile import apply requires the exact persisted plan hash. Imported facts remain internal, Low confidence, operator supplied, and analysis only.
+5. Document AST v2 requires complete claim trace coverage and canonical text hashes. Turkish and English PDF and DOCX outputs pass parse back verification before write.
+6. Application tracker status changes use lifecycle specific operations. Generic application mutation is denied.
+7. The golden product journey covers onboarding, discovery, document rendering, tracker creation, tasks, answer memory, and outcomes in one encrypted event chain.
+8. Npm publication and production ATS execution remain outside this release. The real root tarball bundles the private SDK runtime, installs with production dependencies only, and executes its CLI and bounded document parser from an external consumer. Registry publication remains a separate release decision.
+
+## v0.5.0 Final Local Evidence
+
+Date: 2026-07-12
+
+The final local release gate passed after adversarial remediation of receipt binding, generic application mutation, profile provenance, structural document claims, atomic rendering, trusted confirmation, daemon shutdown, concurrent onboarding, and parser process lifecycle boundaries.
+
+| Check | Result |
+| --- | --- |
+| Privacy scan | PASS |
+| Brand scan | PASS |
+| Strict TypeScript | PASS |
+| Vitest | 55 files, 284 tests passed |
+| Coverage | 81.09 percent statements, 69.64 percent branches, 91.59 percent functions, 84.27 percent lines |
+| JSON Schema | 30 schemas valid |
+| Selfcheck | PASS |
+| Evaluator | 19 of 19 passed |
+| Citation contract | 23 records passed offline validation |
+| SBOM | 462 components parsed |
+| Astro | 2 pages built |
+| Package | Real tarball production install, bundled SDK, external CLI, PDF parser, and DOCX parser passed |
+| Windows daemon shutdown | Authenticated stop released the endpoint and single instance lock |
+
+The final independent read only review returned PASS with no P0 or P1 finding. Its controlled probes verified bounded same-step conflict retry, canonical terminal result derivation, one-time parser settlement, forced termination without `close`, sanitized failure output, and zero remaining parser child handles.
+
+The release candidate remains source first. No npm publish, production ATS execution adapter, automatic merge, or compliance certification is part of this pass.
+
 This document records the VocationOS release engineering evidence. It is not a compliance certification.
 
 ## v0.4.0 Release Candidate

@@ -61,6 +61,7 @@ function closeServer(server: Server): Promise<void> {
 
 export interface DaemonServerHandle {
   endpoint: string;
+  shutdownRequested: Promise<void>;
   close(): Promise<void>;
 }
 
@@ -92,6 +93,10 @@ export async function startDaemonServer(input: {
   const sockets = new Set<Socket>();
   const maxConnections = input.maxConnections ?? 32;
   let authorityQueue: Promise<unknown> = Promise.resolve();
+  let resolveShutdownRequest: (() => void) | null = null;
+  const shutdownRequested = new Promise<void>((resolve) => {
+    resolveShutdownRequest = resolve;
+  });
   const dispatch = (request: IpcRequest): Promise<unknown> => {
     const execution = authorityQueue.then(() => input.authority.execute({
       id: request.id,
@@ -167,6 +172,11 @@ export async function startDaemonServer(input: {
             };
           }
           await channel.send({ ...responseBody, mac: responseMac(sessionKey, responseBody) });
+          if (responseBody.ok && requestValue.operation === "daemon-stop") {
+            resolveShutdownRequest?.();
+            socket.end();
+            break;
+          }
         }
       } catch {
         socket.destroy();
@@ -185,6 +195,7 @@ export async function startDaemonServer(input: {
 
   return {
     endpoint: input.endpoint,
+    shutdownRequested,
     async close(): Promise<void> {
       for (const socket of sockets) socket.destroy();
       await closeServer(server);

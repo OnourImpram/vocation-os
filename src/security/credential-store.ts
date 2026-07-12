@@ -36,7 +36,8 @@ export const CREDENTIAL_ACCOUNTS = {
   checkpointPrivateKey: "checkpoint-private-key",
   latestCheckpointDigest: "latest-checkpoint-digest",
   deviceId: "device-id",
-  rollbackBackupPassphrase: "rollback-backup-passphrase"
+  rollbackBackupPassphrase: "rollback-backup-passphrase",
+  artifactVaultKey: "artifact-vault-key"
 } as const;
 
 export class MemoryCredentialStore implements CredentialStore {
@@ -265,6 +266,7 @@ export interface RuntimeSecrets {
   databasePassphrase: string;
   ipcSecret: string;
   rollbackBackupPassphrase: string;
+  artifactVaultKey: string;
 }
 
 export async function loadOrCreateRuntimeSecrets(store: CredentialStore): Promise<RuntimeSecrets> {
@@ -275,8 +277,9 @@ export async function loadOrCreateRuntimeSecrets(store: CredentialStore): Promis
     CREDENTIAL_ACCOUNTS.rollbackBackupPassphrase,
     32
   );
-  if (new Set([databasePassphrase, ipcSecret, rollbackBackupPassphrase]).size !== 3) {
+  const artifactVaultKey = await getOrCreateCredential(store, CREDENTIAL_ACCOUNTS.artifactVaultKey, 32);
+  if (new Set([databasePassphrase, ipcSecret, rollbackBackupPassphrase, artifactVaultKey]).size !== 4) {
     throw new Error("Runtime credential separation invariant failed");
   }
-  return { databasePassphrase, ipcSecret, rollbackBackupPassphrase };
+  return { databasePassphrase, ipcSecret, rollbackBackupPassphrase, artifactVaultKey };
 }

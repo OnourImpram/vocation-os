@@ -1,0 +1,35 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://vocation-os.dev/schemas/profile-import-plan.schema.json",
+  "title": "ProfileImportPlan",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version", "planHash", "sourceManifest", "format", "pageCount", "textHash", "candidateCount", "candidates", "warnings", "createdAt", "approvalRequired"],
+  "properties": {
+    "version": { "const": 1 },
+    "planHash": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+    "sourceManifest": { "$ref": "https://vocation-os.dev/schemas/artifact-manifest.schema.json" },
+    "format": { "enum": ["pdf", "docx", "markdown", "text"] },
+    "pageCount": { "oneOf": [{ "type": "integer", "minimum": 1, "maximum": 200 }, { "type": "null" }] },
+    "textHash": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+    "candidateCount": { "type": "integer", "minimum": 0, "maximum": 500 },
+    "candidates": {
+      "type": "array",
+      "maxItems": 500,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["candidateId", "text", "category", "sourcePointer"],
+        "properties": {
+          "candidateId": { "type": "string", "pattern": "^CAND-[A-F0-9]{20}$" },
+          "text": { "type": "string", "minLength": 3, "maxLength": 500 },
+          "category": { "enum": ["skill", "credential", "experience", "artifact", "value", "constraint", "preference", "health-boundary", "financial-runway", "family-impact", "work-authorization", "licensing", "network", "reputation", "career-narrative"] },
+          "sourcePointer": { "type": "string", "pattern": "^artifact:hmac-sha256:[a-f0-9]{64}:segment:[1-9][0-9]{0,2}$" }
+        }
+      }
+    },
+    "warnings": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+    "createdAt": { "type": "string", "format": "date-time" },
+    "approvalRequired": { "const": true }
+  }
+}

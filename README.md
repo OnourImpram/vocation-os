@@ -15,13 +15,13 @@ Website: https://onourimpram.github.io/vocation-os/
 
 ## Current Release
 
-Version 0.4.1 is the canonical local runtime and authority maintenance release.
+Version 0.5.0 is the canonical local profile, document, and application operations release candidate.
 
-It includes the deterministic safety kernel, claim and packet integrity, persistent kill switch state, scoped approvals, trusted submission collectors, a migrated encrypted SQLite event store, checksummed schema migrations, encrypted backup and restore, a temporal Career Digital Twin contract, opportunity provenance, theory grounded advisory tools, claim first document structures, portfolio analysis, outcome contracts, and VocationBench.
+It includes the deterministic safety kernel, claim and packet integrity, persistent kill switch state, scoped approvals, trusted submission collectors, a migrated encrypted SQLite event store, checksummed schema migrations, encrypted backup and restore, a content addressed encrypted artifact vault, resumable onboarding, real PDF and DOCX profile parsing, hash bound import plans, event sourced product repositories, claim bound PDF and DOCX rendering with parse back verification, an application tracker, policy bound answer memory, and the existing Career Digital Twin, opportunity, portfolio, outcome, theory, and VocationBench foundations.
 
-`vocationd` is the shipped single writer for consequential local runtime mutations. CLI commands that change auto apply state, import legacy state, create audit checkpoints, manage approvers, or export authority state go through authenticated IPC with request idempotency. Desktop workbench, browser extension, twelve discovery adapters, full interview and offer labs, production collector key custody, and production execution adapters remain roadmap work.
+`vocationd` is the shipped single writer for consequential local runtime mutations. Product domain records, artifact manifests, profile import plans, onboarding transitions, tracker transitions, auto apply state, legacy import, audit checkpoints, and approver changes go through authenticated IPC with request idempotency. Desktop workbench, browser extension, twenty four GA discovery connectors, the verified company catalog, full interview and offer labs, production collector key custody, and production execution adapters remain roadmap work.
 
-Version 0.4.1 ships no production auto apply adapter. Its compiled execution boundary permits only `local-fixture` with a synthetic profile. Adding an adapter string to config cannot grant production execution authority.
+Version 0.5.0 ships no production auto apply adapter. Its compiled execution boundary permits only `local-fixture` with a synthetic profile. Adding an adapter string to config cannot grant production execution authority.
 
 ## Why It Exists
 
@@ -44,44 +44,65 @@ Most career tooling optimizes output volume. VocationOS optimizes decision quali
 | Kill switch | Kill, rearm, and enable are separate idempotent daemon operations persisted in the encrypted event store. |
 | Completion proof | Only a trusted Ed25519 collector receipt bound to attempt, action intent, packet, and adapter can confirm submission. |
 | Local privacy | Sensitive event payloads and the chain head are encrypted with AES 256 GCM and authenticated before read. |
+| Artifact privacy | CV, PDF, DOCX, and generated artifacts use an independent AES 256 GCM vault key and keyed storage locators. Raw source paths are not persisted. |
+| Import integrity | Profile parsing runs in a bounded child process. Apply requires the exact persisted plan hash and imported facts remain analysis only until claim review. |
+| Render integrity | PDF and DOCX are written only after every content node traces to one verified claim and both formats pass parse back verification. |
 | Runtime authority | HMAC authenticated IPC, monotonic request sequences, durable command receipts, and a single instance lock protect the local writer boundary. |
 | Rollback detection | Ed25519 checkpoints bind the database, migration version, event count, chain head, and prior checkpoint digest. The latest digest is retained outside SQLite. |
 | Agent separation | Registered worker manifests enforce phase capabilities. Execute scopes are distinct. A generator cannot self-evaluate and only a human can approve. |
 
 ## Quick Start
 
+Version 0.5.0 is a source-first GitHub release candidate. Registry installation remains intentionally unavailable until the typed SDK and root package complete a separate npm release pass.
+
 ```bash
 npm ci
 npm run typecheck
 npm run test
 npm run validate:schemas
-npx tsx src/cli.ts doctor
-npx tsx src/cli.ts benchmark
+npm run build
+node dist/cli.js doctor
 ```
 
-Build and start the canonical local authority in a separate terminal:
+Run the complete synthetic onboarding journey with one command. The CLI starts the local daemon when needed:
 
 ```bash
-npm run build
-vocationd start
+vocation init --demo
+```
+
+Import a real local PDF, DOCX, Markdown, or UTF-8 profile source. This stores the encrypted artifact, creates a hash bound plan, and stops at claim review:
+
+```bash
+vocation init --profile /absolute/path/to/profile.pdf
+vocation profile-import-apply sha256:<reviewed-plan-hash>
+```
+
+The same flow can be declared in a schema validated config file with `version`, `mode`, and `profilePath`:
+
+```bash
+vocation init --config ./vocation-init.json
 ```
 
 The default daemon uses the native OS credential store. A non graphical host can use an encrypted passphrase backed credential vault without environment variables or command line secrets:
 
 ```bash
 vocationd start --headless
+vocation daemon-status --headless
+vocation onboarding-status --headless
+vocation daemon-stop --headless
 ```
 
-Then inspect authority health and plan a non destructive legacy import:
+Every CLI command that connects to a headless daemon must include `--headless`. VocationOS detects a headless credential vault and returns an actionable provider mismatch error instead of silently selecting the OS keyring.
+
+Inspect authority health, product records, tracker state, or plan a non destructive legacy import:
 
 ```bash
 vocation daemon-status
+vocation daemon-stop
+vocation onboarding-status
+vocation domain-list opportunities
+vocation tracker-list
 vocation legacy-import-plan
-```
-
-Apply only the exact plan hash that was reviewed:
-
-```bash
 vocation legacy-import-apply sha256:<approved-plan-hash>
 ```
 
@@ -134,7 +155,13 @@ Jobs, fellowships, postdocs, grants, consulting, teaching, speaking, publishing,
 
 ### Claim First Documents
 
-Every body sentence in the Document AST uses `verbatim-claim` binding to exactly one claim ID. Its normalized text must match the verified claim text. Missing, inflated, unverified, private, or disallowed claims prevent rendering. Hidden Unicode text is rejected. Human-approved synthesis over multiple claims remains a later, separately gated contract.
+Every content node in Document AST v2 uses `verbatim-claim` binding to exactly one claim ID and the canonical claim text hash. Its normalized text must match the verified claim text. Missing, inflated, unverified, private, or disallowed claims prevent rendering. Hidden Unicode text is rejected. PDF and DOCX output uses packaged Noto Sans fonts and must pass parse back verification before it is written. Human-approved synthesis over multiple claims remains a later, separately gated contract.
+
+### Product Operations
+
+Profiles, opportunities, documents, campaigns, applications, tasks, outcomes, and application answers are versioned encrypted aggregates. Optimistic concurrency and request replay checks protect mutations. Application records use lifecycle specific tracker operations, so generic domain writes cannot manufacture an approved or confirmed status.
+
+Answer memory is scope, sensitivity, expiry, evidence, and use mode aware. Work authorization, visa, relocation, compensation, and licensing answers require per opportunity confirmation and cannot be used in Approved Auto. EEO responses are never resolved for reuse.
 
 ## CLI
 
@@ -147,6 +174,17 @@ npx tsx src/cli.ts demo-advisory
 npx tsx src/cli.ts demo-auto-apply-decision
 npx tsx src/cli.ts benchmark
 npx tsx src/cli.ts list-workers
+```
+
+Product commands are available from the compiled CLI:
+
+```bash
+vocation init --demo
+vocation init --profile ./profile.docx
+vocation artifact-list
+vocation domain-list profiles
+vocation tracker-list
+vocation document-render ./document-v2.json ./claim-graph.json ./exports
 ```
 
 With `vocationd` stopped, verify the canonical encrypted store or create an interactive encrypted backup:
@@ -175,8 +213,8 @@ The values below are checked by `npm run docs:check`.
 | Modes | 21 |
 | Theories | 28 |
 | Rubric dimensions | 20 |
-| Schemas | 20 |
-| CLI commands | 42 |
+| Schemas | 30 |
+| CLI commands | 64 |
 | Evaluator tests | 19 |
 
 ## What This Is Not
@@ -191,7 +229,7 @@ It does not bypass CAPTCHA, anti bot controls, identity checks, platform terms, 
 
 It does not treat an application as complete from caller supplied text or tracker status.
 
-It is not yet a finished v1 desktop product. Version 0.4.1 is a tested local runtime foundation for that product.
+It is not yet a finished v1 desktop product. Version 0.5.0 is a tested local profile, document, and application operations foundation for that product.
 
 ## Governance
 

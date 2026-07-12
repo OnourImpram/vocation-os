@@ -1,5 +1,6 @@
 export const AUTHORITY_OPERATIONS = [
   "health",
+  "daemon-stop",
   "auto-apply-status",
   "auto-apply-kill",
   "auto-apply-rearm",
@@ -12,7 +13,31 @@ export const AUTHORITY_OPERATIONS = [
   "approver-list",
   "approver-register",
   "approver-revoke",
-  "audit-export"
+  "collector-list",
+  "collector-register",
+  "collector-revoke",
+  "audit-export",
+  "domain-get",
+  "domain-list",
+  "domain-put",
+  "domain-archive",
+  "artifact-list",
+  "artifact-import",
+  "onboarding-status",
+  "onboarding-start",
+  "onboarding-complete-step",
+  "onboarding-fail",
+  "onboarding-cancel",
+  "onboarding-resume",
+  "profile-import-plan",
+  "profile-import-apply",
+  "tracker-list",
+  "tracker-get",
+  "tracker-create",
+  "tracker-approve",
+  "tracker-submit",
+  "tracker-block",
+  "tracker-confirm"
 ] as const;
 
 export type AuthorityOperation = (typeof AUTHORITY_OPERATIONS)[number];

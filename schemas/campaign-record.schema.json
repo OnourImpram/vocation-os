@@ -1,0 +1,22 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://vocation-os.dev/schemas/campaign-record.schema.json",
+  "title": "CampaignRecord",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["campaignId", "profileId", "name", "objective", "status", "opportunityIds", "createdAt", "updatedAt"],
+  "properties": {
+    "campaignId": { "type": "string", "pattern": "^CAM-[A-Z0-9-]+$" },
+    "profileId": { "type": "string", "pattern": "^(DEMO|LOCAL|PRIVATE)-[A-Z0-9-]+$" },
+    "name": { "type": "string", "minLength": 1, "maxLength": 160 },
+    "objective": { "type": "string", "minLength": 1, "maxLength": 1000 },
+    "status": { "enum": ["draft", "active", "paused", "completed"] },
+    "opportunityIds": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": { "type": "string", "pattern": "^OPP-[A-Z0-9-]+$" }
+    },
+    "createdAt": { "type": "string", "format": "date-time" },
+    "updatedAt": { "type": "string", "format": "date-time" }
+  }
+}

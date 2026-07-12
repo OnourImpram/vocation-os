@@ -100,12 +100,12 @@
 
 ### Phase 1, v0.5 Product Foundation
 
-- [ ] Add domain repositories for profiles, opportunities, documents, campaigns, applications, tasks, and outcomes behind `vocationd`.
-- [ ] Add a content-addressed encrypted artifact vault for CV, PDF, DOCX, and generated artifacts.
-- [ ] Add resumable and idempotent `vocation init` onboarding with demo, headless, resume, and declarative config modes.
-- [ ] Add safe PDF, DOCX, Markdown, and supported export import planning with exact approval binding.
-- [ ] Add Document AST v2, claim-bound rendering, PDF and DOCX output, parse-back verification, and answer memory.
-- [ ] Add an event-sourced application tracker and end-to-end synthetic user journey.
+- [x] Add domain repositories for profiles, opportunities, documents, campaigns, applications, tasks, outcomes, and answers behind `vocationd`.
+- [x] Add a content-addressed encrypted artifact vault for CV, PDF, DOCX, and generated artifacts.
+- [x] Add resumable and idempotent `vocation init` onboarding with demo, profile, and resume modes. Headless uses an explicitly started headless daemon.
+- [x] Add safe PDF, DOCX, Markdown, and UTF-8 import planning with exact plan hash approval binding.
+- [x] Add Document AST v2, claim-bound rendering, PDF and DOCX output, parse-back verification, and answer memory.
+- [x] Add an event-sourced application tracker and end-to-end synthetic user journey.
 
 ### Phase 2, v0.6 Discovery and Company Catalog
 
@@ -144,3 +144,14 @@
 - 2026-07-11: compiled `vocation help` and `vocation doctor` passed from an external temporary working directory.
 - 2026-07-12: isolated maintenance clone passed 42 test files and 220 tests with 82.57 percent statement, 70.80 percent branch, 92.44 percent function, and 85.11 percent line coverage.
 - 2026-07-12: isolated maintenance clone passed schemas, selfcheck, evaluator, privacy, brand, citation, SBOM, site, subprocess, and package gates without npm publication.
+- 2026-07-12: real Windows `vocation init --demo` smoke created a complete version 8 onboarding session plus one profile and one opportunity, then cleaned its daemon, runtime, and OS credentials.
+- 2026-07-12: real Windows `vocation init --profile` parsed a local UTF-8 profile, stopped at claim review, and applied two analysis-only facts only after exact plan hash approval.
+- 2026-07-12: generated PDF and DOCX fixtures plus multilingual renderer output passed isolated parse-back verification.
+- 2026-07-12: the golden product journey persisted 16 valid events across onboarding, discovery, document, tracker, task, answer, and outcome surfaces.
+- 2026-07-12: independent adversarial review reopened the release gate for stale onboarding receipts and parser spawn failure settlement. Controlled concurrency and child lifecycle tests now cover both boundaries.
+- 2026-07-12: a second adversarial pass exposed non-linearizable concurrent start and resume flows plus late parser success after timeout. Unique mutation identities, canonical post-mutation reads, prompt timeout rejection, and preserved `SIGKILL` escalation closed those races.
+- 2026-07-12: final local `npm run safe:publish-check` passed 55 test files and 284 tests with 81.09 percent statement, 69.64 percent branch, 91.59 percent function, and 84.27 percent line coverage.
+- 2026-07-12: 30 schemas, 19 evaluator cases, 23 citation records, a 462 component SBOM, 2 Astro pages, external CLI smoke, and a real production-only tarball install with PDF and DOCX parser smokes passed.
+- 2026-07-12: authenticated Windows daemon shutdown returned `shutdown-authorized`, released the endpoint and lock, and left no running test process or test credential.
+- 2026-07-12: the final onboarding race review found same-step version churn and a profile result envelope that could contradict terminal canonical state. Bounded canonical retry and canonical `nextAction` derivation now cover both cases.
+- 2026-07-12: final independent read only re-review returned PASS with no P0 or P1 finding. Controlled probes confirmed bounded retry, canonical terminal results, one-time parser settlement, forced termination, sanitized diagnostics, and zero remaining child handles.

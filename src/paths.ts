@@ -17,6 +17,10 @@ export function defaultDatabasePath(): string {
   return path.join(defaultRuntimeRoot(), "vocation.db");
 }
 
+export function defaultArtifactVaultRoot(): string {
+  return path.join(defaultRuntimeRoot(), "artifacts");
+}
+
 export function defaultDaemonLockPath(): string {
   return path.join(defaultRuntimeRoot(), "vocationd.lock.json");
 }

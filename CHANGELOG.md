@@ -1,5 +1,38 @@
 # Changelog
 
+## 0.5.0
+
+Local profile, document, and application operations release candidate.
+
+### Security hardening
+
+1. Authority receipt replay now revalidates deterministic event and authenticated request bindings.
+2. Application records reject generic put and archive mutation.
+3. No-op mutations persist replayable command events before receipts.
+4. Imported profiles store complete plan provenance and reject preseeded value mismatches.
+5. Trusted collectors are daemon owned, and confirmed proof, evaluation, transition, and ledger evidence persist atomically.
+6. Authenticated daemon shutdown and explicit headless provider guidance are available through the CLI.
+7. Concurrent onboarding start and resume flows use unique mutation identities and reload the canonical aggregate instead of treating historical receipts as current state.
+8. Profile parser lifecycle handling settles on spawn and IPC failures, rejects late success after timeout, and preserves forced termination for noncooperating child processes.
+
+### Added
+
+1. Eight encrypted event sourced product repositories for profiles, opportunities, documents, campaigns, applications, tasks, outcomes, and policy bound answer memory.
+2. A content addressed AES 256 GCM artifact vault with HKDF separated encryption and keyed locator keys, bounded reads, authenticated deduplication, symlink containment, and durable writes.
+3. Resumable event sourced onboarding with optimistic concurrency, deterministic replay validation, interruption recovery, and one command demo or profile initialization.
+4. Isolated PDF, DOCX, Markdown, and UTF-8 profile parsing without plaintext disk fallback or inherited secret environment variables.
+5. Hash bound profile import plans whose candidates remain operator supplied and analysis only until explicit claim review.
+6. Document AST v2 with exact claim and text hash binding, Noto Sans multilingual PDF rendering, DOCX rendering, and mandatory parse back verification.
+7. An event sourced application tracker that preserves approval, high stakes, and trusted collector confirmation transitions.
+8. A golden local first journey covering onboarding, discovery, documents, tracker, tasks, answer memory, and outcomes in one encrypted runtime.
+
+### Changed
+
+1. Package version advanced to 0.5.0 and the typed local daemon SDK advanced to 0.2.0.
+2. Product domain writes and onboarding mutations now route through authenticated `vocationd` operations.
+3. Application records cannot be written through generic domain mutation. They require lifecycle specific tracker operations.
+4. Npm publication remains deferred. Production execution adapters remain compile blocked.
+
 ## 0.4.1
 
 Product engineering maintenance release candidate.

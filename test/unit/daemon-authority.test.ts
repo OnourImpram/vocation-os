@@ -82,6 +82,22 @@ describe("daemon authority boundary", () => {
     })).rejects.toThrow(/closed|timed out|invalid|authentication/i);
   });
 
+  it("signals shutdown only after an authenticated authority command is persisted", async () => {
+    await startServer();
+    if (!server) throw new Error("Daemon server fixture did not start");
+    const shutdownSignal = server.shutdownRequested;
+
+    await expect(callAuthority({
+      endpoint,
+      ipcSecret: IPC_SECRET,
+      operation: "daemon-stop",
+      payload: {},
+      requestId: "REQ-DAEMON-STOP-0001"
+    })).resolves.toMatchObject({ status: "shutdown-authorized" });
+    await expect(shutdownSignal).resolves.toBeUndefined();
+    expect((await store.readAll()).map((event) => event.eventType)).toEqual(["daemon-stop-completed"]);
+  });
+
   it("replays identical mutating requests and rejects request id reuse with different payloads", async () => {
     await startServer();
 

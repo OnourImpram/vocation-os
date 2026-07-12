@@ -1,6 +1,6 @@
 {
   "name": "@vocation-os/sdk",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Typed local daemon client contracts for VocationOS product surfaces.",
   "type": "module",
   "license": "MIT",

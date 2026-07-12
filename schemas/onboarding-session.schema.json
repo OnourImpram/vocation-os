@@ -1,0 +1,229 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://vocation-os.dev/schemas/onboarding-session.schema.json",
+  "title": "OnboardingSession",
+  "description": "A privacy bounded, resumable onboarding aggregate with an auditable transition log.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "sessionId",
+    "version",
+    "status",
+    "currentStep",
+    "events",
+    "createdAt",
+    "updatedAt"
+  ],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "sessionId": { "$ref": "#/definitions/canonicalUuid" },
+    "version": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991
+    },
+    "status": {
+      "type": "string",
+      "enum": ["active", "failed", "cancelled", "complete"]
+    },
+    "currentStep": { "$ref": "#/definitions/onboardingStep" },
+    "events": {
+      "type": "array",
+      "items": {
+        "oneOf": [
+          { "$ref": "#/definitions/stepCompletedEvent" },
+          { "$ref": "#/definitions/failedEvent" },
+          { "$ref": "#/definitions/cancelledEvent" },
+          { "$ref": "#/definitions/resumedEvent" }
+        ]
+      }
+    },
+    "createdAt": { "$ref": "#/definitions/canonicalTimestamp" },
+    "updatedAt": { "$ref": "#/definitions/canonicalTimestamp" }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "status": { "const": "complete" }
+        },
+        "required": ["status"]
+      },
+      "then": {
+        "properties": {
+          "currentStep": { "const": "complete" }
+        }
+      },
+      "else": {
+        "properties": {
+          "currentStep": { "not": { "const": "complete" } }
+        }
+      }
+    }
+  ],
+  "definitions": {
+    "canonicalUuid": {
+      "type": "string",
+      "format": "uuid",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+    },
+    "sha256Digest": {
+      "type": "string",
+      "pattern": "^sha256:[a-f0-9]{64}$"
+    },
+    "redactedResultPointer": {
+      "type": "string",
+      "pattern": "^redacted:[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+    },
+    "canonicalTimestamp": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$"
+    },
+    "onboardingStep": {
+      "type": "string",
+      "enum": [
+        "runtime",
+        "privacy",
+        "profile-import",
+        "claim-review",
+        "career-goals",
+        "source-packs",
+        "model-egress",
+        "first-discovery",
+        "complete"
+      ]
+    },
+    "actionableOnboardingStep": {
+      "type": "string",
+      "enum": [
+        "runtime",
+        "privacy",
+        "profile-import",
+        "claim-review",
+        "career-goals",
+        "source-packs",
+        "model-egress",
+        "first-discovery"
+      ]
+    },
+    "eventVersion": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 9007199254740991
+    },
+    "reasonCode": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 64,
+      "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+){0,7}$"
+    },
+    "stepCompletedEvent": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "eventType",
+        "operationId",
+        "operationHash",
+        "version",
+        "step",
+        "occurredAt",
+        "nextStep",
+        "outcome",
+        "resultPointer",
+        "contentHash",
+        "resultHash"
+      ],
+      "properties": {
+        "eventType": { "const": "step-completed" },
+        "operationId": { "$ref": "#/definitions/canonicalUuid" },
+        "operationHash": { "$ref": "#/definitions/sha256Digest" },
+        "version": { "$ref": "#/definitions/eventVersion" },
+        "step": { "$ref": "#/definitions/actionableOnboardingStep" },
+        "occurredAt": { "$ref": "#/definitions/canonicalTimestamp" },
+        "nextStep": { "$ref": "#/definitions/onboardingStep" },
+        "outcome": {
+          "type": "string",
+          "enum": ["completed", "skipped", "declined"]
+        },
+        "resultPointer": { "$ref": "#/definitions/redactedResultPointer" },
+        "contentHash": { "$ref": "#/definitions/sha256Digest" },
+        "resultHash": { "$ref": "#/definitions/sha256Digest" }
+      }
+    },
+    "failedEvent": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "eventType",
+        "operationId",
+        "operationHash",
+        "version",
+        "step",
+        "occurredAt",
+        "reasonCode",
+        "resultPointer"
+      ],
+      "properties": {
+        "eventType": { "const": "failed" },
+        "operationId": { "$ref": "#/definitions/canonicalUuid" },
+        "operationHash": { "$ref": "#/definitions/sha256Digest" },
+        "version": { "$ref": "#/definitions/eventVersion" },
+        "step": { "$ref": "#/definitions/actionableOnboardingStep" },
+        "occurredAt": { "$ref": "#/definitions/canonicalTimestamp" },
+        "reasonCode": { "$ref": "#/definitions/reasonCode" },
+        "resultPointer": { "$ref": "#/definitions/redactedResultPointer" }
+      }
+    },
+    "cancelledEvent": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "eventType",
+        "operationId",
+        "operationHash",
+        "version",
+        "step",
+        "occurredAt",
+        "reasonCode",
+        "resultPointer"
+      ],
+      "properties": {
+        "eventType": { "const": "cancelled" },
+        "operationId": { "$ref": "#/definitions/canonicalUuid" },
+        "operationHash": { "$ref": "#/definitions/sha256Digest" },
+        "version": { "$ref": "#/definitions/eventVersion" },
+        "step": { "$ref": "#/definitions/actionableOnboardingStep" },
+        "occurredAt": { "$ref": "#/definitions/canonicalTimestamp" },
+        "reasonCode": { "$ref": "#/definitions/reasonCode" },
+        "resultPointer": { "$ref": "#/definitions/redactedResultPointer" }
+      }
+    },
+    "resumedEvent": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "eventType",
+        "operationId",
+        "operationHash",
+        "version",
+        "step",
+        "occurredAt",
+        "resumedFrom"
+      ],
+      "properties": {
+        "eventType": { "const": "resumed" },
+        "operationId": { "$ref": "#/definitions/canonicalUuid" },
+        "operationHash": { "$ref": "#/definitions/sha256Digest" },
+        "version": { "$ref": "#/definitions/eventVersion" },
+        "step": { "$ref": "#/definitions/actionableOnboardingStep" },
+        "occurredAt": { "$ref": "#/definitions/canonicalTimestamp" },
+        "resumedFrom": {
+          "type": "string",
+          "enum": ["failed", "cancelled"]
+        }
+      }
+    }
+  }
+}

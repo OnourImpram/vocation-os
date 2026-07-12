@@ -1,0 +1,25 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://vocation-os.dev/schemas/task-record.schema.json",
+  "title": "CareerTaskRecord",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["taskId", "title", "status", "priority", "relatedDomain", "relatedRecordId", "dueAt", "completedAt", "createdAt", "updatedAt"],
+  "properties": {
+    "taskId": { "type": "string", "pattern": "^TSK-[A-Z0-9-]+$" },
+    "title": { "type": "string", "minLength": 1, "maxLength": 500 },
+    "status": { "enum": ["pending", "in-progress", "completed", "cancelled"] },
+    "priority": { "type": "integer", "minimum": 0, "maximum": 100 },
+    "relatedDomain": {
+      "oneOf": [
+        { "enum": ["profiles", "opportunities", "documents", "campaigns", "applications", "tasks", "outcomes", "answers"] },
+        { "type": "null" }
+      ]
+    },
+    "relatedRecordId": { "oneOf": [{ "type": "string", "minLength": 1, "maxLength": 160 }, { "type": "null" }] },
+    "dueAt": { "oneOf": [{ "type": "string", "format": "date-time" }, { "type": "null" }] },
+    "completedAt": { "oneOf": [{ "type": "string", "format": "date-time" }, { "type": "null" }] },
+    "createdAt": { "type": "string", "format": "date-time" },
+    "updatedAt": { "type": "string", "format": "date-time" }
+  }
+}
