@@ -42,18 +42,80 @@ function nestedString(value: unknown, key: string): string {
 }
 
 function stripMarkup(value: string): string {
-  return normalizeWhitespace(
-    value
-      .replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, " ")
-      .replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi, " ")
-      .replace(/<[^>]+>/g, " ")
-      .replace(/&nbsp;/gi, " ")
-      .replace(/&amp;/gi, "&")
-      .replace(/&lt;/gi, "<")
-      .replace(/&gt;/gi, ">")
-      .replace(/&quot;/gi, '"')
-      .replace(/&#39;/gi, "'")
-  );
+  return normalizeWhitespace(decodeBasicEntities(stripTags(value)));
+}
+
+function stripTags(value: string): string {
+  let output = "";
+  let index = 0;
+  const lower = value.toLowerCase();
+  while (index < value.length) {
+    if (value[index] !== "<") {
+      output += value[index];
+      index += 1;
+      continue;
+    }
+
+    const tagStart = index + 1;
+    let nameEnd = tagStart;
+    while (nameEnd < value.length && /[a-z0-9]/i.test(value[nameEnd] ?? "")) {
+      nameEnd += 1;
+    }
+    const tagName = lower.slice(tagStart, nameEnd);
+    const close = value.indexOf(">", nameEnd);
+    if (close === -1) {
+      output += " ";
+      break;
+    }
+
+    if (tagName === "script" || tagName === "style") {
+      const closingTag = `</${tagName}`;
+      const closingStart = lower.indexOf(closingTag, close + 1);
+      if (closingStart === -1) {
+        output += " ";
+        break;
+      }
+      const closingEnd = value.indexOf(">", closingStart + closingTag.length);
+      index = closingEnd === -1 ? value.length : closingEnd + 1;
+      output += " ";
+      continue;
+    }
+
+    output += " ";
+    index = close + 1;
+  }
+  return output;
+}
+
+function decodeBasicEntities(value: string): string {
+  const entities: Record<string, string> = {
+    "&nbsp;": " ",
+    "&quot;": '"',
+    "&#39;": "'",
+    "&lt;": "<",
+    "&gt;": ">",
+    "&amp;": "&"
+  };
+  let output = "";
+  let index = 0;
+  while (index < value.length) {
+    if (value[index] !== "&") {
+      output += value[index];
+      index += 1;
+      continue;
+    }
+    const semicolon = value.indexOf(";", index + 1);
+    if (semicolon === -1 || semicolon - index > 8) {
+      output += value[index];
+      index += 1;
+      continue;
+    }
+    const token = value.slice(index, semicolon + 1).toLowerCase();
+    const decoded = entities[token];
+    output += decoded ?? value.slice(index, semicolon + 1);
+    index = semicolon + 1;
+  }
+  return output;
 }
 
 function leverRemotePolicy(value: unknown): RemotePolicy | undefined {
