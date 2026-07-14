@@ -265,7 +265,6 @@ export async function getOrCreateCredential(
 export interface RuntimeSecrets {
   databasePassphrase: string;
   ipcSecret: string;
-  rollbackBackupPassphrase: string;
   artifactVaultKey: string;
 }
 
@@ -281,5 +280,5 @@ export async function loadOrCreateRuntimeSecrets(store: CredentialStore): Promis
   if (new Set([databasePassphrase, ipcSecret, rollbackBackupPassphrase, artifactVaultKey]).size !== 4) {
     throw new Error("Runtime credential separation invariant failed");
   }
-  return { databasePassphrase, ipcSecret, rollbackBackupPassphrase, artifactVaultKey };
+  return { databasePassphrase, ipcSecret, artifactVaultKey };
 }
