@@ -181,17 +181,35 @@ function classifyCandidate(text: string): CareerFactCategory {
   return "career-narrative";
 }
 
-function candidateLines(text: string): string[] {
+function splitCandidateLine(line: string): string[] {
+  const segments: string[] = [];
+  let remaining = line;
+  while (remaining.length > MAX_CANDIDATE_CHARACTERS) {
+    const boundary = remaining.lastIndexOf(" ", MAX_CANDIDATE_CHARACTERS);
+    const end = boundary >= 3 ? boundary : MAX_CANDIDATE_CHARACTERS;
+    segments.push(remaining.slice(0, end));
+    remaining = remaining.slice(end).trimStart();
+  }
+  if (remaining.length > 0) segments.push(remaining);
+  return segments;
+}
+
+function candidateLines(text: string): { lines: string[]; splitLineCount: number } {
   const seen = new Set<string>();
   const lines: string[] = [];
+  let splitLineCount = 0;
   for (const raw of text.split("\n")) {
     const line = raw.replace(/^\s*[-*+•]\s*/u, "").trim().replace(/\s+/g, " ");
     if (line.length < 3 || seen.has(line)) continue;
     seen.add(line);
-    lines.push(line.slice(0, MAX_CANDIDATE_CHARACTERS));
-    if (lines.length >= MAX_CANDIDATES) break;
+    const segments = splitCandidateLine(line);
+    if (segments.length > 1) splitLineCount += 1;
+    if (lines.length + segments.length > MAX_CANDIDATES) {
+      throw new Error(`Profile import exceeds the lossless candidate limit of ${MAX_CANDIDATES}`);
+    }
+    lines.push(...segments);
   }
-  return lines;
+  return { lines, splitLineCount };
 }
 
 function planBody(plan: Omit<ProfileImportPlan, "planHash">): Omit<ProfileImportPlan, "planHash"> {
@@ -205,7 +223,8 @@ export function createProfileImportPlan(
 ): ProfileImportPlan {
   assertArtifactManifest(sourceManifest);
   if (!PROFILE_IMPORT_FORMATS.includes(extracted.format)) throw new Error("Unsupported extracted profile format");
-  const lines = candidateLines(extracted.text);
+  const extraction = candidateLines(extracted.text);
+  const lines = extraction.lines;
   const candidates = lines.map<ProfileImportCandidate>((text, index) => ({
     candidateId: `CAND-${sha256(`${index}:${text}`).slice("sha256:".length, "sha256:".length + 20).toUpperCase()}`,
     text,
@@ -213,7 +232,9 @@ export function createProfileImportPlan(
     sourcePointer: `artifact:${sourceManifest.storageLocator}:segment:${index + 1}`
   }));
   const warnings = [
-    ...(lines.length === MAX_CANDIDATES ? [`candidate limit reached at ${MAX_CANDIDATES}`] : []),
+    ...(extraction.splitLineCount > 0
+      ? [`split ${extraction.splitLineCount} long source line(s) into lossless bounded segments`]
+      : []),
     ...(candidates.length === 0 ? ["no candidate profile lines were extracted"] : []),
     "imported candidates remain operator supplied until claim review"
   ];

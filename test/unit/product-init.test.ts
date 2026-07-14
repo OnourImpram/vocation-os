@@ -114,37 +114,17 @@ describe("single command product initialization", () => {
     expect((await store.verifyIntegrity()).eventCount).toBe(6);
   });
 
-  it("returns the canonical aggregate when another initializer wins the start race", async () => {
-    const startObserved = deferred();
-    const releaseStart = deferred();
-    const delayedClient: ProductInitClient = {
-      request: async (operation, payload = {}, options = {}) => {
-        if (operation === "onboarding-start") {
-          startObserved.resolve();
-          await releaseStart.promise;
-        }
-        return client.request(operation, payload, options);
-      }
-    };
-    const delayedResume = runProductInitialization(delayedClient, { mode: "resume" });
-    await startObserved.promise;
-
-    const concurrent = await runProductInitialization(client, { mode: "demo" });
-    releaseStart.resolve();
-    const resumed = await delayedResume;
-
-    expect(concurrent.session).toMatchObject({ status: "complete", version: 8 });
-    expect(resumed).toMatchObject({
-      nextAction: "complete",
-      session: { sessionId: concurrent.session.sessionId, status: "complete", version: 8 }
-    });
+  it("rejects resume when no onboarding session exists", async () => {
+    await expect(runProductInitialization(client, { mode: "resume" }))
+      .rejects.toThrow("No onboarding session exists to resume");
+    expect((await store.chainHead()).eventCount).toBe(0);
   });
 
   it("reloads canonical state when another initializer wins the resume mutation race", async () => {
     const started = await authority.execute({
       id: "REQ-PRODUCT-INIT-RACE-START",
       operation: "onboarding-start",
-      payload: {}
+      payload: { initializationMode: "demo" }
     }, START) as { version: number };
     await authority.execute({
       id: "REQ-PRODUCT-INIT-RACE-FAIL",
@@ -232,7 +212,7 @@ describe("single command product initialization", () => {
     });
   });
 
-  it("derives the profile result action from a concurrently completed canonical session", async () => {
+  it("rejects a demo mode takeover while profile onboarding is awaiting claim review", async () => {
     const profilePath = path.join(root, "operator-profile.txt");
     writeFileSync(profilePath, Buffer.from("private profile source bytes", "utf8"));
     const stepObserved = deferred();
@@ -255,14 +235,35 @@ describe("single command product initialization", () => {
     const profileInitialization = runProductInitialization(delayedClient, { mode: "profile", profilePath });
     await stepObserved.promise;
 
-    const concurrent = await runProductInitialization(client, { mode: "demo" });
+    await expect(runProductInitialization(client, { mode: "demo" }))
+      .rejects.toThrow("Onboarding mode is locked to profile");
     releaseStep.resolve();
     const profileResult = await profileInitialization;
 
-    expect(concurrent.session).toMatchObject({ status: "complete", version: 8 });
     expect(profileResult).toMatchObject({
-      nextAction: "complete",
-      session: { sessionId: concurrent.session.sessionId, status: "complete", version: 8 }
+      nextAction: "claim-review",
+      session: { initializationMode: "profile", status: "active", currentStep: "claim-review", version: 3 }
+    });
+    await expect(authority.execute({
+      id: "REQ-PRODUCT-INIT-MODE-LOCK-PROFILES",
+      operation: "domain-list",
+      payload: { domain: "profiles" }
+    })).resolves.toEqual([]);
+  });
+
+  it("recovers the active profile plan after the client loses the first response", async () => {
+    const profilePath = path.join(root, "operator-profile.txt");
+    writeFileSync(profilePath, Buffer.from("private profile source bytes", "utf8"));
+    const first = await runProductInitialization(client, { mode: "profile", profilePath });
+
+    const recovered = await runProductInitialization(client, { mode: "profile", profilePath });
+
+    expect(first.profileImportPlan).toMatchObject({ planHash: first.session.profilePlanHash });
+    expect(recovered.profileImportPlan).toEqual(first.profileImportPlan);
+    expect(recovered.artifactManifest).toEqual(first.artifactManifest);
+    expect(recovered).toMatchObject({
+      nextAction: "claim-review",
+      session: { profilePlanHash: first.session.profilePlanHash, currentStep: "claim-review" }
     });
   });
 });

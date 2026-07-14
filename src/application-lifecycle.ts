@@ -31,6 +31,9 @@ export interface ApplicationAttempt {
   createdAt: string;
   updatedAt: string;
   approvalId: string | null;
+  approvalApprovedBy: string | null;
+  approvalKeyId: string | null;
+  approvalExpiresAt: string | null;
   proofId: string | null;
   proofReceiptHash: string | null;
   collectorId: string | null;
@@ -64,15 +67,17 @@ export function createApplicationAttempt(input: ApplicationAttemptInput): Applic
     throw new Error("All high stakes flags require explicit boolean assessment");
   }
   const highStakesGatePassed = HIGH_STAKES_FLAGS.every((flag) => input.highStakesFlags[flag] === false);
+  const attemptId = `ATT-${now.getUTCFullYear()}-${randomUUID()}`;
   const actionIntentHash = computeActionIntentHash({
     operation: "auto-apply",
     opportunityId: input.opportunityId,
     packetHash: input.packetHash,
     adapterId: input.adapterId,
-    reversibilityTag: input.reversibilityTag
+    reversibilityTag: input.reversibilityTag,
+    attemptId
   });
   return validated({
-    attemptId: `ATT-${now.getUTCFullYear()}-${randomUUID()}`,
+    attemptId,
     opportunityId: input.opportunityId,
     packetHash: input.packetHash,
     adapterId: input.adapterId,
@@ -84,6 +89,9 @@ export function createApplicationAttempt(input: ApplicationAttemptInput): Applic
     createdAt: now.toISOString(),
     updatedAt: now.toISOString(),
     approvalId: null,
+    approvalApprovedBy: null,
+    approvalKeyId: null,
+    approvalExpiresAt: null,
     proofId: null,
     proofReceiptHash: null,
     collectorId: null,
@@ -107,7 +115,8 @@ export function approveApplicationAttempt(
       adapterId: attempt.adapterId,
       reversibilityTag: attempt.reversibilityTag,
       requiredField: "application-packet",
-      now
+      now,
+      expectedActionIntentHash: attempt.actionIntentHash
     },
     trustedApprovers
   );
@@ -118,14 +127,37 @@ export function approveApplicationAttempt(
     ...attempt,
     status: "approved",
     updatedAt: now.toISOString(),
-    approvalId: approval.approvalId
+    approvalId: approval.approvalId,
+    approvalApprovedBy: approval.approvedBy,
+    approvalKeyId: approval.keyId,
+    approvalExpiresAt: approval.expiresAt
   });
 }
 
-export function markSubmissionAttempted(attempt: ApplicationAttempt, now = new Date()): ApplicationAttempt {
+export function markSubmissionAttempted(
+  attempt: ApplicationAttempt,
+  trustedApprovers: readonly TrustedApprover[],
+  now = new Date()
+): ApplicationAttempt {
   assertTransition(attempt, "approved");
   if (!attempt.highStakesGatePassed) {
     throw new Error("High stakes gate must pass before submission can be attempted");
+  }
+  if (
+    attempt.approvalId === null
+    || attempt.approvalApprovedBy === null
+    || attempt.approvalKeyId === null
+    || attempt.approvalExpiresAt === null
+  ) {
+    throw new Error("Application approval binding is incomplete");
+  }
+  if (Date.parse(attempt.approvalExpiresAt) <= now.getTime()) {
+    throw new Error("Application approval expired before submission");
+  }
+  if (!trustedApprovers.some(
+    (approver) => approver.approvedBy === attempt.approvalApprovedBy && approver.keyId === attempt.approvalKeyId
+  )) {
+    throw new Error("Application approval signer is no longer trusted");
   }
   return validated({
     ...attempt,
@@ -200,7 +232,13 @@ export function confirmationLedgerEntry(
   ) {
     throw new Error("Only a collector bound confirmed attempt can create a confirmation ledger entry");
   }
-  if (!attempt.highStakesGatePassed || attempt.approvalId === null) {
+  if (
+    !attempt.highStakesGatePassed
+    || attempt.approvalId === null
+    || attempt.approvalApprovedBy === null
+    || attempt.approvalKeyId === null
+    || attempt.approvalExpiresAt === null
+  ) {
     throw new Error("Confirmation ledger requires passed high stakes and approval gates");
   }
   const entry: ActionLedgerEntry = {

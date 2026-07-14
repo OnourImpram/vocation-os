@@ -368,6 +368,44 @@ export class RuntimeAuthority {
     return config;
   }
 
+  private async assertOnboardingStepPrerequisites(
+    session: OnboardingSession,
+    step: ActionableOnboardingStep,
+    result: OnboardingStepResultInput
+  ): Promise<void> {
+    const repositories = new ProductRepositories(this.store);
+    if (step === "profile-import") {
+      if (session.initializationMode === "profile") {
+        if (result.profilePlanHash === undefined) throw new Error("Profile import step requires a plan hash");
+        if (!(await this.findProfileImportPlan(result.profilePlanHash))) {
+          throw new Error("Profile import step plan hash is not present in authenticated history");
+        }
+      } else {
+        const profiles = await repositories.profiles.list();
+        if (!profiles.some((record) => record.value.profileScope === "synthetic")) {
+          throw new Error("Demo profile import step requires a persisted synthetic profile");
+        }
+      }
+    }
+    if (step === "claim-review") {
+      if (session.initializationMode === "profile") {
+        if (session.profilePlanHash === null) throw new Error("Profile claim review requires an active plan hash");
+        const plan = await this.findProfileImportPlan(session.profilePlanHash);
+        if (!plan) throw new Error("Profile claim review plan is missing from authenticated history");
+        const profile = await repositories.profiles.get(careerTwinFromImportPlan(plan).twinId);
+        if (!profile) throw new Error("Profile claim review requires the approved plan to be applied");
+      } else {
+        const profiles = await repositories.profiles.list();
+        if (!profiles.some((record) => record.value.profileScope === "synthetic")) {
+          throw new Error("Demo claim review requires a persisted synthetic profile");
+        }
+      }
+    }
+    if (step === "first-discovery" && (await repositories.opportunities.list()).length === 0) {
+      throw new Error("First discovery requires a persisted opportunity");
+    }
+  }
+
   public async execute(request: AuthorityRequest, now = new Date()): Promise<unknown> {
     assertRequestId(request.id);
     const requestHash = sha256(stableStringify({ operation: request.operation, payload: request.payload }));
@@ -419,6 +457,16 @@ export class RuntimeAuthority {
     }
     if (request.operation === "onboarding-status") {
       return this.repository.loadOnboardingSession();
+    }
+    if (request.operation === "profile-import-plan-get") {
+      objectPayload(request.payload);
+      const session = await this.repository.loadOnboardingSession();
+      if (!session || session.initializationMode !== "profile" || session.profilePlanHash === null) {
+        throw new Error("No active profile import plan is bound to onboarding");
+      }
+      const plan = await this.findProfileImportPlan(session.profilePlanHash);
+      if (!plan) throw new Error("The onboarding profile import plan is missing from authenticated history");
+      return plan;
     }
     if (request.operation === "domain-get" || request.operation === "domain-list") {
       const payload = objectPayload(request.payload);
@@ -519,13 +567,24 @@ export class RuntimeAuthority {
       return record;
     }
     if (request.operation === "onboarding-start") {
-      objectPayload(request.payload);
+      const payload = objectPayload(request.payload);
+      const initializationMode = payload["initializationMode"];
+      if (initializationMode !== "demo" && initializationMode !== "profile") {
+        throw new Error("Onboarding start requires demo or profile initialization mode");
+      }
       const existing = await this.repository.loadOnboardingSession();
       if (existing) {
+        if (existing.initializationMode !== initializationMode) {
+          throw new Error(`Onboarding mode is locked to ${existing.initializationMode}`);
+        }
         await this.recordCommand(request, requestHash, eventId, existing, now);
         return existing;
       }
-      const session = createOnboardingSession({ sessionId: uuidForRequest(request.id), createdAt: now.toISOString() });
+      const session = createOnboardingSession({
+        sessionId: uuidForRequest(request.id),
+        createdAt: now.toISOString(),
+        initializationMode
+      });
       return this.saveOnboardingResponse(request, requestHash, eventId, session, now);
     }
     if (
@@ -544,6 +603,7 @@ export class RuntimeAuthority {
       let next: OnboardingSession;
       if (request.operation === "onboarding-complete-step") {
         const result = payload["result"] as OnboardingStepResultInput;
+        await this.assertOnboardingStepPrerequisites(current, step, result);
         next = completeOnboardingStep(current, { operationId, expectedVersion, step, occurredAt, result });
       } else if (request.operation === "onboarding-resume") {
         next = resumeOnboarding(current, { operationId, expectedVersion, step, occurredAt });

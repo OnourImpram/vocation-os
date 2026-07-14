@@ -108,6 +108,35 @@ describe("bounded profile import planning", () => {
     await expect(parseProfileArtifact(Buffer.from([0xc3, 0x28]), "text")).rejects.toThrow("not valid UTF-8");
   });
 
+  it("splits long source lines without dropping their tail", () => {
+    const prefix = "Evidence grounded career systems ".repeat(16);
+    const tail = "FINAL-SOURCE-TAIL";
+    const source = `${prefix}${tail}`;
+    const manifest = vault.store(Buffer.from(source, "utf8")).manifest;
+    const plan = createProfileImportPlan(manifest, {
+      format: "text",
+      pageCount: null,
+      text: source
+    }, NOW);
+    const reconstructed = plan.candidates.map((candidate) => candidate.text).join(" ");
+    const twin = careerTwinFromImportPlan(plan);
+
+    expect(plan.candidateCount).toBeGreaterThan(1);
+    expect(reconstructed).toContain(tail);
+    expect(twin.facts.map((fact) => fact.value).join(" ")).toContain(tail);
+    expect(plan.warnings.join(" ")).toContain("lossless bounded segments");
+  });
+
+  it("fails closed instead of truncating when lossless segmentation exceeds the candidate ceiling", () => {
+    const source = Array.from({ length: 501 }, (_, index) => `Distinct profile fact ${index.toString().padStart(3, "0")}`).join("\n");
+    const manifest = vault.store(Buffer.from(source, "utf8")).manifest;
+    expect(() => createProfileImportPlan(manifest, {
+      format: "text",
+      pageCount: null,
+      text: source
+    }, NOW)).toThrow("lossless candidate limit");
+  });
+
   it("does not expose parser diagnostics or source content for malformed documents", async () => {
     const privateMarker = "PRIVATE-PROFILE-CONTENT-MUST-NOT-LEAK";
     let message = "";

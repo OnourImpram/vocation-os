@@ -45,6 +45,7 @@ export interface AnswerMemoryRecord {
 
 export interface AnswerResolutionContext {
   questionType: AnswerQuestionType;
+  normalizedPrompt: string;
   roleFamily: string | null;
   opportunityId: string;
   mode: AnswerUseMode;
@@ -85,6 +86,15 @@ export function validateAnswerMemory(record: AnswerMemoryRecord): string[] {
     if (!record.requiresPerOpportunityConfirmation) reasons.push("high stakes answers require per opportunity confirmation");
     if (record.allowedModes.includes("approved-auto")) reasons.push("high stakes answers cannot be approved auto");
   }
+  if (record.sensitivity === "sensitive") {
+    if (!record.requiresPerOpportunityConfirmation) reasons.push("sensitive answers require per opportunity confirmation");
+    if (record.allowedModes.includes("approved-auto")) reasons.push("sensitive answers cannot be approved auto");
+  }
+  if (record.sensitivity === "restricted") {
+    if (record.reusable) reasons.push("restricted answers cannot be reusable");
+    if (!record.requiresPerOpportunityConfirmation) reasons.push("restricted answers require per opportunity confirmation");
+    if (record.allowedModes.some((mode) => mode !== "assist")) reasons.push("restricted answers are assist only");
+  }
   return reasons;
 }
 
@@ -103,12 +113,15 @@ export function resolveAnswerMemory(
   records: readonly AnswerMemoryRecord[],
   context: AnswerResolutionContext
 ): AnswerResolution {
+  const requestedPromptHash = computeClaimTextHash(context.normalizedPrompt);
   const candidates = records
     .filter((record) => {
       assertAnswerMemory(record);
       return record.status === "active"
         && record.questionType === context.questionType
+        && record.promptHash === requestedPromptHash
         && record.allowedModes.includes(context.mode)
+        && (context.mode !== "approved-auto" || record.sensitivity === "standard")
         && (record.expiresAt === null || Date.parse(record.expiresAt) > context.now.getTime())
         && scopeRank(record, context) > 0;
     })

@@ -30,6 +30,7 @@ export const AUTHORITY_OPERATIONS = [
   "onboarding-cancel",
   "onboarding-resume",
   "profile-import-plan",
+  "profile-import-plan-get",
   "profile-import-apply",
   "tracker-list",
   "tracker-get",

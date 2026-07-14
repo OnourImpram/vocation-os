@@ -5,7 +5,9 @@ import {
   mkdirSync,
   mkdtempSync,
   readFileSync,
+  readdirSync,
   rmSync,
+  statSync,
   writeFileSync
 } from "node:fs";
 import { tmpdir } from "node:os";
@@ -17,6 +19,32 @@ const tempRoot = mkdtempSync(path.join(tmpdir(), "vocation-pack-check-"));
 const packDir = path.join(tempRoot, "pack");
 const consumerDir = path.join(tempRoot, "consumer");
 const bundledSdkPrefix = "node_modules/@vocation-os/sdk/";
+const binaryExtensions = new Set([".gif", ".ico", ".jpeg", ".jpg", ".png", ".ttf", ".woff", ".woff2"]);
+const forbiddenBrandTokens = [
+  [99, 97, 114, 101, 101, 114, 45, 97, 103, 101, 110, 116],
+  [67, 97, 114, 101, 101, 114, 32, 65, 103, 101, 110, 116],
+  [99, 97, 114, 101, 101, 114, 32, 97, 103, 101, 110, 116],
+  [67, 65, 82, 69, 69, 82, 95, 65, 71, 69, 78, 84]
+].map((codes) => String.fromCharCode(...codes));
+const riskyReleasePaths = [
+  /(^|\/)\.env(\.|$)/i,
+  /(^|\/)upload\//i,
+  /(^|\/)download\//i,
+  /(^|\/)tool-results\//i,
+  /(^|\/)_archive\//i,
+  /(^|\/)_state\//i,
+  /(^|\/)_research\/.*\.json$/i,
+  /(^|\/)private-profile\//i,
+  /\.(pdf|doc|docx|db|sqlite|sqlite3|key|pem|p12|crt)$/i
+];
+const secretPatterns = [
+  /OPENAI_API_KEY\s*=/i,
+  /ANTHROPIC_API_KEY\s*=/i,
+  /GITHUB_TOKEN\s*=/i,
+  /-----BEGIN (RSA |EC |OPENSSH |)PRIVATE KEY-----/,
+  /\bsk-(?:proj-|live_|test_)?[A-Za-z0-9_-]{32,}/,
+  /xox[baprs]-[A-Za-z0-9-]{20,}/
+];
 
 function run(command, args, cwd) {
   return spawnSync(command, args, {
@@ -66,6 +94,40 @@ function installedPackagePath(packageName) {
     path.join(consumerDir, "node_modules", "vocation-os", "node_modules", ...segments)
   ];
   return candidates.find((candidate) => existsSync(path.join(candidate, "package.json"))) ?? null;
+}
+
+function releaseFiles(rootPath) {
+  const files = [];
+  const visit = (current) => {
+    for (const entry of readdirSync(current)) {
+      const absolute = path.join(current, entry);
+      const stat = statSync(absolute);
+      if (stat.isDirectory()) visit(absolute);
+      else if (stat.isFile()) files.push(absolute);
+    }
+  };
+  visit(rootPath);
+  return files;
+}
+
+function scanInstalledRelease(installedRoot) {
+  const failures = [];
+  for (const filePath of releaseFiles(installedRoot)) {
+    const relative = path.relative(installedRoot, filePath).split(path.sep).join("/");
+    if (riskyReleasePaths.some((pattern) => pattern.test(relative))) {
+      failures.push(`risky release path: ${relative}`);
+      continue;
+    }
+    if (binaryExtensions.has(path.extname(relative).toLowerCase())) continue;
+    const content = readFileSync(filePath, "utf8");
+    if (forbiddenBrandTokens.some((token) => content.includes(token))) {
+      failures.push(`forbidden legacy brand token in release: ${relative}`);
+    }
+    if (secretPatterns.some((pattern) => pattern.test(content))) {
+      failures.push(`secret pattern in release: ${relative}`);
+    }
+  }
+  requireCondition(failures.length === 0, failures.join("\n"));
 }
 
 let successMessage = "";
@@ -154,6 +216,7 @@ try {
 
   const installedRoot = path.join(consumerDir, "node_modules", "vocation-os");
   const installedManifest = readJson(path.join(installedRoot, "package.json"));
+  scanInstalledRelease(installedRoot);
   requireCondition(
     installedManifest.dependencies?.["pdf-lib"] === "1.17.1" &&
       installedManifest.devDependencies?.["pdf-lib"] === undefined,
@@ -219,7 +282,7 @@ try {
   );
 
   successMessage =
-    "pack check passed: actual tarball, bundled private SDK, production-only install, external CLI, and bounded PDF/DOCX parser smokes verified";
+    "pack check passed: actual tarball, release content scan, bundled private SDK, production-only install, external CLI, and bounded PDF/DOCX parser smokes verified";
 } finally {
   rmSync(tempRoot, { recursive: true, force: true });
 }

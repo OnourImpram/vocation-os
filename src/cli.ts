@@ -643,7 +643,11 @@ async function profileImportPlan(): Promise<void> {
   const format = process.argv[4];
   if (!manifestPath || !format) throw new Error("profile-import-plan requires <manifest-json> <pdf|docx|markdown|text>");
   const manifest = JSON.parse(readFileSync(path.resolve(manifestPath), "utf8")) as unknown;
-  printJson(await callDaemon("profile-import-plan", { manifest, format }));
+  printJson(await callDaemon("profile-import-plan", { manifest, format }, { timeoutMs: 45_000 }));
+}
+
+async function profileImportPlanShow(): Promise<void> {
+  printJson(await callDaemon("profile-import-plan-get"));
 }
 
 async function profileImportApply(): Promise<void> {
@@ -1037,6 +1041,9 @@ async function main(): Promise<void> {
     break;
   case "profile-import-plan":
     await profileImportPlan();
+    break;
+  case "profile-import-plan-show":
+    await profileImportPlanShow();
     break;
   case "profile-import-apply":
     await profileImportApply();

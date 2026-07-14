@@ -38,10 +38,11 @@ function timestamp(offsetSeconds: number): string {
   return new Date(Date.UTC(2026, 6, 11, 12, 0, offsetSeconds)).toISOString();
 }
 
-function freshSession(): OnboardingSession {
+function freshSession(initializationMode: "demo" | "profile" = "demo"): OnboardingSession {
   return createOnboardingSession({
     sessionId: uuid(1),
-    createdAt: timestamp(0)
+    createdAt: timestamp(0),
+    initializationMode
   });
 }
 
@@ -376,5 +377,25 @@ describe("resumable onboarding state machine", () => {
     const validation = validateOnboardingSession(tampered);
     expect(validation.valid).toBe(false);
     expect(validation.errors.join(" ")).toContain("operationHash does not match");
+  });
+
+  it("requires and projects an active plan hash for profile onboarding", () => {
+    let session = freshSession("profile");
+    session = completeOnboardingStep(session, completionCommand(session, "runtime", 1));
+    session = completeOnboardingStep(session, completionCommand(session, "privacy", 2));
+    const missingPlan = completionCommand(session, "profile-import", 3);
+    expect(() => completeOnboardingStep(session, missingPlan)).toThrow("requires a bound profile plan hash");
+
+    const planHash = digest(777);
+    const completed = completeOnboardingStep(session, {
+      ...missingPlan,
+      result: { ...missingPlan.result, profilePlanHash: planHash }
+    });
+    expect(completed).toMatchObject({
+      initializationMode: "profile",
+      profilePlanHash: planHash,
+      currentStep: "claim-review"
+    });
+    expect(validateOnboardingSession(completed)).toEqual({ valid: true, errors: [] });
   });
 });

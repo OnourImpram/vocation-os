@@ -16,6 +16,8 @@ import { MemoryCredentialStore } from "../../src/security/credential-store.js";
 import type { CareerTaskRecord, VersionedDomainRecord } from "../../src/storage/product-repositories.js";
 import { ProductRepositories } from "../../src/storage/product-repositories.js";
 import { careerTwinFromImportPlan, type ProfileImportPlan } from "../../src/import/profile-import.js";
+import { createCareerTwin } from "../../src/career-twin.js";
+import { createOpportunityRecord } from "../../src/opportunity.js";
 
 const PASSPHRASE = "product authority integration passphrase";
 const MASTER_KEY = Buffer.alloc(32, 0x61);
@@ -87,10 +89,41 @@ describe("product operations behind vocationd authority", () => {
     let session = await authority.execute({
       id: "REQ-ONBOARDING-START-0001",
       operation: "onboarding-start",
-      payload: {}
+      payload: { initializationMode: "demo" }
     }, START) as OnboardingSession;
 
     for (const [index, step] of ONBOARDING_ACTIONABLE_STEPS.entries()) {
+      if (step === "profile-import") {
+        const profile = createCareerTwin("synthetic", [], [], now(index + 1));
+        await authority.execute({
+          id: "REQ-ONBOARDING-DEMO-PROFILE-0001",
+          operation: "domain-put",
+          payload: { domain: "profiles", expectedVersion: 0, value: profile }
+        }, now(index + 1));
+      }
+      if (step === "first-discovery") {
+        const opportunity = createOpportunityRecord({
+          source: "manual",
+          sourceId: "ONBOARDING-AUTHORITY-TEST",
+          sourceUrl: "https://example.test/vocation-os/onboarding-authority",
+          applyUrl: null,
+          company: "Synthetic Career Systems Lab",
+          roleTitle: "Career Systems Researcher",
+          locationText: "Remote worldwide",
+          remotePolicy: "remote",
+          applicantLocationRequirements: ["worldwide"],
+          descriptionText: "Synthetic first discovery prerequisite.",
+          postedAt: null,
+          capturedAt: now(index + 1).toISOString(),
+          extractionConfidence: "high",
+          sourcePayload: { fixture: true }
+        });
+        await authority.execute({
+          id: "REQ-ONBOARDING-DEMO-OPPORTUNITY-0001",
+          operation: "domain-put",
+          payload: { domain: "opportunities", expectedVersion: 0, value: opportunity }
+        }, now(index + 1));
+      }
       session = await authority.execute({
         id: `REQ-ONBOARDING-STEP-${(index + 1).toString().padStart(4, "0")}`,
         operation: "onboarding-complete-step",
@@ -113,7 +146,35 @@ describe("product operations behind vocationd authority", () => {
       operation: "onboarding-status",
       payload: {}
     })).resolves.toEqual(session);
-    expect((await store.chainHead()).eventCount).toBe(9);
+    expect((await store.chainHead()).eventCount).toBe(11);
+  });
+
+  it("cannot advance demo onboarding past profile import without a persisted synthetic profile", async () => {
+    let session = await authority.execute({
+      id: "REQ-ONBOARDING-PREREQUISITE-START",
+      operation: "onboarding-start",
+      payload: { initializationMode: "demo" }
+    }, START) as OnboardingSession;
+    for (const [index, step] of (["runtime", "privacy"] as const).entries()) {
+      session = await authority.execute({
+        id: `REQ-ONBOARDING-PREREQUISITE-${step.toUpperCase()}`,
+        operation: "onboarding-complete-step",
+        payload: {
+          expectedVersion: session.version,
+          step,
+          result: { outcome: "completed", resultPointer: pointer(index + 20), contentHash: digest(index + 20) }
+        }
+      }, now(index + 1)) as OnboardingSession;
+    }
+    await expect(authority.execute({
+      id: "REQ-ONBOARDING-PREREQUISITE-PROFILE",
+      operation: "onboarding-complete-step",
+      payload: {
+        expectedVersion: session.version,
+        step: "profile-import",
+        result: { outcome: "completed", resultPointer: pointer(22), contentHash: digest(22) }
+      }
+    }, now(3))).rejects.toThrow("requires a persisted synthetic profile");
   });
 
   it("enforces daemon owned domain versions archive behavior and request replay", async () => {
@@ -270,13 +331,13 @@ describe("product operations behind vocationd authority", () => {
     const first = {
       id: "REQ-RECEIPT-BINDING-0001",
       operation: "onboarding-start" as const,
-      payload: {}
+      payload: { initializationMode: "demo" }
     };
     await authority.execute(first, now(1));
     await authority.execute({
       id: "REQ-RECEIPT-BINDING-0002",
       operation: "onboarding-start",
-      payload: {}
+      payload: { initializationMode: "demo" }
     }, now(2));
     const secondReceipt = store.findAuthorityReceipt("REQ-RECEIPT-BINDING-0002");
     if (!secondReceipt?.eventId) throw new Error("Receipt fixture was not persisted");
@@ -298,12 +359,12 @@ describe("product operations behind vocationd authority", () => {
     const created = await authority.execute({
       id: "REQ-ONBOARDING-START-BIND-0001",
       operation: "onboarding-start",
-      payload: {}
+      payload: { initializationMode: "demo" }
     }, START);
     await expect(authority.execute({
       id: "REQ-ONBOARDING-START-BIND-0002",
       operation: "onboarding-start",
-      payload: {}
+      payload: { initializationMode: "demo" }
     }, now(1))).resolves.toEqual(created);
     await expect(authority.execute({
       id: "REQ-ONBOARDING-START-BIND-0002",

@@ -2,7 +2,7 @@
 
 ## 0.5.0
 
-Local profile, document, and application operations release candidate.
+Local profile, document, and application operations release.
 
 ### Security hardening
 
@@ -14,12 +14,21 @@ Local profile, document, and application operations release candidate.
 6. Authenticated daemon shutdown and explicit headless provider guidance are available through the CLI.
 7. Concurrent onboarding start and resume flows use unique mutation identities and reload the canonical aggregate instead of treating historical receipts as current state.
 8. Profile parser lifecycle handling settles on spawn and IPC failures, rejects late success after timeout, and preserves forced termination for noncooperating child processes.
+9. Release workflows pin first-party actions to reviewed commit identities and add CodeQL, dependency review, and Dependabot coverage.
+10. The public license now uses the canonical MIT text, and package metadata declares its repository, support URL, website, and minimum Node version.
+11. Legacy import receipts fail closed unless the exact source binding exists in the authenticated event chain.
+12. Application approvals bind to one concrete attempt. Expiry and active signer status are rechecked at submission.
+13. IPC enforces bounded frame queues, short pending handshakes, and separate authenticated capacity.
+14. Onboarding mode is immutable, active profile plans are recoverable, and terminal progress requires persisted product prerequisites.
+15. Answer reuse requires exact prompt identity. Sensitive and restricted answer policies are enforced at validation and resolution.
+16. Profile imports split long lines into bounded lossless segments and fail closed before the candidate ceiling.
+17. Long authority operations use operation-specific deadlines and return stable request IDs for canonical retry recovery.
 
 ### Added
 
 1. Eight encrypted event sourced product repositories for profiles, opportunities, documents, campaigns, applications, tasks, outcomes, and policy bound answer memory.
 2. A content addressed AES 256 GCM artifact vault with HKDF separated encryption and keyed locator keys, bounded reads, authenticated deduplication, symlink containment, and durable writes.
-3. Resumable event sourced onboarding with optimistic concurrency, deterministic replay validation, interruption recovery, and one command demo or profile initialization.
+3. Resumable event sourced onboarding with immutable mode binding, active plan recovery, optimistic concurrency, deterministic replay validation, interruption recovery, and one command demo or profile initialization.
 4. Isolated PDF, DOCX, Markdown, and UTF-8 profile parsing without plaintext disk fallback or inherited secret environment variables.
 5. Hash bound profile import plans whose candidates remain operator supplied and analysis only until explicit claim review.
 6. Document AST v2 with exact claim and text hash binding, Noto Sans multilingual PDF rendering, DOCX rendering, and mandatory parse back verification.
@@ -32,6 +41,7 @@ Local profile, document, and application operations release candidate.
 2. Product domain writes and onboarding mutations now route through authenticated `vocationd` operations.
 3. Application records cannot be written through generic domain mutation. They require lifecycle specific tracker operations.
 4. Npm publication remains deferred. Production execution adapters remain compile blocked.
+5. Version 0.5.0 is finalized as a source-first GitHub release rather than an npm release.
 
 ## 0.4.1
 

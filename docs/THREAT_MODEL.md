@@ -28,7 +28,7 @@ Opportunity content is fenced as untrusted data in advisory prompts.
 
 Public documents require verified claim references.
 
-Approval is scoped and expires.
+Approval is scoped to one concrete attempt and expires. Expiry and active signer status are rechecked at the submission transition.
 
 Approval origin is verified against an Ed25519 trusted approver registry.
 
@@ -40,7 +40,11 @@ Encrypted events are hash chained and authenticated. An encrypted chain head det
 
 Existing stores authenticate the key, SQLite image, event hashes, payload tags, and chain head before migrations can write. Migration checksums are verified on every open.
 
-Daemon connections use challenge response HMAC, per connection message authentication, monotonic request sequences, bounded frames, durable request receipts, and an exclusive process lock. Receipt replay is accepted only when the deterministic authenticated event carries the same request and response binding.
+Daemon connections use challenge response HMAC, per connection message authentication, monotonic request sequences, bounded frames, bounded complete-frame queues, short pending-handshake deadlines, separate authenticated capacity, durable request receipts, and an exclusive process lock. Receipt replay is accepted only when the deterministic authenticated event carries the same request and response binding.
+
+Legacy import receipts are untrusted cache entries until their source, locator, event metadata, and payload match an authenticated event.
+
+Onboarding mode and active profile plan are event-projected state. Answer reuse requires exact prompt identity and sensitivity-policy eligibility. Profile extraction splits long lines and rejects candidate overflow instead of truncating facts.
 
 PDF and DOCX imports use format and size limits, archive and PDF structure preflight, active content rejection, bounded extraction, a dedicated child process, built-runtime read-only permissions, network deny guards, a bounded heap, and confirmed timeout termination.
 
@@ -59,6 +63,8 @@ The current local event chain has no independent external timestamp.
 Full database deletion, replacement, or replay of both an old database and its encrypted chain head requires an external checkpoint copy or retained signing context to detect. Signed checkpoints and credential provider boundaries now exist, but external archival and recovery drills remain required for full device compromise.
 
 Administrator access, root access, compromised OS credentials, malicious code already executing as the same operating system user, and simultaneous rollback of both SQLite and its external credential state remain outside the local daemon guarantee.
+
+Pending-handshake and frame-queue limits bound local IPC resource use, but they do not promise availability against a process that already controls the same operating system account and can reconnect continuously.
 
 The pure policy API is not an isolation boundary against malicious code in the same process. Consequential adapters are therefore compile blocked. `vocationd` now owns authoritative config, ledger paths, approver registries, and adapter capabilities before production execution ships.
 

@@ -155,3 +155,40 @@
 - 2026-07-12: authenticated Windows daemon shutdown returned `shutdown-authorized`, released the endpoint and lock, and left no running test process or test credential.
 - 2026-07-12: the final onboarding race review found same-step version churn and a profile result envelope that could contradict terminal canonical state. Bounded canonical retry and canonical `nextAction` derivation now cover both cases.
 - 2026-07-12: final independent read only re-review returned PASS with no P0 or P1 finding. Controlled probes confirmed bounded retry, canonical terminal results, one-time parser settlement, forced termination, sanitized diagnostics, and zero remaining child handles.
+
+## Final Public Release Audit, 2026-07-12
+
+- [x] Freeze and compare `main`, PR 6, and PR 7 commit and blob identities.
+- [x] Re-run the complete release gate from a fresh production-like checkout.
+- [x] Review runtime authority, encrypted storage, parser containment, document claims, application lifecycle, and onboarding concurrency for P0 and P1 defects.
+- [x] Review package metadata, license detection, dependency health, workflows, Pages, release evidence, and repository security settings.
+- [x] Apply only release-blocking or low-risk release-hardening corrections and add regression evidence.
+- [ ] Obtain an independent adversarial verdict with no unresolved P0 or P1 finding.
+- [ ] Merge the stacked release chain in order, rebase the second pull request onto `main`, and require green Ubuntu and Windows checks.
+- [ ] Verify post-merge `main`, GitHub Pages, package archive, release evidence, and remote blob identity.
+- [ ] Publish the GitHub `v0.5.0` release without publishing to npm.
+- [ ] Enable appropriate main-branch and dependency security controls after merge.
+- [ ] Record the next differentiated product package without expanding the v0.5 release scope.
+
+### Reopened P1 Runtime Gates
+
+- [x] Bind legacy import receipts to the authenticated event and reject forged receipt-only replay.
+- [x] Bind tracker approvals to one attempt, recheck expiry and signer revocation at submit time, and reject approval reuse.
+- [x] Bound IPC frame queues and pending handshakes without letting idle pre-auth sockets consume authenticated capacity.
+- [x] Persist immutable onboarding mode and active profile plan hash, reject mode switching, and expose authenticated plan recovery.
+- [x] Match answer memory by prompt identity and enforce sensitive and restricted reuse policy.
+- [x] Replace profile candidate truncation with lossless segmentation and fail closed at the candidate ceiling.
+- [x] Add operation-specific IPC deadlines and canonical retry guidance for long-running profile parsing.
+- [x] Re-run focused exploit regressions before the complete release gate.
+
+### Final Local Release Evidence, 2026-07-14
+
+- [x] `npm run safe:publish-check` passed with 55 test files and 297 tests.
+- [x] Coverage thresholds passed: 80 statements, 68 branches, 85 functions, and 80 lines.
+- [x] Workflow pinning check passed for 4 GitHub workflow files.
+- [x] JSON Schema validation passed for 30 schemas.
+- [x] Evaluator passed 19 of 19 cases.
+- [x] Citation contract passed for 23 offline records.
+- [x] SBOM generation and parse passed.
+- [x] Astro built 2 pages.
+- [x] Real package tarball, production-only install, external CLI, and bounded PDF/DOCX parser smokes passed.

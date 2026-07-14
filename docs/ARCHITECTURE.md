@@ -27,7 +27,7 @@ CLI, typed SDK, and vocationd today, TUI, desktop, and extension later
 
 Version 0.5.0 exposes one command onboarding, profile import planning, product domain repositories, tracker operations, and read only or demo surfaces through the CLI. Consequential local runtime mutations go through `vocationd` as the authenticated single writer. Tauri and WXT are not yet shipped.
 
-IPC uses length prefixed JSON frames with a one MiB limit. A random client nonce and server challenge authenticate with HMAC without transmitting the IPC secret. Per connection keys bind request and response MACs. Request sequences are monotonic. Mutating request IDs are durable and idempotent. Reusing an ID with different canonical parameters fails closed. Receipt rows are reconstructable caches. Replay also verifies the deterministic event ID and the request, operation, response, and hash binding inside the authenticated event.
+IPC uses length prefixed JSON frames with a one MiB frame limit, a bounded complete-frame queue, a bounded pending-handshake pool, and separate authenticated connection capacity. A random client nonce and server challenge authenticate with HMAC without transmitting the IPC secret. Per connection keys bind request and response MACs. Request sequences are monotonic. Mutating request IDs are durable and idempotent. Reusing an ID with different canonical parameters fails closed. Long-running commands expose their request ID when a response deadline expires so the same request can recover the canonical result. Receipt rows are reconstructable caches. Replay also verifies the deterministic event ID and the request, operation, response, and hash binding inside the authenticated event.
 
 ## Data Authority
 
@@ -35,17 +35,21 @@ The claim graph remains the authority for public assertions.
 
 The Career Digital Twin is the temporal profile authority target.
 
-The encrypted SQLite event store is the canonical local runtime authority. Legacy JSON and JSONL files are import sources only. Import planning is write free and content bound. Apply requires the exact reviewed plan hash, preserves every source file, writes idempotency receipts, and creates an encrypted rollback backup.
+The encrypted SQLite event store is the canonical local runtime authority. Legacy JSON and JSONL files are import sources only. Import planning is write free and content bound. Apply requires the exact reviewed plan hash, preserves every source file, binds every cache receipt back to the exact authenticated import event, and creates an encrypted rollback backup.
 
 Profiles, opportunities, Document AST records, campaigns, application attempts, tasks, outcomes, and answer memory are optimistic concurrency controlled encrypted aggregates. A shared mutation coordinator serializes domain writes across the one event chain. Generic application put and archive operations are blocked at the daemon boundary. Application lifecycle transitions use the tracker service.
 
 The artifact vault stores CV, PDF, DOCX, and generated binaries under HMAC SHA 256 locators. AES 256 GCM encryption and locator keys are independently derived from a dedicated credential using HKDF. Manifests do not contain source paths or file names. Profile parsing receives decrypted bytes through local process IPC and never creates a plaintext parser file. PDF and DOCX resource preflight runs before fork. The built child receives read-only package and dependency access, network deny guards, a bounded heap, and hard timeout termination.
 
-Profile import plans bind parser format, source manifest, extracted text hash, review candidates, and plan hash. Apply accepts only the exact persisted plan hash. The resulting profile stores full plan and source provenance. Imported identifiers are reserved from generic writes, and an existing record is accepted only when its complete value hash matches the approved plan. Imported facts remain `operator_supplied`, `Low` confidence, internal, and analysis only until a separate claim review changes their permitted use.
+Onboarding stores one immutable initialization mode. Profile onboarding persists the active plan hash in its event projection and can recover the complete plan through authenticated history after a client restart. Demo and profile modes cannot take over each other's session. Mode-specific profile and discovery prerequisites are checked before progression.
+
+Profile import plans bind parser format, source manifest, extracted text hash, review candidates, and plan hash. Long lines are split into lossless bounded segments. Candidate overflow fails before an approvable plan can be produced. Apply accepts only the exact persisted plan hash. The resulting profile stores full plan and source provenance. Imported identifiers are reserved from generic writes, and an existing record is accepted only when its complete value hash matches the approved plan. Imported facts remain `operator_supplied`, `Low` confidence, internal, and analysis only until a separate claim review changes their permitted use.
 
 Application packets bind rendered claims and document hashes to one opportunity.
 
-Approval references authorize one bounded action intent.
+Approval references authorize one bounded action intent. Application tracker intents include the unique attempt ID. Approval expiry and active signer status are checked again immediately before submission.
+
+Answer memory is bound to the exact normalized prompt hash. Sensitive answers require per-opportunity confirmation. Restricted answers are assist only and cannot be reusable.
 
 Approver and collector signatures establish origin inside separate trusted local registries owned by the local runtime authority. Registry management ships in v0.5.0. Production collector keys and ATS collectors do not.
 

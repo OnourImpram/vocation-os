@@ -44,6 +44,7 @@ describe("policy bound application answer memory", () => {
 
     expect(resolveAnswerMemory([global, scoped], {
       questionType: "custom",
+      normalizedPrompt: global.normalizedPrompt,
       roleFamily: null,
       opportunityId: "OPP-DEMO-001",
       mode: "supervised",
@@ -59,13 +60,14 @@ describe("policy bound application answer memory", () => {
       promptHash: computeClaimTextHash("Are you authorized to work in this country?"),
       answerText: "Requires operator confirmation for this jurisdiction",
       answerHash: computeClaimTextHash("Requires operator confirmation for this jurisdiction"),
-      sensitivity: "restricted",
+      sensitivity: "sensitive",
       requiresPerOpportunityConfirmation: true,
       allowedModes: ["assist", "supervised"]
     });
 
     expect(resolveAnswerMemory([authorization], {
       questionType: "work-authorization",
+      normalizedPrompt: authorization.normalizedPrompt,
       roleFamily: null,
       opportunityId: "OPP-DEMO-001",
       mode: "supervised",
@@ -89,11 +91,36 @@ describe("policy bound application answer memory", () => {
     assertAnswerMemory(eeo);
     expect(resolveAnswerMemory([eeo], {
       questionType: "eeo-demographic",
+      normalizedPrompt: eeo.normalizedPrompt,
       roleFamily: null,
       opportunityId: "OPP-DEMO-001",
       mode: "assist",
       now: NOW
     })).toMatchObject({ status: "not-found", answer: null });
     expect(validateAnswerMemory({ ...eeo, answerText: "mutated" }).join(" ")).toContain("text hash mismatch");
+  });
+
+  it("does not reuse an answer for a different prompt with the same broad question type", () => {
+    const record = answer();
+    expect(resolveAnswerMemory([record], {
+      questionType: "custom",
+      normalizedPrompt: "What salary range do you expect?",
+      roleFamily: null,
+      opportunityId: "OPP-DEMO-001",
+      mode: "supervised",
+      now: NOW
+    })).toMatchObject({ status: "not-found", answer: null });
+  });
+
+  it("rejects restricted answers that are reusable or eligible for approved automation", () => {
+    const restricted = answer({
+      answerId: "ANS-RESTRICTED-001",
+      sensitivity: "restricted",
+      requiresPerOpportunityConfirmation: true,
+      allowedModes: ["assist", "approved-auto"]
+    });
+    const reasons = validateAnswerMemory(restricted).join(" ");
+    expect(reasons).toContain("cannot be reusable");
+    expect(reasons).toContain("assist only");
   });
 });

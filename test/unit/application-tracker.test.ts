@@ -58,7 +58,7 @@ describe("event sourced application tracker", () => {
     const approved = await tracker.approve(
       prepared.recordId,
       prepared.version,
-      demoApprovalReference({ packet, now: approvedAt }),
+      demoApprovalReference({ packet, now: approvedAt, actionIntentHash: prepared.value.actionIntentHash }),
       { ...context(2), now: approvedAt }
     );
     const submitted = await tracker.markSubmitted(approved.recordId, approved.version, context(3));

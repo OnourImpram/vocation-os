@@ -10,6 +10,7 @@ import { callAuthority } from "../../src/ipc/client.js";
 import {
   FrameChannel,
   deriveSessionKey,
+  encodeFrame,
   handshakeProof,
   randomNonce,
   requestMac,
@@ -63,13 +64,14 @@ describe("authenticated daemon IPC", () => {
   let secret: string;
   let store: EncryptedEventStore | undefined;
   let server: DaemonServerHandle | undefined;
+  let authority: RuntimeAuthority;
 
   beforeEach(async () => {
     dir = mkdtempSync(path.join(tmpdir(), "vocation-ipc-"));
     endpoint = endpointFor(dir);
     secret = randomBytes(32).toString("base64url");
     store = await EncryptedEventStore.open(path.join(dir, "vocation.db"), STORE_PASSPHRASE);
-    const authority = new RuntimeAuthority(store, new MemoryCredentialStore(), dir);
+    authority = new RuntimeAuthority(store, new MemoryCredentialStore(), dir);
     server = await startDaemonServer({
       endpoint,
       lockPath: path.join(dir, "vocationd.lock"),
@@ -179,5 +181,65 @@ describe("authenticated daemon IPC", () => {
       sessionKey.fill(0);
       socket.destroy();
     }
+  });
+
+  it("reserves authenticated capacity while idle pre-auth sockets are bounded separately", async () => {
+    await server?.close();
+    server = await startDaemonServer({
+      endpoint,
+      lockPath: path.join(dir, "vocationd.lock"),
+      ipcSecret: secret,
+      authority,
+      maxConnections: 2,
+      maxPendingHandshakes: 4,
+      handshakeTimeoutMs: 1_000
+    });
+    const idleSockets = await Promise.all([openSocket(endpoint), openSocket(endpoint)]);
+    try {
+      await expect(callAuthority({
+        endpoint,
+        ipcSecret: secret,
+        operation: "health",
+        requestId: "REQ-IPC-PENDING-RESERVE-0001",
+        timeoutMs: 1_000
+      })).resolves.toMatchObject({ status: "ok" });
+    } finally {
+      for (const socket of idleSockets) socket.destroy();
+    }
+  });
+
+  it("closes a peer that exceeds the bounded pre-auth frame queue", async () => {
+    const socket = await openSocket(endpoint);
+    const closed = new Promise<void>((resolve) => socket.once("close", () => resolve()));
+    const hello = encodeFrame({ type: "hello", clientNonce: randomNonce() });
+    socket.write(Buffer.concat(Array.from({ length: 20 }, () => hello)));
+    await expect(Promise.race([
+      closed.then(() => "closed"),
+      new Promise<string>((resolve) => setTimeout(() => resolve("timeout"), 1_000))
+    ])).resolves.toBe("closed");
+  });
+
+  it("surfaces the request id after timeout so the canonical completed result can be recovered", async () => {
+    const originalExecute = authority.execute.bind(authority);
+    authority.execute = async (request, now) => {
+      if (request.id === "REQ-IPC-TIMEOUT-RECOVERY-0001") {
+        await new Promise((resolve) => setTimeout(resolve, 500));
+      }
+      return originalExecute(request, now);
+    };
+    const request = {
+      endpoint,
+      ipcSecret: secret,
+      operation: "onboarding-start" as const,
+      requestId: "REQ-IPC-TIMEOUT-RECOVERY-0001",
+      payload: { initializationMode: "demo" }
+    };
+
+    await expect(callAuthority({ ...request, timeoutMs: 200 }))
+      .rejects.toThrow("REQ-IPC-TIMEOUT-RECOVERY-0001");
+    await new Promise((resolve) => setTimeout(resolve, 600));
+    await expect(callAuthority({ ...request, timeoutMs: 2_000 }))
+      .resolves.toMatchObject({ initializationMode: "demo", status: "active" });
+    expect((await store?.chainHead())?.eventCount).toBe(1);
   });
 });

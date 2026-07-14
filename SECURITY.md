@@ -1,6 +1,8 @@
 # Security
 
-Report security issues privately to the maintainer.
+Report security issues through [GitHub private vulnerability reporting](https://github.com/OnourImpram/vocation-os/security/advisories/new). Do not open a public issue for an undisclosed vulnerability.
+
+Include the affected version, reproducible steps, expected impact, and the smallest safe proof of concept. Do not include real CVs, credentials, tokens, or third-party personal data.
 
 ## Release Blockers
 

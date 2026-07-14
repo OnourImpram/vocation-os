@@ -4,18 +4,19 @@ Evidence grounded career decision safety for high agency operators.
 
 ![VocationOS decision control room banner](assets/vocationos-banner.png)
 
-![CI](https://img.shields.io/badge/CI-safe%20publish%20gate-informational)
+[![CI](https://github.com/OnourImpram/vocation-os/actions/workflows/ci.yml/badge.svg)](https://github.com/OnourImpram/vocation-os/actions/workflows/ci.yml)
+[![Security analysis](https://github.com/OnourImpram/vocation-os/actions/workflows/security.yml/badge.svg)](https://github.com/OnourImpram/vocation-os/actions/workflows/security.yml)
 ![TypeScript](https://img.shields.io/badge/TypeScript-strict-blue)
 ![Safety](https://img.shields.io/badge/safety-adversarially%20tested-informational)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
 VocationOS is a local first career decision safety system. It makes consequential automation conditional on evidence, reversibility, stakes, scoped human authorization, and verifiable completion evidence.
 
-Website: https://onourimpram.github.io/vocation-os/
+Website: [onourimpram.github.io/vocation-os](https://onourimpram.github.io/vocation-os/)
 
 ## Current Release
 
-Version 0.5.0 is the canonical local profile, document, and application operations release candidate.
+Version 0.5.0 is the canonical local profile, document, and application operations release.
 
 It includes the deterministic safety kernel, claim and packet integrity, persistent kill switch state, scoped approvals, trusted submission collectors, a migrated encrypted SQLite event store, checksummed schema migrations, encrypted backup and restore, a content addressed encrypted artifact vault, resumable onboarding, real PDF and DOCX profile parsing, hash bound import plans, event sourced product repositories, claim bound PDF and DOCX rendering with parse back verification, an application tracker, policy bound answer memory, and the existing Career Digital Twin, opportunity, portfolio, outcome, theory, and VocationBench foundations.
 
@@ -53,7 +54,7 @@ Most career tooling optimizes output volume. VocationOS optimizes decision quali
 
 ## Quick Start
 
-Version 0.5.0 is a source-first GitHub release candidate. Registry installation remains intentionally unavailable until the typed SDK and root package complete a separate npm release pass.
+Version 0.5.0 is a source-first GitHub release. Registry installation remains intentionally unavailable until the typed SDK and root package complete a separate npm release pass.
 
 ```bash
 npm ci
@@ -106,7 +107,7 @@ vocation legacy-import-plan
 vocation legacy-import-apply sha256:<approved-plan-hash>
 ```
 
-Run the complete release candidate gate:
+Run the complete release gate:
 
 ```bash
 npm run safe:publish-check
@@ -181,6 +182,7 @@ Product commands are available from the compiled CLI:
 ```bash
 vocation init --demo
 vocation init --profile ./profile.docx
+vocation profile-import-plan-show
 vocation artifact-list
 vocation domain-list profiles
 vocation tracker-list
@@ -214,7 +216,7 @@ The values below are checked by `npm run docs:check`.
 | Theories | 28 |
 | Rubric dimensions | 20 |
 | Schemas | 30 |
-| CLI commands | 64 |
+| CLI commands | 65 |
 | Evaluator tests | 19 |
 
 ## What This Is Not

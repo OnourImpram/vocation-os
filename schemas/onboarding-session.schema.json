@@ -8,6 +8,8 @@
   "required": [
     "schemaVersion",
     "sessionId",
+    "initializationMode",
+    "profilePlanHash",
     "version",
     "status",
     "currentStep",
@@ -16,8 +18,15 @@
     "updatedAt"
   ],
   "properties": {
-    "schemaVersion": { "const": 1 },
+    "schemaVersion": { "const": 2 },
     "sessionId": { "$ref": "#/definitions/canonicalUuid" },
+    "initializationMode": { "type": "string", "enum": ["demo", "profile"] },
+    "profilePlanHash": {
+      "oneOf": [
+        { "$ref": "#/definitions/sha256Digest" },
+        { "type": "null" }
+      ]
+    },
     "version": {
       "type": "integer",
       "minimum": 0,
@@ -132,8 +141,8 @@
         "nextStep",
         "outcome",
         "resultPointer",
-        "contentHash",
-        "resultHash"
+          "contentHash",
+          "resultHash"
       ],
       "properties": {
         "eventType": { "const": "step-completed" },
@@ -149,6 +158,7 @@
         },
         "resultPointer": { "$ref": "#/definitions/redactedResultPointer" },
         "contentHash": { "$ref": "#/definitions/sha256Digest" },
+        "profilePlanHash": { "$ref": "#/definitions/sha256Digest" },
         "resultHash": { "$ref": "#/definitions/sha256Digest" }
       }
     },

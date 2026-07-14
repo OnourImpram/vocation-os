@@ -20,9 +20,9 @@ VocationOS is a human supervised, candidate side career decision system.
 
 ## Scoped Authorization
 
-An `ApprovalReference` binds the opportunity ID, packet hash, adapter ID, action intent hash, allowed field, approver, approval time, and expiry. It is signed with Ed25519 and must verify against the trusted approver registry.
+An `ApprovalReference` binds the opportunity ID, packet hash, adapter ID, action intent hash, allowed field, approver, approval time, and expiry. Application tracker intents also bind the unique attempt ID. The approval is signed with Ed25519 and must verify against the trusted approver registry.
 
-Approvals expire after at most 24 hours. Replaying approval against another opportunity, packet, adapter, or reversibility level fails closed.
+Approvals expire after at most 24 hours. Replaying approval against another opportunity, packet, adapter, reversibility level, or application attempt fails closed. Expiry and active signer status are checked again immediately before submission.
 
 The rearm phrase only disengages the kill switch. It does not enable automation.
 
@@ -44,15 +44,15 @@ A local signature provides origin and tamper evidence within the configured trus
 
 Version 0.5.0 compiles only the synthetic `local-fixture` execution adapter. A config, caller, or plugin cannot enable a production ATS execution adapter. `vocationd` owns the runtime adapter decision, but no production execution adapter ships in this release.
 
-Profile import does not convert extracted text into verified public claims. Candidates are stored as operator supplied, Low confidence, internal, and analysis only. Applying an import requires the exact persisted plan hash. PDF and DOCX parsing runs in a bounded local child process with structural resource preflight, an allowlisted environment, built-runtime read-only filesystem permissions, network deny guards, a bounded heap, confirmed timeout termination, and no plaintext disk fallback. PDF.js requires a pinned native canvas addon, so this boundary is process containment and input hardening rather than a complete operating system sandbox.
+Profile import does not convert extracted text into verified public claims. Candidates are stored as operator supplied, Low confidence, internal, and analysis only. Applying an import requires the exact persisted plan hash. Long lines are split without dropping their tail, and candidate overflow blocks plan creation. Onboarding mode cannot switch between demo and profile, and the active plan is recoverable from authenticated state. PDF and DOCX parsing runs in a bounded local child process with structural resource preflight, an allowlisted environment, built-runtime read-only filesystem permissions, network deny guards, a bounded heap, confirmed timeout termination, and no plaintext disk fallback. PDF.js requires a pinned native canvas addon, so this boundary is process containment and input hardening rather than a complete operating system sandbox.
 
-Document AST v2 rendering requires one verified claim and canonical text hash per content node. Structural text uses a constrained vocabulary and cannot carry free form claims. PDF and DOCX output must pass parse back verification before being written. Application records cannot bypass lifecycle transitions through generic put or archive operations. Confirmed attempts persist the signed collector proof, its evaluation, the lifecycle transition, and the ledger evidence together. EEO answers are not resolved for reuse, and legal, licensing, relocation, compensation, visa, and work authorization answers require per opportunity confirmation.
+Document AST v2 rendering requires one verified claim and canonical text hash per content node. Structural text uses a constrained vocabulary and cannot carry free form claims. PDF and DOCX output must pass parse back verification before being written. Application records cannot bypass lifecycle transitions through generic put or archive operations. Confirmed attempts persist the signed collector proof, its evaluation, the lifecycle transition, and the ledger evidence together. Answer memory requires exact prompt identity. EEO answers are not resolved for reuse. Sensitive answers require per opportunity confirmation. Restricted answers are assist only and non reusable.
 
 ## Local Data Security
 
 The encrypted event store uses SQLite WAL and FULL synchronous mode. Sensitive event and snapshot payloads and the canonical chain head use AES 256 GCM. Native installations keep separated secrets in the OS credential store. Headless installations use an AES 256 GCM credential vault whose key is derived with `scrypt` from a masked interactive passphrase. Plaintext, shell, argument, and environment variable secret fallbacks are not supported.
 
-Checksummed migrations authenticate an existing store before writing and create a standard encrypted rollback backup before applying a newer schema. Legacy imports require a deterministic dry run plan hash, preserve source files, and create another encrypted rollback backup before mutation. Restore verifies the SQLite image, migration history, database identity, event count, and event chain head before an atomic swap.
+Checksummed migrations authenticate an existing store before writing and create a standard encrypted rollback backup before applying a newer schema. Legacy imports require a deterministic dry run plan hash, preserve source files, verify cache receipts against authenticated import events, and create another encrypted rollback backup before mutation. Restore verifies the SQLite image, migration history, database identity, event count, and event chain head before an atomic swap.
 
 Signed Ed25519 checkpoints bind the database identity, schema version, event count, chain head, prior checkpoint digest, device, and key. The latest digest is retained in the credential store to detect rollback of SQLite together with its internal chain head. This is tamper evidence, not an independent timestamp or remote notarization service.
 

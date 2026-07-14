@@ -81,6 +81,7 @@ export const CLI_COMMANDS = [
   "domain-archive",
   "onboarding-status",
   "profile-import-plan",
+  "profile-import-plan-show",
   "profile-import-apply",
   "document-render",
   "tracker-list",

@@ -78,7 +78,11 @@ describe("daemon owned trusted collector confirmation", () => {
       payload: {
         attemptId: prepared.recordId,
         expectedVersion: prepared.version,
-        approval: demoApprovalReference({ packet, now: approvedAt })
+        approval: demoApprovalReference({
+          packet,
+          now: approvedAt,
+          actionIntentHash: prepared.value.actionIntentHash
+        })
       }
     }, approvedAt) as { recordId: string; version: number };
     const submittedAt = new Date(NOW.getTime() + 4_000);

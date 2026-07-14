@@ -35,9 +35,13 @@
 1. Ship twenty four contract tested GA discovery connectors.
 2. Add source liveness, cross source deduplication, salary provenance, and title adjacency.
 3. Add O*NET and ESCO data ingestion with versioned caches.
-4. Add campaign quotas, quality thresholds, diversity controls, and follow up cadence.
-5. Add read only import from supported career workflow exports.
-6. Ship a versioned catalog containing at least 150 verified company portal entries and domain source packs.
+4. Add an Opportunity Truth Engine for stale posting, duplicate, contradiction, and unresolved eligibility signals without presenting inference as fact.
+5. Add a Career Assurance Case that binds each consequential recommendation to evidence, uncertainty, defeaters, policy decisions, approval, and outcome receipts.
+6. Add campaign quotas, quality thresholds, diversity controls, and follow up cadence.
+7. Add read only import from supported career workflow exports.
+8. Ship a versioned catalog containing at least 150 verified company portal entries and domain source packs.
+
+See `docs/V0.6_DIFFERENTIATION.md` for the acceptance contract.
 
 ## v0.7 Workbench
 
@@ -60,6 +64,7 @@
 2. Add Network Intelligence with relationship fatigue controls.
 3. Add Offer Lab for compensation, BATNA, relocation, and specialist questions.
 4. Add multilingual English and Turkish product surfaces.
+5. Add a Credential Passport for standards-based verified achievements and provenance-preserving evidence exchange.
 
 ## v0.10 Evaluation and Learning
 

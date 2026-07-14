@@ -71,8 +71,22 @@ export async function startDaemonServer(input: {
   ipcSecret: string;
   authority: RuntimeAuthority;
   maxConnections?: number;
+  maxPendingHandshakes?: number;
+  handshakeTimeoutMs?: number;
   instanceLock?: SingleInstanceLock;
 }): Promise<DaemonServerHandle> {
+  const maxConnections = input.maxConnections ?? 32;
+  const maxPendingHandshakes = input.maxPendingHandshakes ?? Math.max(8, Math.min(32, maxConnections));
+  const handshakeTimeoutMs = input.handshakeTimeoutMs ?? 2_000;
+  if (!Number.isSafeInteger(maxConnections) || maxConnections < 1) {
+    throw new Error("Daemon authenticated connection limit must be a positive integer");
+  }
+  if (!Number.isSafeInteger(maxPendingHandshakes) || maxPendingHandshakes < 1) {
+    throw new Error("Daemon pending handshake limit must be a positive integer");
+  }
+  if (!Number.isSafeInteger(handshakeTimeoutMs) || handshakeTimeoutMs < 100 || handshakeTimeoutMs > 30_000) {
+    throw new Error("Daemon handshake timeout must be between 100 and 30000 milliseconds");
+  }
   const ownsLock = input.instanceLock === undefined;
   const lock = input.instanceLock ?? await acquireSingleInstanceLock({
       lockPath: input.lockPath,
@@ -91,7 +105,8 @@ export async function startDaemonServer(input: {
     throw error;
   }
   const sockets = new Set<Socket>();
-  const maxConnections = input.maxConnections ?? 32;
+  let pendingHandshakes = 0;
+  let authenticatedConnections = 0;
   let authorityQueue: Promise<unknown> = Promise.resolve();
   let resolveShutdownRequest: (() => void) | null = null;
   const shutdownRequested = new Promise<void>((resolve) => {
@@ -108,18 +123,29 @@ export async function startDaemonServer(input: {
   };
 
   const server = createServer((socket) => {
-    if (sockets.size >= maxConnections) {
+    if (
+      authenticatedConnections >= maxConnections
+      || pendingHandshakes >= maxPendingHandshakes
+      || sockets.size >= maxConnections + maxPendingHandshakes
+    ) {
       socket.destroy();
       return;
     }
     sockets.add(socket);
+    pendingHandshakes += 1;
+    let connectionPhase: "pending" | "authenticated" | "closed" = "pending";
     socket.setNoDelay(true);
-    socket.once("close", () => sockets.delete(socket));
+    socket.once("close", () => {
+      sockets.delete(socket);
+      if (connectionPhase === "pending") pendingHandshakes -= 1;
+      if (connectionPhase === "authenticated") authenticatedConnections -= 1;
+      connectionPhase = "closed";
+    });
     const channel = new FrameChannel(socket);
     void (async () => {
       let sessionKey: Buffer | null = null;
       try {
-        const helloValue = await channel.receive();
+        const helloValue = await channel.receive(handshakeTimeoutMs);
         if (!isHello(helloValue)) throw new Error("Invalid IPC hello frame");
         const challenge = {
           type: "challenge" as const,
@@ -127,13 +153,19 @@ export async function startDaemonServer(input: {
           serverNonce: randomNonce()
         };
         await channel.send(challenge);
-        const authValue = await channel.receive();
+        const authValue = await channel.receive(handshakeTimeoutMs);
         if (!isAuth(authValue) || authValue.challengeId !== challenge.challengeId) {
           throw new Error("Invalid IPC authentication frame");
         }
         if (!secureEqual(authValue.proof, handshakeProof(input.ipcSecret, helloValue, challenge))) {
           throw new Error("IPC authentication failed");
         }
+        if (authenticatedConnections >= maxConnections) {
+          throw new Error("Daemon authenticated connection capacity is exhausted");
+        }
+        pendingHandshakes -= 1;
+        authenticatedConnections += 1;
+        connectionPhase = "authenticated";
         sessionKey = deriveSessionKey(input.ipcSecret, helloValue, challenge);
         await channel.send({
           type: "ready",

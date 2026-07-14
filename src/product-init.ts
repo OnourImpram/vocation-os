@@ -1,9 +1,15 @@
 import { randomUUID } from "node:crypto";
 import type { AuthorityOperation, VocationRequestOptions } from "@vocation-os/sdk";
-import { assertOnboardingSession, type ActionableOnboardingStep, type OnboardingSession } from "./onboarding.js";
+import {
+  assertOnboardingSession,
+  type ActionableOnboardingStep,
+  type OnboardingSession,
+  type Sha256Digest
+} from "./onboarding.js";
 import { sha256, stableStringify } from "./hash.js";
 import { createOpportunityRecord } from "./opportunity.js";
 import type { CareerTwin } from "./career-twin.js";
+import type { ProfileImportPlan } from "./import/profile-import.js";
 import type { ProfileImportFormat } from "./import/profile-parser-worker.js";
 
 export type ProductInitMode = "demo" | "profile" | "resume";
@@ -69,11 +75,24 @@ function nextActionFor(session: OnboardingSession, profileMode = false): Product
   return "continue-onboarding";
 }
 
+function recoveredProfilePlan(value: unknown): ProfileImportPlan {
+  const plan = value as { planHash?: unknown; sourceManifest?: unknown };
+  if (
+    typeof plan?.planHash !== "string"
+    || !/^sha256:[a-f0-9]{64}$/.test(plan.planHash)
+    || plan.sourceManifest === undefined
+  ) {
+    throw new Error("Profile import plan recovery returned an invalid plan");
+  }
+  return value as ProfileImportPlan;
+}
+
 async function completeStep(
   client: ProductInitClient,
   session: OnboardingSession,
   step: ActionableOnboardingStep,
   evidence: unknown,
+  profilePlanHash?: Sha256Digest,
   conflictRetries = 0
 ): Promise<OnboardingSession> {
   if (session.currentStep !== step) return session;
@@ -82,10 +101,11 @@ async function completeStep(
     result = await client.request("onboarding-complete-step", {
       expectedVersion: session.version,
       step,
-      result: {
-        outcome: "completed",
-        resultPointer: redactedPointer(session, step),
-        contentHash: sha256(stableStringify(evidence))
+        result: {
+          outcome: "completed",
+          resultPointer: redactedPointer(session, step),
+          contentHash: sha256(stableStringify(evidence)),
+          ...(profilePlanHash !== undefined ? { profilePlanHash } : {})
       }
     }, { requestId: requestId(session, `STEP-${step}`) });
   } catch (error) {
@@ -95,7 +115,7 @@ async function completeStep(
       const resumed = await resumeIfInterrupted(client, current);
       if (resumed.currentStep !== step) return resumed;
       if (resumed.status === "active") {
-        return completeStep(client, resumed, step, evidence, conflictRetries + 1);
+        return completeStep(client, resumed, step, evidence, profilePlanHash, conflictRetries + 1);
       }
     }
     throw error;
@@ -185,14 +205,20 @@ export async function runProductInitialization(
     throw new Error("Profile onboarding requires an absolute profile path");
   }
   const persistedSession = await currentOnboardingSession(client);
+  if (persistedSession === null && options.mode === "resume") {
+    throw new Error("No onboarding session exists to resume");
+  }
   let session = persistedSession === null
     ? sessionFrom(await client.request(
         "onboarding-start",
-        {},
+        { initializationMode: options.mode },
         { requestId: uniqueRequestId("REQ-INIT-PRIMARY-START") }
       ))
     : persistedSession;
   session = await currentOnboardingSession(client) ?? session;
+  if (options.mode !== "resume" && session.initializationMode !== options.mode) {
+    throw new Error(`Onboarding mode is locked to ${session.initializationMode} and cannot switch to ${options.mode}`);
+  }
   if (session.status === "complete") {
     return {
       mode: options.mode,
@@ -231,12 +257,19 @@ export async function runProductInitialization(
         { sourcePath: options.profilePath },
         { requestId: requestId(session, "ARTIFACT-PROFILE") }
       );
-      profileImportPlan = await client.request(
+      const plan = recoveredProfilePlan(await client.request(
         "profile-import-plan",
         { manifest: artifactManifest, format: profileFormat(options.profilePath ?? "") },
-        { requestId: requestId(session, "PROFILE-IMPORT-PLAN") }
+        { requestId: requestId(session, "PROFILE-IMPORT-PLAN"), timeoutMs: 45_000 }
+      ));
+      profileImportPlan = plan;
+      session = await completeStep(
+        client,
+        session,
+        "profile-import",
+        { artifactManifest, profileImportPlan: plan },
+        plan.planHash as Sha256Digest
       );
-      session = await completeStep(client, session, "profile-import", artifactManifest);
     } else {
       profileRecordId = await putDemoProfile(client, session);
       session = await completeStep(client, session, "profile-import", { profileRecordId });
@@ -245,6 +278,17 @@ export async function runProductInitialization(
 
   if (options.mode === "profile") {
     session = await currentOnboardingSession(client) ?? session;
+    if (session.profilePlanHash === null) {
+      throw new Error("Profile onboarding did not persist an active plan hash");
+    }
+    if (profileImportPlan === null) {
+      const plan = recoveredProfilePlan(await client.request("profile-import-plan-get"));
+      if (plan.planHash !== session.profilePlanHash) {
+        throw new Error("Recovered profile import plan does not match onboarding state");
+      }
+      profileImportPlan = plan;
+      artifactManifest = plan.sourceManifest;
+    }
     return {
       mode: options.mode,
       session,

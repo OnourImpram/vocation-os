@@ -24,6 +24,10 @@ const collector: TrustedCollector = {
 const packet = demoPacket();
 const approvalNow = new Date("2026-07-11T00:01:00.000Z");
 
+function approvalFor(attempt: ApplicationAttempt, now = approvalNow, packetValue = packet) {
+  return demoApprovalReference({ packet: packetValue, now, actionIntentHash: attempt.actionIntentHash });
+}
+
 function proof(attempt: ApplicationAttempt, packetHash = packet.packetHash) {
   return createSubmissionProof(
     {
@@ -58,11 +62,11 @@ function submittedAttempt() {
   });
   const approved = approveApplicationAttempt(
     prepared,
-    demoApprovalReference({ packet, now: approvalNow }),
+    approvalFor(prepared),
     demoTrustedApprovers(),
     approvalNow
   );
-  return markSubmissionAttempted(approved, new Date("2026-07-11T00:01:30.000Z"));
+  return markSubmissionAttempted(approved, demoTrustedApprovers(), new Date("2026-07-11T00:01:30.000Z"));
 }
 
 describe("application lifecycle", () => {
@@ -100,8 +104,8 @@ describe("application lifecycle", () => {
       highStakesFlags: { ...noHighStakesFlags(), licensingSensitive: true },
       now: new Date("2026-07-11T00:00:00.000Z")
     });
-    const approved = approveApplicationAttempt(prepared, demoApprovalReference({ packet, now: approvalNow }), demoTrustedApprovers(), approvalNow);
-    expect(() => markSubmissionAttempted(approved)).toThrow("High stakes gate must pass");
+    const approved = approveApplicationAttempt(prepared, approvalFor(prepared), demoTrustedApprovers(), approvalNow);
+    expect(() => markSubmissionAttempted(approved, demoTrustedApprovers())).toThrow("High stakes gate must pass");
   });
 
   it("creates a ledger entry bound to proof and collector", () => {
@@ -136,7 +140,7 @@ describe("application lifecycle", () => {
       now: new Date("2026-07-11T00:00:00.000Z")
     });
     const otherPacket = demoPacket("verified", { opportunityId: "OPP-OTHER-001" });
-    expect(() => approveApplicationAttempt(prepared, demoApprovalReference({ packet: otherPacket, now: approvalNow }), demoTrustedApprovers(), approvalNow)).toThrow(
+    expect(() => approveApplicationAttempt(prepared, approvalFor(prepared, approvalNow, otherPacket), demoTrustedApprovers(), approvalNow)).toThrow(
       "approval-scope-mismatch"
     );
   });
@@ -151,7 +155,7 @@ describe("application lifecycle", () => {
       highStakesFlags: noHighStakesFlags(),
       now: new Date("2026-07-11T00:00:00.000Z")
     });
-    expect(() => approveApplicationAttempt(prepared, demoApprovalReference({ packet, now: approvalNow }), [], approvalNow)).toThrow(
+    expect(() => approveApplicationAttempt(prepared, approvalFor(prepared), [], approvalNow)).toThrow(
       "approver-not-trusted"
     );
   });
@@ -166,10 +170,52 @@ describe("application lifecycle", () => {
       highStakesFlags: noHighStakesFlags(),
       now: new Date("2026-07-11T00:00:00.000Z")
     });
-    const approval = demoApprovalReference({ packet, now: approvalNow });
+    const approval = approvalFor(prepared);
     const tampered = { ...approval, allowedFields: [...approval.allowedFields, "private-field"] };
     expect(() => approveApplicationAttempt(prepared, tampered, demoTrustedApprovers(), approvalNow)).toThrow(
       "approval-signature-invalid"
     );
+  });
+
+  it("binds one approval to one concrete attempt", () => {
+    const input = {
+      opportunityId: packet.opportunityId,
+      packetHash: packet.packetHash,
+      adapterId: "local-fixture",
+      channel: "ats-form" as const,
+      reversibilityTag: "R3" as const,
+      highStakesFlags: noHighStakesFlags(),
+      now: new Date("2026-07-11T00:00:00.000Z")
+    };
+    const first = createApplicationAttempt(input);
+    const second = createApplicationAttempt(input);
+    const approval = approvalFor(first);
+    expect(() => approveApplicationAttempt(first, approval, demoTrustedApprovers(), approvalNow)).not.toThrow();
+    expect(() => approveApplicationAttempt(second, approval, demoTrustedApprovers(), approvalNow)).toThrow(
+      "approval-scope-mismatch"
+    );
+  });
+
+  it("rechecks approval expiry and signer trust immediately before submission", () => {
+    const prepared = createApplicationAttempt({
+      opportunityId: packet.opportunityId,
+      packetHash: packet.packetHash,
+      adapterId: "local-fixture",
+      channel: "ats-form",
+      reversibilityTag: "R3",
+      highStakesFlags: noHighStakesFlags(),
+      now: new Date("2026-07-11T00:00:00.000Z")
+    });
+    const approved = approveApplicationAttempt(prepared, approvalFor(prepared), demoTrustedApprovers(), approvalNow);
+    expect(() => markSubmissionAttempted(
+      approved,
+      demoTrustedApprovers(),
+      new Date("2026-07-11T02:00:00.000Z")
+    )).toThrow("expired before submission");
+    expect(() => markSubmissionAttempted(
+      approved,
+      [],
+      new Date("2026-07-11T00:01:30.000Z")
+    )).toThrow("no longer trusted");
   });
 });

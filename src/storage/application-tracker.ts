@@ -99,7 +99,7 @@ export class ApplicationTracker {
     context: TrackerWriteContext
   ): Promise<VersionedDomainRecord<ApplicationAttempt>> {
     const current = await this.current(attemptId, expectedVersion);
-    return this.save(current, markSubmissionAttempted(current.value, context.now), context);
+    return this.save(current, markSubmissionAttempted(current.value, this.trustedApprovers, context.now), context);
   }
 
   public async block(

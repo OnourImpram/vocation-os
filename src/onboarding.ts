@@ -3,7 +3,8 @@ import { Ajv, type AnySchema, type ErrorObject, type ValidateFunction } from "aj
 import * as addFormatsModule from "ajv-formats/dist/index.js";
 import { sha256, stableStringify } from "./hash.js";
 
-export const ONBOARDING_SCHEMA_VERSION = 1 as const;
+export const ONBOARDING_SCHEMA_VERSION = 2 as const;
+export const ONBOARDING_MODES = ["demo", "profile"] as const;
 
 export const ONBOARDING_STEPS = [
   "runtime",
@@ -33,6 +34,7 @@ export const ONBOARDING_STEP_OUTCOMES = ["completed", "skipped", "declined"] as 
 export const ONBOARDING_EVENT_TYPES = ["step-completed", "failed", "cancelled", "resumed"] as const;
 
 export type OnboardingStep = (typeof ONBOARDING_STEPS)[number];
+export type OnboardingMode = (typeof ONBOARDING_MODES)[number];
 export type ActionableOnboardingStep = (typeof ONBOARDING_ACTIONABLE_STEPS)[number];
 export type OnboardingStatus = (typeof ONBOARDING_STATUSES)[number];
 export type OnboardingStepOutcome = (typeof ONBOARDING_STEP_OUTCOMES)[number];
@@ -63,6 +65,7 @@ export interface OnboardingStepResultInput {
   outcome: OnboardingStepOutcome;
   resultPointer: RedactedResultPointer;
   contentHash: Sha256Digest;
+  profilePlanHash?: Sha256Digest;
 }
 
 interface OnboardingCommandBase {
@@ -86,6 +89,7 @@ export interface ResumeOnboardingCommand extends OnboardingCommandBase {}
 export interface CreateOnboardingSessionInput {
   sessionId: string;
   createdAt: string;
+  initializationMode: OnboardingMode;
 }
 
 interface OnboardingEventBase {
@@ -103,6 +107,7 @@ export interface OnboardingStepCompletedEvent extends OnboardingEventBase {
   outcome: OnboardingStepOutcome;
   resultPointer: RedactedResultPointer;
   contentHash: Sha256Digest;
+  profilePlanHash?: Sha256Digest;
   resultHash: Sha256Digest;
 }
 
@@ -122,6 +127,8 @@ export type OnboardingEvent = OnboardingStepCompletedEvent | OnboardingInterrupt
 export interface OnboardingSession {
   schemaVersion: typeof ONBOARDING_SCHEMA_VERSION;
   sessionId: string;
+  initializationMode: OnboardingMode;
+  profilePlanHash: Sha256Digest | null;
   version: number;
   status: OnboardingStatus;
   currentStep: OnboardingStep;
@@ -252,6 +259,12 @@ function assertStepOutcome(value: unknown, context: string): asserts value is On
   }
 }
 
+function assertOnboardingMode(value: unknown, context: string): asserts value is OnboardingMode {
+  if (typeof value !== "string" || !(ONBOARDING_MODES as readonly string[]).includes(value)) {
+    throw validationError(`${context} must be demo or profile`);
+  }
+}
+
 function assertReasonCode(value: unknown, context: string): asserts value is string {
   if (typeof value !== "string" || value.length > 64 || !REASON_CODE_PATTERN.test(value)) {
     throw validationError(`${context} must be a bounded machine reason code`);
@@ -266,10 +279,30 @@ function assertCommandBase(command: OnboardingCommandBase): void {
 }
 
 function assertStepResult(result: OnboardingStepResultInput): void {
-  assertExactKeys(result, ["outcome", "resultPointer", "contentHash"], "step result");
+  assertExactKeys(
+    result,
+    result.profilePlanHash === undefined
+      ? ["outcome", "resultPointer", "contentHash"]
+      : ["outcome", "resultPointer", "contentHash", "profilePlanHash"],
+    "step result"
+  );
   assertStepOutcome(result.outcome, "step result outcome");
   assertRedactedPointer(result.resultPointer, "step result pointer");
   assertSha256(result.contentHash, "step result contentHash");
+  if (result.profilePlanHash !== undefined) assertSha256(result.profilePlanHash, "step result profilePlanHash");
+}
+
+function assertProfilePlanBinding(
+  mode: OnboardingMode,
+  step: ActionableOnboardingStep,
+  profilePlanHash: Sha256Digest | undefined
+): void {
+  if (step === "profile-import" && mode === "profile" && profilePlanHash === undefined) {
+    throw validationError("profile onboarding requires a bound profile plan hash");
+  }
+  if ((step !== "profile-import" || mode === "demo") && profilePlanHash !== undefined) {
+    throw validationError("profilePlanHash is only valid for profile import in profile mode");
+  }
 }
 
 function assertTimestampIsMonotonic(session: OnboardingSession, occurredAt: string): void {
@@ -297,7 +330,8 @@ export function computeOnboardingStepResultHash(
     step,
     outcome: result.outcome,
     resultPointer: result.resultPointer,
-    contentHash: result.contentHash
+    contentHash: result.contentHash,
+    ...(result.profilePlanHash !== undefined ? { profilePlanHash: result.profilePlanHash } : {})
   })) as Sha256Digest;
 }
 
@@ -343,6 +377,7 @@ interface OnboardingProjection {
   version: number;
   status: OnboardingStatus;
   currentStep: OnboardingStep;
+  profilePlanHash: Sha256Digest | null;
   updatedAt: string;
 }
 
@@ -354,6 +389,7 @@ function projectEvents(session: OnboardingSession): OnboardingProjection {
   let version = 0;
   let status: OnboardingStatus = "active";
   let currentStep: OnboardingStep = "runtime";
+  let profilePlanHash: Sha256Digest | null = null;
   let updatedAt = session.createdAt;
   const operationIds = new Set<string>();
 
@@ -371,10 +407,12 @@ function projectEvents(session: OnboardingSession): OnboardingProjection {
         const nextStep = getNextOnboardingStep(event.step);
         invariant(event.nextStep === nextStep, `event ${index} has next step ${event.nextStep}, expected ${nextStep}`);
         assertAllowedStepTransition(currentStep, nextStep);
+        assertProfilePlanBinding(session.initializationMode, event.step, event.profilePlanHash);
         const resultHash = computeOnboardingStepResultHash(event.step, {
           outcome: event.outcome,
           resultPointer: event.resultPointer,
-          contentHash: event.contentHash
+          contentHash: event.contentHash,
+          ...(event.profilePlanHash !== undefined ? { profilePlanHash: event.profilePlanHash } : {})
         });
         invariant(event.resultHash === resultHash, `event ${index} resultHash does not match its sanitized result`);
         invariant(
@@ -385,6 +423,7 @@ function projectEvents(session: OnboardingSession): OnboardingProjection {
         assertAllowedStatusTransition(status, nextStatus);
         currentStep = nextStep;
         status = nextStatus;
+        if (event.step === "profile-import") profilePlanHash = event.profilePlanHash ?? null;
         break;
       }
       case "failed":
@@ -412,7 +451,7 @@ function projectEvents(session: OnboardingSession): OnboardingProjection {
     updatedAt = event.occurredAt;
   }
 
-  return { version, status, currentStep, updatedAt };
+  return { version, status, currentStep, profilePlanHash, updatedAt };
 }
 
 function validateProjection(session: OnboardingSession): string[] {
@@ -423,6 +462,9 @@ function validateProjection(session: OnboardingSession): string[] {
     if (session.status !== projection.status) errors.push(`/status is ${session.status}, projected ${projection.status}`);
     if (session.currentStep !== projection.currentStep) {
       errors.push(`/currentStep is ${session.currentStep}, projected ${projection.currentStep}`);
+    }
+    if (session.profilePlanHash !== projection.profilePlanHash) {
+      errors.push(`/profilePlanHash is ${String(session.profilePlanHash)}, projected ${String(projection.profilePlanHash)}`);
     }
     if (session.updatedAt !== projection.updatedAt) errors.push(`/updatedAt is ${session.updatedAt}, projected ${projection.updatedAt}`);
     return errors;
@@ -452,13 +494,16 @@ function validated(session: OnboardingSession): OnboardingSession {
 }
 
 export function createOnboardingSession(input: CreateOnboardingSessionInput): OnboardingSession {
-  assertExactKeys(input, ["sessionId", "createdAt"], "create onboarding input");
+  assertExactKeys(input, ["sessionId", "createdAt", "initializationMode"], "create onboarding input");
   assertCanonicalUuid(input.sessionId, "sessionId");
   assertTimestamp(input.createdAt, "createdAt");
+  assertOnboardingMode(input.initializationMode, "initializationMode");
 
   return validated({
     schemaVersion: ONBOARDING_SCHEMA_VERSION,
     sessionId: input.sessionId,
+    initializationMode: input.initializationMode,
+    profilePlanHash: null,
     version: 0,
     status: "active",
     currentStep: "runtime",
@@ -531,6 +576,9 @@ function appendEvent(
     version: event.version,
     status,
     currentStep,
+    profilePlanHash: event.eventType === "step-completed" && event.step === "profile-import"
+      ? event.profilePlanHash ?? null
+      : session.profilePlanHash,
     events: [...session.events, event],
     updatedAt: event.occurredAt
   });
@@ -544,6 +592,7 @@ export function completeOnboardingStep(
   assertExactKeys(command, ["operationId", "expectedVersion", "step", "occurredAt", "result"], "complete step command");
   assertCommandBase(command);
   assertStepResult(command.result);
+  assertProfilePlanBinding(session.initializationMode, command.step, command.result.profilePlanHash);
 
   const resultHash = computeOnboardingStepResultHash(command.step, command.result);
   const requestHash = completeStepOperationHash(command.step, resultHash);
@@ -571,6 +620,7 @@ export function completeOnboardingStep(
     outcome: command.result.outcome,
     resultPointer: command.result.resultPointer,
     contentHash: command.result.contentHash,
+    ...(command.result.profilePlanHash !== undefined ? { profilePlanHash: command.result.profilePlanHash } : {}),
     resultHash
   };
   return appendEvent(session, event, nextStatus, nextStep);

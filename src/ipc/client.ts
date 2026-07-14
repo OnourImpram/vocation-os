@@ -60,6 +60,22 @@ function isResponse(value: unknown): value is IpcResponse {
     && typeof frame.mac === "string";
 }
 
+function defaultOperationTimeoutMs(operation: AuthorityOperation): number {
+  switch (operation) {
+    case "profile-import-plan":
+      return 45_000;
+    case "legacy-import-apply":
+      return 120_000;
+    case "artifact-import":
+    case "profile-import-apply":
+    case "audit-export":
+    case "checkpoint-create":
+      return 30_000;
+    default:
+      return 5_000;
+  }
+}
+
 export async function daemonEndpointReachable(endpoint: string, timeoutMs = 250): Promise<boolean> {
   try {
     const socket = await openSocket(endpoint, timeoutMs);
@@ -78,14 +94,16 @@ export async function callAuthority(input: {
   requestId?: string;
   timeoutMs?: number;
 }): Promise<unknown> {
-  const timeoutMs = input.timeoutMs ?? 5000;
-  const socket = await openSocket(input.endpoint, timeoutMs);
+  const timeoutMs = input.timeoutMs ?? defaultOperationTimeoutMs(input.operation);
+  const handshakeTimeoutMs = Math.min(timeoutMs, 5_000);
+  const requestId = input.requestId ?? `REQ-${randomUUID()}`;
+  const socket = await openSocket(input.endpoint, handshakeTimeoutMs);
   const channel = new FrameChannel(socket);
   let sessionKey: Buffer | null = null;
   try {
     const hello: HelloFrame = { type: "hello", clientNonce: randomNonce() };
     await channel.send(hello);
-    const challengeValue = await channel.receive(timeoutMs);
+    const challengeValue = await channel.receive(handshakeTimeoutMs);
     if (!isChallenge(challengeValue)) throw new Error("Daemon returned an invalid challenge");
     const auth: AuthFrame = {
       type: "auth",
@@ -94,7 +112,7 @@ export async function callAuthority(input: {
     };
     sessionKey = deriveSessionKey(input.ipcSecret, hello, challengeValue);
     await channel.send(auth);
-    const readyValue = await channel.receive(timeoutMs);
+    const readyValue = await channel.receive(handshakeTimeoutMs);
     if (!isReady(readyValue) || readyValue.challengeId !== challengeValue.challengeId) {
       throw new Error("Daemon authentication acknowledgement is invalid");
     }
@@ -104,14 +122,24 @@ export async function callAuthority(input: {
 
     const unsigned: Omit<IpcRequest, "mac"> = {
       type: "request",
-      id: input.requestId ?? `REQ-${randomUUID()}`,
+      id: requestId,
       sequence: 1,
       operation: input.operation,
       payload: input.payload ?? {}
     };
     const request: IpcRequest = { ...unsigned, mac: requestMac(sessionKey, unsigned) };
     await channel.send(request);
-    const responseValue = await channel.receive(timeoutMs);
+    let responseValue: unknown;
+    try {
+      responseValue = await channel.receive(timeoutMs);
+    } catch (error) {
+      if (error instanceof Error && error.message === "IPC receive timed out") {
+        throw new Error(
+          `Authority response timed out for request ${requestId}. Retry with the same request id to recover the canonical result`
+        );
+      }
+      throw error;
+    }
     if (!isResponse(responseValue)) throw new Error("Daemon returned an invalid response");
     const { mac, ...unsignedResponse } = responseValue;
     if (
