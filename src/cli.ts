@@ -805,7 +805,7 @@ async function storeRollback(): Promise<void> {
   }
   const credentials = await cliCredentialStore();
   const storePassphrase = await credentials.get(CREDENTIAL_ACCOUNTS.databasePassphrase);
-  const rollbackPassphrase = await credentials.get(CREDENTIAL_ACCOUNTS.rollbackBackupPassphrase);
+  const rollbackPassphrase = await credentials.get(CREDENTIAL_ACCOUNTS.rollbackBackupSecret);
   if (!storePassphrase || !rollbackPassphrase) throw new Error("Rollback credentials are not initialized");
   const lock = await acquireSingleInstanceLock({
     lockPath: defaultDaemonLockPath(),

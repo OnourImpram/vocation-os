@@ -36,7 +36,7 @@ export const CREDENTIAL_ACCOUNTS = {
   checkpointPrivateKey: "checkpoint-private-key",
   latestCheckpointDigest: "latest-checkpoint-digest",
   deviceId: "device-id",
-  rollbackBackupPassphrase: "rollback-backup-passphrase",
+  rollbackBackupSecret: "rollback-backup-secret",
   artifactVaultKey: "artifact-vault-key"
 } as const;
 

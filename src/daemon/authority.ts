@@ -835,7 +835,7 @@ export class RuntimeAuthority {
       );
       const rollbackPassphrase = await getOrCreateCredential(
         this.credentials,
-        CREDENTIAL_ACCOUNTS.rollbackBackupPassphrase,
+        CREDENTIAL_ACCOUNTS.rollbackBackupSecret,
         32
       );
       const journal: StorageOperationJournal = {

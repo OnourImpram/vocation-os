@@ -169,7 +169,7 @@ describe("runtime authority", () => {
     }) as { rollbackBackupPath: string };
 
     expect(second.rollbackBackupPath).not.toBe(first.rollbackBackupPath);
-    const rollbackPassphrase = await credentials.get(CREDENTIAL_ACCOUNTS.rollbackBackupPassphrase);
+    const rollbackPassphrase = await credentials.get(CREDENTIAL_ACCOUNTS.rollbackBackupSecret);
     expect(rollbackPassphrase).not.toBeNull();
     expect(inspectEncryptedBackup(first.rollbackBackupPath, rollbackPassphrase!)).toMatchObject({ eventCount: 0 });
     expect(inspectEncryptedBackup(second.rollbackBackupPath, rollbackPassphrase!)).toMatchObject({ eventCount: 2 });
