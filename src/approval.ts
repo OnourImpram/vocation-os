@@ -11,6 +11,7 @@ export interface ApprovalScope {
   reversibilityTag: ReversibilityTag;
   requiredField: string;
   now: Date;
+  expectedActionIntentHash?: string;
 }
 
 export interface ApprovalValidationResult {
@@ -100,13 +101,13 @@ export function validateApprovalReference(
   if (expiresAt - approvedAt > 86_400_000) {
     return { valid: false, blockedBy: "approval-window-too-wide", reasons: ["approval validity must not exceed 24 hours"] };
   }
-  const expectedIntentHash = computeActionIntentHash({
-    operation: scope.operation,
-    opportunityId: scope.opportunityId,
-    packetHash: scope.packetHash,
-    adapterId: scope.adapterId,
-    reversibilityTag: scope.reversibilityTag
-  });
+  const expectedIntentHash = scope.expectedActionIntentHash ?? computeActionIntentHash({
+      operation: scope.operation,
+      opportunityId: scope.opportunityId,
+      packetHash: scope.packetHash,
+      adapterId: scope.adapterId,
+      reversibilityTag: scope.reversibilityTag
+    });
   if (
     approval.operation !== scope.operation ||
     approval.opportunityId !== scope.opportunityId ||

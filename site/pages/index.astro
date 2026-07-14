@@ -10,6 +10,17 @@ const socialImage = `${siteUrl}social-preview.png`;
 const iconImage = `${base}control-room-background.png`;
 const backgroundUrl = typeof backgroundImage === "string" ? backgroundImage : backgroundImage.src;
 const repoUrl = "https://github.com/OnourImpram/vocation-os";
+const structuredData = JSON.stringify({
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  name: "VocationOS",
+  applicationCategory: "BusinessApplication",
+  operatingSystem: "Windows, macOS, Linux",
+  description: "Evidence grounded career decision safety for high agency operators.",
+  url: siteUrl,
+  codeRepository: repoUrl,
+  license: "https://opensource.org/license/mit"
+});
 ---
 
 <!doctype html>
@@ -23,13 +34,19 @@ const repoUrl = "https://github.com/OnourImpram/vocation-os";
       content="Evidence grounded career decision safety for high agency operators."
     />
     <meta property="og:title" content="VocationOS" />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content={siteUrl} />
     <meta
       property="og:description"
       content="Automation conditional on evidence, reversibility, stakes, and human authorization."
     />
     <meta property="og:image" content={socialImage} />
     <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:image" content={socialImage} />
+    <meta name="theme-color" content="#070a0c" />
+    <link rel="canonical" href={siteUrl} />
     <link rel="icon" href={iconImage} />
+    <script type="application/ld+json" set:html={structuredData}></script>
     <style>
       :root {
         color-scheme: dark;

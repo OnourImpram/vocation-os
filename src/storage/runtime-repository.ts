@@ -2,6 +2,9 @@ import { assertSchema } from "../schema.js";
 import { defaultAutoApplyConfig } from "../auto-apply.js";
 import type { ActionLedgerEntry, AutoApplyConfig } from "../types.js";
 import type { TrustedApprover } from "../approval.js";
+import type { TrustedCollector } from "../submission-proof.js";
+import { assertOnboardingSession, type OnboardingSession } from "../onboarding.js";
+import { assertArtifactManifest, type ArtifactManifest } from "./artifact-vault.js";
 import type { EncryptedEventStore, StoredEvent } from "./encrypted-event-store.js";
 
 interface ConfigEventPayload {
@@ -14,6 +17,9 @@ interface ConfigEventPayload {
 
 interface LedgerEventPayload {
   entry?: ActionLedgerEntry;
+  audit?: {
+    ledgerEntry?: ActionLedgerEntry;
+  };
   value?: {
     entry?: ActionLedgerEntry;
   };
@@ -25,6 +31,26 @@ interface ApproverEventPayload {
     approver?: TrustedApprover;
     keyId?: string;
   };
+}
+
+interface CollectorEventPayload {
+  response?: {
+    action?: "registered" | "revoked";
+    collector?: TrustedCollector;
+    keyId?: string;
+  };
+}
+
+interface OnboardingEventPayload {
+  response?: OnboardingSession;
+  session?: OnboardingSession;
+  metadata?: Record<string, unknown>;
+}
+
+interface ArtifactEventPayload {
+  response?: ArtifactManifest;
+  manifest?: ArtifactManifest;
+  metadata?: Record<string, unknown>;
 }
 
 function configFromEvent(event: StoredEvent<ConfigEventPayload>): AutoApplyConfig | null {
@@ -99,11 +125,19 @@ export class RuntimeRepository {
   }
 
   public async readLedger(): Promise<ActionLedgerEntry[]> {
-    const events = (await this.store.readAll<LedgerEventPayload>())
-      .filter((event) => event.aggregateType === "action-ledger");
+    const events = await this.store.readAll<LedgerEventPayload>();
     return events.flatMap((event) => {
-      const entry = ledgerEntryFromEvent(event);
-      return entry ? [entry] : [];
+      const entries: ActionLedgerEntry[] = [];
+      if (event.aggregateType === "action-ledger") {
+        const entry = ledgerEntryFromEvent(event);
+        if (entry) entries.push(entry);
+      }
+      const embedded = event.payload.audit?.ledgerEntry;
+      if (embedded) {
+        assertSchema("action-ledger-entry", embedded);
+        entries.push(embedded);
+      }
+      return entries;
     });
   }
 
@@ -130,5 +164,92 @@ export class RuntimeRepository {
       if (response?.action === "revoked" && response.keyId) registry.delete(response.keyId);
     }
     return [...registry.values()].sort((left, right) => left.keyId.localeCompare(right.keyId));
+  }
+
+  public async listTrustedCollectors(): Promise<TrustedCollector[]> {
+    const registry = new Map<string, TrustedCollector>();
+    const events = (await this.store.readAll<CollectorEventPayload>())
+      .filter((event) => event.eventType === "collector-register-completed" || event.eventType === "collector-revoke-completed");
+    for (const event of events) {
+      const response = event.payload.response;
+      if (response?.action === "registered" && response.collector) {
+        assertSchema("trusted-collector", response.collector);
+        registry.set(response.collector.keyId, response.collector);
+      }
+      if (response?.action === "revoked" && response.keyId) registry.delete(response.keyId);
+    }
+    return [...registry.values()].sort((left, right) => left.keyId.localeCompare(right.keyId));
+  }
+
+  public async loadOnboardingSession(): Promise<OnboardingSession | null> {
+    const events = await this.store.readAggregate<OnboardingEventPayload>("onboarding-session", "primary");
+    for (const event of [...events].reverse()) {
+      const session = event.payload.response ?? event.payload.session;
+      if (!session) continue;
+      assertOnboardingSession(session);
+      return session;
+    }
+    return null;
+  }
+
+  public async saveOnboardingSession(input: {
+    session: OnboardingSession;
+    eventId: string;
+    eventType: string;
+    occurredAt: Date;
+    metadata?: Record<string, unknown>;
+  }): Promise<string> {
+    assertOnboardingSession(input.session);
+    const event = await this.store.append<OnboardingEventPayload>({
+      eventId: input.eventId,
+      aggregateType: "onboarding-session",
+      aggregateId: "primary",
+      eventType: input.eventType,
+      schemaVersion: 1,
+      occurredAt: input.occurredAt,
+      payload: {
+        session: input.session,
+        response: input.session,
+        ...(input.metadata ? { metadata: input.metadata } : {})
+      }
+    });
+    return event.eventId;
+  }
+
+  public async listArtifactManifests(): Promise<ArtifactManifest[]> {
+    const events = (await this.store.readAll<ArtifactEventPayload>())
+      .filter((event) => event.aggregateType === "artifact-manifest");
+    const manifests = new Map<string, ArtifactManifest>();
+    for (const event of events) {
+      const manifest = event.payload.response ?? event.payload.manifest;
+      if (!manifest) continue;
+      assertArtifactManifest(manifest);
+      manifests.set(manifest.storageLocator, manifest);
+    }
+    return [...manifests.values()].sort((left, right) => left.storageLocator.localeCompare(right.storageLocator));
+  }
+
+  public async saveArtifactManifest(input: {
+    manifest: ArtifactManifest;
+    eventId: string;
+    occurredAt: Date;
+    metadata?: Record<string, unknown>;
+  }): Promise<string> {
+    assertArtifactManifest(input.manifest);
+    assertSchema("artifact-manifest", input.manifest);
+    const event = await this.store.append<ArtifactEventPayload>({
+      eventId: input.eventId,
+      aggregateType: "artifact-manifest",
+      aggregateId: input.manifest.storageLocator,
+      eventType: "artifact-import-completed",
+      schemaVersion: 1,
+      occurredAt: input.occurredAt,
+      payload: {
+        manifest: input.manifest,
+        response: input.manifest,
+        ...(input.metadata ? { metadata: input.metadata } : {})
+      }
+    });
+    return event.eventId;
   }
 }

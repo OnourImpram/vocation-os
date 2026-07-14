@@ -36,7 +36,8 @@ export const CREDENTIAL_ACCOUNTS = {
   checkpointPrivateKey: "checkpoint-private-key",
   latestCheckpointDigest: "latest-checkpoint-digest",
   deviceId: "device-id",
-  rollbackBackupPassphrase: "rollback-backup-passphrase"
+  rollbackBackupSecret: "rollback-backup-secret",
+  artifactVaultKey: "artifact-vault-key"
 } as const;
 
 export class MemoryCredentialStore implements CredentialStore {
@@ -261,22 +262,31 @@ export async function getOrCreateCredential(
   return created;
 }
 
+async function getOrCreateIpcSecret(store: CredentialStore): Promise<string> {
+  const existing = await store.get(CREDENTIAL_ACCOUNTS.ipcSecret);
+  if (existing !== null) {
+    if (existing.length < 16) throw new Error("Credential account ipc-secret contains an invalid secret");
+    return existing;
+  }
+  const created = randomBytes(32).toString("base64url");
+  await store.set(CREDENTIAL_ACCOUNTS.ipcSecret, created);
+  const verified = await store.get(CREDENTIAL_ACCOUNTS.ipcSecret);
+  if (verified !== created) throw new Error("Credential account ipc-secret failed read after write verification");
+  return created;
+}
+
 export interface RuntimeSecrets {
   databasePassphrase: string;
   ipcSecret: string;
-  rollbackBackupPassphrase: string;
+  artifactVaultKey: string;
 }
 
 export async function loadOrCreateRuntimeSecrets(store: CredentialStore): Promise<RuntimeSecrets> {
   const databasePassphrase = await getOrCreateCredential(store, CREDENTIAL_ACCOUNTS.databasePassphrase, 32);
-  const ipcSecret = await getOrCreateCredential(store, CREDENTIAL_ACCOUNTS.ipcSecret, 32);
-  const rollbackBackupPassphrase = await getOrCreateCredential(
-    store,
-    CREDENTIAL_ACCOUNTS.rollbackBackupPassphrase,
-    32
-  );
-  if (new Set([databasePassphrase, ipcSecret, rollbackBackupPassphrase]).size !== 3) {
+  const ipcSecret = await getOrCreateIpcSecret(store);
+  const artifactVaultKey = await getOrCreateCredential(store, CREDENTIAL_ACCOUNTS.artifactVaultKey, 32);
+  if (new Set([databasePassphrase, ipcSecret, artifactVaultKey]).size !== 3) {
     throw new Error("Runtime credential separation invariant failed");
   }
-  return { databasePassphrase, ipcSecret, rollbackBackupPassphrase };
+  return { databasePassphrase, ipcSecret, artifactVaultKey };
 }

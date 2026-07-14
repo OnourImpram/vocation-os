@@ -7,7 +7,8 @@
   "required": [
     "attemptId", "opportunityId", "packetHash", "adapterId", "channel", "reversibilityTag",
     "highStakesGatePassed", "actionIntentHash", "status", "createdAt", "updatedAt",
-    "approvalId", "proofId", "proofReceiptHash", "collectorId", "blocker"
+    "approvalId", "approvalApprovedBy", "approvalKeyId", "approvalExpiresAt",
+    "proofId", "proofReceiptHash", "collectorId", "blocker"
   ],
   "properties": {
     "attemptId": { "type": "string", "pattern": "^ATT-\\d{4}-[0-9a-f-]{36}$" },
@@ -22,6 +23,9 @@
     "createdAt": { "type": "string", "format": "date-time" },
     "updatedAt": { "type": "string", "format": "date-time" },
     "approvalId": { "oneOf": [{ "type": "string", "pattern": "^APR-[A-Z0-9-]+$" }, { "type": "null" }] },
+    "approvalApprovedBy": { "oneOf": [{ "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$" }, { "type": "null" }] },
+    "approvalKeyId": { "oneOf": [{ "type": "string", "pattern": "^KEY-[A-Z0-9-]+$" }, { "type": "null" }] },
+    "approvalExpiresAt": { "oneOf": [{ "type": "string", "format": "date-time" }, { "type": "null" }] },
     "proofId": { "oneOf": [{ "type": "string", "pattern": "^PRF-[A-F0-9]{20}$" }, { "type": "null" }] },
     "proofReceiptHash": { "oneOf": [{ "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" }, { "type": "null" }] },
     "collectorId": { "oneOf": [{ "type": "string", "pattern": "^COL-[A-Z0-9-]+$" }, { "type": "null" }] },

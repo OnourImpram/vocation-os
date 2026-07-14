@@ -47,6 +47,31 @@ export interface LegacyImportPlanSummary {
   errors: string[];
 }
 
+async function assertAuthenticatedImportEvent(
+  store: EncryptedEventStore,
+  candidate: LegacyImportCandidate
+): Promise<void> {
+  const event = await store.readEvent(candidate.eventId);
+  const expectedPayload = {
+    source: {
+      kind: candidate.sourceKind,
+      digest: candidate.sourceDigest,
+      locatorHash: candidate.sourceLocatorHash
+    },
+    value: candidate.payload
+  };
+  if (
+    !event
+    || event.aggregateType !== candidate.aggregateType
+    || event.aggregateId !== candidate.aggregateId
+    || event.eventType !== candidate.eventType
+    || event.schemaVersion !== 1
+    || stableStringify(event.payload) !== stableStringify(expectedPayload)
+  ) {
+    throw new Error(`Legacy import receipt is not bound to an authenticated event for ${candidate.sourceDigest}`);
+  }
+}
+
 function opaqueHash(value: string): string {
   return sha256(value).slice("sha256:".length);
 }
@@ -230,14 +255,22 @@ export async function applyLegacyImport(
   for (const candidate of plan.candidates) {
     const priorReceipt = store.findLegacyImportReceipt(candidate.sourceDigest);
     if (priorReceipt) {
-      if (priorReceipt.eventId !== candidate.eventId || priorReceipt.sourceLocatorHash !== candidate.sourceLocatorHash) {
+      if (
+        priorReceipt.eventId !== candidate.eventId
+        || priorReceipt.sourceKind !== candidate.sourceKind
+        || priorReceipt.sourceLocatorHash !== candidate.sourceLocatorHash
+      ) {
         throw new Error(`Legacy import receipt conflict for ${candidate.sourceDigest}`);
       }
+      await assertAuthenticatedImportEvent(store, candidate);
       alreadyImported += 1;
       eventIds.push(priorReceipt.eventId);
       continue;
     }
-    if (!(await store.hasEvent(candidate.eventId))) {
+    const eventAlreadyPresent = await store.hasEvent(candidate.eventId);
+    if (eventAlreadyPresent) {
+      await assertAuthenticatedImportEvent(store, candidate);
+    } else {
       await store.append({
         eventId: candidate.eventId,
         aggregateType: candidate.aggregateType,
@@ -262,7 +295,8 @@ export async function applyLegacyImport(
       eventId: candidate.eventId,
       importedAt: now.toISOString()
     });
-    imported += 1;
+    if (eventAlreadyPresent) alreadyImported += 1;
+    else imported += 1;
     eventIds.push(candidate.eventId);
   }
   return {

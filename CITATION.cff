@@ -5,6 +5,9 @@ authors:
   - family-names: "Impram"
     given-names: "Onour"
     orcid: "https://orcid.org/0000-0003-1076-3928"
-version: "0.4.1"
-url: "https://github.com/OnourImpram/vocation-os"
+version: "0.5.0"
+date-released: 2026-07-12
+license: MIT
+repository-code: "https://github.com/OnourImpram/vocation-os"
+url: "https://onourimpram.github.io/vocation-os/"
 type: software

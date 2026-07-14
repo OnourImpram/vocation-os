@@ -25,7 +25,7 @@ VocationOS is differentiated by conditional, evidence bound automation and longi
 | VocationBench fixture and metric engine | Implemented and tested |
 | Reproducible competitor benchmark results | Roadmap |
 | Desktop workbench and browser copilot | Roadmap |
-| Runtime adapter authority behind `vocationd` | Implemented and tested. v0.4.0 remains compile limited to a synthetic local fixture and ships no production execution adapter. |
+| Runtime adapter authority behind `vocationd` | Implemented and tested. v0.5.0 remains compile limited to a synthetic local fixture and ships no production execution adapter. |
 
 ## Positioning
 

@@ -1,0 +1,20 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://vocation-os.dev/schemas/product-init-config.schema.json",
+  "title": "ProductInitConfig",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version", "mode", "profilePath"],
+  "properties": {
+    "version": { "const": 1 },
+    "mode": { "enum": ["demo", "profile", "resume"] },
+    "profilePath": { "oneOf": [{ "type": "string", "minLength": 1, "maxLength": 2000 }, { "type": "null" }] }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "mode": { "const": "profile" } }, "required": ["mode"] },
+      "then": { "properties": { "profilePath": { "type": "string", "minLength": 1 } } },
+      "else": { "properties": { "profilePath": { "type": "null" } } }
+    }
+  ]
+}

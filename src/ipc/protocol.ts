@@ -4,6 +4,8 @@ import { stableStringify } from "../hash.js";
 import type { AuthorityOperation } from "@vocation-os/sdk";
 
 export const MAX_IPC_FRAME_BYTES = 1024 * 1024;
+export const MAX_IPC_BUFFER_BYTES = (MAX_IPC_FRAME_BYTES + 4) * 2;
+export const MAX_IPC_QUEUED_FRAMES = 16;
 
 export type { AuthorityOperation } from "@vocation-os/sdk";
 
@@ -54,6 +56,7 @@ export function randomNonce(): string {
 }
 
 function hmac(secret: string | Buffer, value: string): string {
+  // lgtm[js/insufficient-password-hash] This MAC authenticates IPC frames. Secret persistence uses the credential store KDF, not this envelope MAC.
   return createHmac("sha256", secret).update(value, "utf8").digest("base64url");
 }
 
@@ -126,7 +129,13 @@ export class FrameChannel {
   }> = [];
   private failure: Error | null = null;
 
-  public constructor(private readonly socket: Socket) {
+  public constructor(
+    private readonly socket: Socket,
+    private readonly maxQueuedFrames = MAX_IPC_QUEUED_FRAMES
+  ) {
+    if (!Number.isSafeInteger(maxQueuedFrames) || maxQueuedFrames < 1) {
+      throw new Error("IPC queued frame limit must be a positive integer");
+    }
     socket.on("data", (chunk: Buffer) => this.accept(chunk));
     socket.on("error", (error) => this.fail(error));
     socket.on("close", () => this.fail(new Error("IPC connection closed")));
@@ -134,6 +143,11 @@ export class FrameChannel {
 
   private accept(chunk: Buffer): void {
     if (this.failure) return;
+    if (this.buffer.length + chunk.length > MAX_IPC_BUFFER_BYTES) {
+      this.fail(new Error("IPC buffered data exceeds the maximum size"));
+      this.socket.destroy();
+      return;
+    }
     this.buffer = Buffer.concat([this.buffer, chunk]);
     while (this.buffer.length >= 4) {
       const length = this.buffer.readUInt32BE(0);
@@ -158,7 +172,11 @@ export class FrameChannel {
   private deliver(value: unknown): void {
     const waiter = this.waiters.shift();
     if (waiter) waiter.resolve(value);
-    else this.queue.push(value);
+    else if (this.queue.length < this.maxQueuedFrames) this.queue.push(value);
+    else {
+      this.fail(new Error("IPC queued frame limit exceeded"));
+      this.socket.destroy();
+    }
   }
 
   private fail(error: Error): void {

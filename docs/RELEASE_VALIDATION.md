@@ -1,5 +1,49 @@
 # Release Validation
 
+## v0.5.0 Product Foundation Evidence
+
+Version 0.5.0 adds product operations without enabling production auto apply. The release gate covers the following executable contracts.
+
+1. Resumable onboarding uses an immutable initialization mode, a persisted active profile plan hash, immutable hashed events, optimistic concurrency, idempotent request replay, and persisted projection validation.
+2. The encrypted artifact vault uses a dedicated credential, HKDF separated keys, authenticated content deduplication, bounded reads, durable writes, and source path minimization.
+3. PDF, DOCX, Markdown, and UTF-8 profile sources parse in a bounded child process without plaintext disk fallback or inherited secret environment variables. PDF and DOCX inputs pass structural resource preflight. The built parser runs with read-only Node permissions, a pinned native canvas allowance required by PDF.js, network deny guards, a bounded heap, and confirmed timeout termination.
+4. Profile import apply requires the exact persisted plan hash. Long source lines are split into lossless bounded segments and imports fail closed before the candidate ceiling can truncate data. Imported facts remain internal, Low confidence, operator supplied, and analysis only.
+5. Document AST v2 requires complete claim trace coverage and canonical text hashes. Turkish and English PDF and DOCX outputs pass parse back verification before write.
+6. Application tracker status changes use lifecycle specific operations. Approval is bound to one attempt and its expiry plus active signer status are rechecked immediately before submission. Generic application mutation is denied.
+7. Answer memory resolves only exact prompt identities. Sensitive answers require per opportunity confirmation and restricted answers are assist only and non reusable.
+8. Legacy import cache receipts must match the exact authenticated event. IPC bounds complete frame queues and pending handshakes separately from authenticated capacity. Long running operations expose stable request IDs for canonical retry recovery.
+9. The golden product journey covers onboarding, discovery, document rendering, tracker creation, tasks, answer memory, and outcomes in one encrypted event chain.
+10. Npm publication and production ATS execution remain outside this release. The real root tarball bundles the private SDK runtime, installs with production dependencies only, scans the installed release content, and executes its CLI and bounded document parser from an external consumer. Registry publication remains a separate release decision.
+
+## v0.5.0 Final Local Evidence
+
+Date: 2026-07-14
+
+The final local release gate passed after adversarial remediation of receipt binding, generic application mutation, profile provenance, structural document claims, atomic rendering, trusted confirmation, daemon shutdown, concurrent onboarding, parser process lifecycle boundaries, attempt bound approvals, bounded IPC pressure, immutable onboarding mode, prompt bound answer memory, lossless profile import, operation specific IPC deadlines, and workflow supply chain pinning.
+
+| Check | Result |
+| --- | --- |
+| Privacy scan | PASS |
+| Brand scan | PASS |
+| Workflow pinning | 4 workflow files passed |
+| Strict TypeScript | PASS |
+| Vitest | 55 files, 297 tests passed |
+| Coverage | Configured thresholds passed: 80 statements, 68 branches, 85 functions, 80 lines |
+| JSON Schema | 30 schemas valid |
+| Selfcheck | PASS |
+| Evaluator | 19 of 19 passed |
+| Citation contract | 23 records passed offline validation |
+| SBOM | CycloneDX generation and JSON parse passed |
+| Astro | 2 pages built |
+| Package | Real tarball content scan, production install, bundled SDK, external CLI, PDF parser, and DOCX parser passed |
+| Windows daemon shutdown | Authenticated stop released the endpoint and single instance lock |
+
+Exact coverage percentages and SBOM component counts can vary across Node and npm implementations. Canonical release CI is pinned by `.nvmrc` and `packageManager`. Release acceptance depends on configured coverage thresholds and successful SBOM generation and parsing, not an environment-sensitive component total.
+
+The local release evidence was regenerated with `npm run safe:publish-check` on 2026-07-14. The workflow check also validates that GitHub Actions are pinned to immutable SHAs and that Node setup uses `.nvmrc`.
+
+The release remains source first. No npm publish, production ATS execution adapter, or compliance certification is part of this pass.
+
 This document records the VocationOS release engineering evidence. It is not a compliance certification.
 
 ## v0.4.0 Release Candidate

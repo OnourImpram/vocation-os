@@ -46,6 +46,7 @@ export interface ActionIntentBinding {
   packetHash: string;
   adapterId: string;
   reversibilityTag: ReversibilityTag;
+  attemptId?: string;
 }
 
 export function computeActionIntentHash(binding: ActionIntentBinding): string {

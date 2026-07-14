@@ -23,19 +23,25 @@
 
 ## v0.5 Profile and Document Intelligence
 
-1. Import CV, DOCX, PDF, and supported official profile exports.
-2. Add temporal fact editing, counterfactual snapshots, and evidence gap analysis.
-3. Add claim first CV, cover letter, outreach, interview story, PDF, and DOCX renderers.
-4. Add ATS parse back and human edit distance tests.
-5. Add application answer memory with sensitivity and expiry policies.
+1. Shipped bounded PDF, DOCX, Markdown, and UTF-8 profile parsing without plaintext disk fallback.
+2. Shipped a content addressed encrypted artifact vault and hash bound profile import plans.
+3. Shipped resumable onboarding and versioned product repositories behind `vocationd`.
+4. Shipped Document AST v2 PDF and DOCX renderers with multilingual fonts and parse back verification.
+5. Shipped application answer memory policies and an event sourced tracker.
+6. Temporal fact editing, official export adapters, counterfactual snapshots, and human edit distance benchmarking remain scheduled for later product passes.
 
 ## v0.6 Opportunity and Campaign Engine
 
-1. Expand discovery to twelve contract tested providers.
+1. Ship twenty four contract tested GA discovery connectors.
 2. Add source liveness, cross source deduplication, salary provenance, and title adjacency.
 3. Add O*NET and ESCO data ingestion with versioned caches.
-4. Add campaign quotas, quality thresholds, diversity controls, and follow up cadence.
-5. Add read only import from supported career workflow exports.
+4. Add an Opportunity Truth Engine for stale posting, duplicate, contradiction, and unresolved eligibility signals without presenting inference as fact.
+5. Add a Career Assurance Case that binds each consequential recommendation to evidence, uncertainty, defeaters, policy decisions, approval, and outcome receipts.
+6. Add campaign quotas, quality thresholds, diversity controls, and follow up cadence.
+7. Add read only import from supported career workflow exports.
+8. Ship a versioned catalog containing at least 150 verified company portal entries and domain source packs.
+
+See `docs/V0.6_DIFFERENTIATION.md` for the acceptance contract.
 
 ## v0.7 Workbench
 
@@ -58,6 +64,7 @@
 2. Add Network Intelligence with relationship fatigue controls.
 3. Add Offer Lab for compensation, BATNA, relocation, and specialist questions.
 4. Add multilingual English and Turkish product surfaces.
+5. Add a Credential Passport for standards-based verified achievements and provenance-preserving evidence exchange.
 
 ## v0.10 Evaluation and Learning
 

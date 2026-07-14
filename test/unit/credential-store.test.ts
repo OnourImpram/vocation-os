@@ -18,12 +18,14 @@ describe("runtime credential separation", () => {
 
     expect(first).toEqual(second);
     expect(first.databasePassphrase).not.toBe(first.ipcSecret);
-    expect(first.rollbackBackupPassphrase).not.toBe(first.databasePassphrase);
-    expect(first.rollbackBackupPassphrase).not.toBe(first.ipcSecret);
+    expect(first.artifactVaultKey).not.toBe(first.databasePassphrase);
+    expect(first.artifactVaultKey).not.toBe(first.ipcSecret);
     expect(first.databasePassphrase.length).toBeGreaterThanOrEqual(43);
     expect(first.ipcSecret.length).toBeGreaterThanOrEqual(43);
     expect(await credentialStore.get(CREDENTIAL_ACCOUNTS.databasePassphrase)).toBe(first.databasePassphrase);
     expect(await credentialStore.get(CREDENTIAL_ACCOUNTS.ipcSecret)).toBe(first.ipcSecret);
+    expect(await credentialStore.get(CREDENTIAL_ACCOUNTS.rollbackBackupSecret)).toBeNull();
+    expect(await credentialStore.get(CREDENTIAL_ACCOUNTS.artifactVaultKey)).toBe(first.artifactVaultKey);
   });
 
   it("persists headless credentials only inside an authenticated encrypted vault", async () => {

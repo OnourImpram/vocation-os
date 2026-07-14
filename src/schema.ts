@@ -26,7 +26,17 @@ export const SCHEMA_NAMES = [
   "submission-proof",
   "backup-manifest",
   "legacy-import-report",
-  "store-verification-report"
+  "store-verification-report",
+  "artifact-manifest",
+  "onboarding-session",
+  "campaign-record",
+  "task-record",
+  "outcome-event",
+  "profile-import-plan",
+  "document-ast-v2",
+  "answer-memory-record",
+  "product-init-config",
+  "trusted-collector"
 ] as const;
 
 export type SchemaName = (typeof SCHEMA_NAMES)[number];

@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { defaultDaemonEndpoint, defaultDaemonLockPath, defaultDatabasePath, defaultRuntimeRoot } from "./paths.js";
+import { defaultArtifactVaultRoot, defaultDaemonEndpoint, defaultDaemonLockPath, defaultDatabasePath, defaultRuntimeRoot } from "./paths.js";
 import {
   credentialServiceName,
   EncryptedFileCredentialStore,
@@ -16,6 +16,7 @@ import { acquireSingleInstanceLock } from "./runtime/single-instance.js";
 import { daemonEndpointReachable } from "./ipc/client.js";
 import { recoverInterruptedRestore } from "./storage/encrypted-backup.js";
 import { verifyCheckpointChain } from "./security/audit-checkpoint.js";
+import { ArtifactVault } from "./storage/artifact-vault.js";
 
 function writeLog(level: "info" | "error", event: string, fields: Record<string, unknown> = {}): void {
   const stream = level === "error" ? process.stderr : process.stdout;
@@ -36,6 +37,7 @@ async function main(): Promise<void> {
   });
   let credentialStore: CredentialStore | null = null;
   let store: EncryptedEventStore | null = null;
+  let artifactVault: ArtifactVault | null = null;
   let server: Awaited<ReturnType<typeof startDaemonServer>> | null = null;
   try {
     if (process.argv.includes("--headless")) {
@@ -48,6 +50,12 @@ async function main(): Promise<void> {
       credentialStore = await OsCredentialStore.create(credentialServiceName(runtimeRoot));
     }
     const secrets = await loadOrCreateRuntimeSecrets(credentialStore);
+    const artifactVaultKey = Buffer.from(secrets.artifactVaultKey, "base64url");
+    try {
+      artifactVault = new ArtifactVault({ rootPath: defaultArtifactVaultRoot(), masterKey: artifactVaultKey });
+    } finally {
+      artifactVaultKey.fill(0);
+    }
     await recoverInterruptedRestore({
       journalPath: `${databasePath}.restore-journal.json`,
       databasePath,
@@ -55,7 +63,7 @@ async function main(): Promise<void> {
     });
     store = await EncryptedEventStore.open(databasePath, secrets.databasePassphrase);
     await verifyCheckpointChain(store, credentialStore);
-    const authority = new RuntimeAuthority(store, credentialStore, runtimeRoot);
+    const authority = new RuntimeAuthority(store, credentialStore, runtimeRoot, artifactVault);
     server = await startDaemonServer({
       endpoint,
       lockPath,
@@ -65,11 +73,12 @@ async function main(): Promise<void> {
     });
   } catch (error) {
     await store?.close();
+    artifactVault?.close();
     await credentialStore?.close?.();
     instanceLock.release();
     throw error;
   }
-  if (!credentialStore || !store || !server) throw new Error("Daemon initialization did not complete");
+  if (!credentialStore || !store || !artifactVault || !server) throw new Error("Daemon initialization did not complete");
   writeLog("info", "vocationd.started", {
     endpoint: server.endpoint,
     databaseId: await store.databaseId(),
@@ -84,6 +93,7 @@ async function main(): Promise<void> {
     try {
       await server.close();
       await store.close();
+      artifactVault.close();
       await credentialStore.close?.();
       writeLog("info", "vocationd.stopped");
       process.exitCode = 0;
@@ -96,6 +106,7 @@ async function main(): Promise<void> {
   };
   process.once("SIGINT", () => void shutdown("SIGINT"));
   process.once("SIGTERM", () => void shutdown("SIGTERM"));
+  void server.shutdownRequested.then(() => shutdown("authenticated-ipc"));
 }
 
 try {

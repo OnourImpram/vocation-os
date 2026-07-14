@@ -152,4 +152,26 @@ describe("legacy import", () => {
       expect(readFileSync(filePath)).toEqual(originalContents.get(filePath));
     }
   });
+
+  it("rejects a plaintext receipt that has no authenticated import event", async () => {
+    writeCompleteLegacyFixture(runtimeRoot);
+    const plan = planLegacyImport(runtimeRoot);
+    const candidate = plan.candidates[0];
+    if (!candidate) throw new Error("Legacy import fixture did not create a candidate");
+    const store = await EncryptedEventStore.open(path.join(runtimeRoot, "vocation.db"), PASSPHRASE);
+    try {
+      store.recordLegacyImportReceipt({
+        sourceDigest: candidate.sourceDigest,
+        sourceKind: candidate.sourceKind,
+        sourceLocatorHash: candidate.sourceLocatorHash,
+        eventId: candidate.eventId,
+        importedAt: "2026-07-11T11:00:00.000Z"
+      });
+      await expect(applyLegacyImport(store, plan, plan.planHash))
+        .rejects.toThrow("not bound to an authenticated event");
+      expect(await store.readAll()).toHaveLength(0);
+    } finally {
+      await store.close();
+    }
+  });
 });

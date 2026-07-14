@@ -1,12 +1,28 @@
 {
   "name": "vocation-os",
-  "version": "0.4.1",
+  "version": "0.5.0",
   "description": "Evidence grounded career decision safety for high agency operators.",
   "type": "module",
+  "packageManager": "npm@10.9.8",
   "license": "MIT",
+  "author": "Onour Impram",
+  "homepage": "https://onourimpram.github.io/vocation-os/",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/OnourImpram/vocation-os.git"
+  },
+  "bugs": {
+    "url": "https://github.com/OnourImpram/vocation-os/issues"
+  },
+  "engines": {
+    "node": ">=22.13.0"
+  },
   "private": false,
   "workspaces": [
     "packages/*"
+  ],
+  "bundleDependencies": [
+    "@vocation-os/sdk"
   ],
   "bin": {
     "vocation": "./dist/cli.js",
@@ -14,6 +30,7 @@
   },
   "files": [
     "dist",
+    "assets/fonts",
     "schemas",
     "examples",
     "docs",
@@ -40,7 +57,13 @@
     "cli",
     "reversibility",
     "evidence-based",
-    "career-development"
+    "career-development",
+    "career-counseling",
+    "claim-graph",
+    "agent-safety",
+    "audit-log",
+    "governance",
+    "responsible-ai"
   ],
   "scripts": {
     "build:sdk": "npm run build --workspace @vocation-os/sdk",
@@ -54,6 +77,7 @@
     "privacy:scan": "node scripts/privacy-scan.mjs",
     "brand:scan": "node scripts/brand-scan.mjs",
     "docs:check": "node scripts/docs-check.mjs",
+    "workflow:check": "node scripts/workflow-check.mjs",
     "docs:theory-map": "tsx scripts/theory-map.ts",
     "citations:check": "node scripts/citation-check.mjs",
     "citations:check:online": "node scripts/citation-check-online.mjs",
@@ -65,21 +89,27 @@
     "site:build": "astro build",
     "site:preview": "astro preview",
     "pack:check": "npm run build && node scripts/pack-check.mjs",
-    "ci": "npm run privacy:scan && npm run brand:scan && npm run typecheck && npm run coverage && npm run validate:schemas && npm run selfcheck && npm run evaluate && npm run scan-fable && npm run docs:check && npm run citations:check && npm run sbom:check && npm run site:build && npm run test:cli && npm run pack:check",
+    "ci": "npm run privacy:scan && npm run brand:scan && npm run workflow:check && npm run typecheck && npm run coverage && npm run validate:schemas && npm run selfcheck && npm run evaluate && npm run scan-fable && npm run docs:check && npm run citations:check && npm run sbom:check && npm run site:build && npm run test:cli && npm run pack:check",
     "safe:publish-check": "npm run ci"
   },
   "dependencies": {
-    "@vocation-os/sdk": "0.1.0",
+    "@pdf-lib/fontkit": "1.1.1",
+    "@vocation-os/sdk": "0.2.0",
     "ajv": "^8.17.1",
     "ajv-formats": "^3.0.1",
     "better-sqlite3": "^12.11.1",
-    "kysely": "^0.29.3"
+    "docx": "9.7.1",
+    "kysely": "^0.29.3",
+    "mammoth": "1.12.0",
+    "pdf-lib": "1.17.1",
+    "pdfjs-dist": "6.1.200"
   },
   "devDependencies": {
     "@types/better-sqlite3": "^7.6.13",
-    "@types/node": "^22.13.14",
+    "@types/node": "^22.20.1",
     "@vitest/coverage-v8": "4.1.10",
-    "astro": "^7.0.6",
+    "astro": "^7.0.7",
+    "jszip": "3.10.1",
     "tsx": "^4.19.3",
     "typescript": "^5.8.2",
     "vitest": "4.1.10"

@@ -17,6 +17,7 @@ export interface DemoApprovalOptions {
   packet?: ApplicationPacket;
   adapterId?: string;
   reversibilityTag?: ReversibilityTag;
+  actionIntentHash?: string;
   now?: Date;
 }
 
@@ -49,13 +50,13 @@ export function demoApprovalReference(options: DemoApprovalOptions = {}): Approv
     opportunityId: packet.opportunityId,
     packetHash: packet.packetHash,
     adapterId,
-    actionIntentHash: computeActionIntentHash({
-      operation: "auto-apply",
-      opportunityId: packet.opportunityId,
-      packetHash: packet.packetHash,
-      adapterId,
-      reversibilityTag
-    }),
+    actionIntentHash: options.actionIntentHash ?? computeActionIntentHash({
+        operation: "auto-apply",
+        opportunityId: packet.opportunityId,
+        packetHash: packet.packetHash,
+        adapterId,
+        reversibilityTag
+      }),
     allowedFields: ["application-packet"]
   }, demoApproverKeyPair.privateKey);
 }

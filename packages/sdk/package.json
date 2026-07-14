@@ -1,6 +1,6 @@
 {
   "name": "@vocation-os/sdk",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Typed local daemon client contracts for VocationOS product surfaces.",
   "type": "module",
   "license": "MIT",
@@ -19,7 +19,7 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "engines": {
-    "node": ">=22"
+    "node": ">=22.13.0"
   },
   "devDependencies": {
     "typescript": "^5.8.2"

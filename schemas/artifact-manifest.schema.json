@@ -1,0 +1,23 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://vocation-os.dev/schemas/artifact-manifest.schema.json",
+  "title": "ArtifactManifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "format",
+    "version",
+    "cipher",
+    "contentHash",
+    "storageLocator",
+    "sizeBytes"
+  ],
+  "properties": {
+    "format": { "const": "vocation-os-artifact" },
+    "version": { "const": 1 },
+    "cipher": { "const": "aes-256-gcm" },
+    "contentHash": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+    "storageLocator": { "type": "string", "pattern": "^hmac-sha256:[a-f0-9]{64}$" },
+    "sizeBytes": { "type": "integer", "minimum": 0, "maximum": 9007199254740991 }
+  }
+}

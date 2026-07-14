@@ -1,0 +1,34 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://vocation-os.dev/schemas/trusted-collector.schema.json",
+  "title": "TrustedCollector",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["collectorId", "keyId", "publicKeyPem", "allowedAdapters", "allowedSourceDomains", "allowedKinds"],
+  "properties": {
+    "collectorId": { "type": "string", "pattern": "^COL-[A-Z0-9-]+$" },
+    "keyId": { "type": "string", "pattern": "^KEY-[A-Z0-9-]{8,100}$" },
+    "publicKeyPem": { "type": "string", "minLength": 80, "maxLength": 1000 },
+    "allowedAdapters": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 50,
+      "uniqueItems": true,
+      "items": { "type": "string", "pattern": "^[a-z0-9][a-z0-9._-]{0,99}$" }
+    },
+    "allowedSourceDomains": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 50,
+      "uniqueItems": true,
+      "items": { "type": "string", "pattern": "^[a-z0-9.-]+$" }
+    },
+    "allowedKinds": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 4,
+      "uniqueItems": true,
+      "items": { "enum": ["confirmation-page", "ats-dashboard", "sent-items", "receipt-email"] }
+    }
+  }
+}
