@@ -55,11 +55,24 @@ function run(command, args, cwd) {
   });
 }
 
-function runNpm(args, cwd) {
+function resolveNpmExecPath() {
   const npmExecPath = process.env.npm_execpath;
+  if (!npmExecPath) return undefined;
+
+  const resolved = path.resolve(npmExecPath);
+  const baseName = path.basename(resolved).toLowerCase();
+  const allowedNames = new Set(["npm-cli.js", "cli.js"]);
+  if (!allowedNames.has(baseName)) return undefined;
+  if (!existsSync(resolved) || !statSync(resolved).isFile()) return undefined;
+  if (!resolved.toLowerCase().includes(`${path.sep}npm${path.sep}`)) return undefined;
+  return resolved;
+}
+
+function runNpm(args, cwd) {
+  const npmExecPath = resolveNpmExecPath();
   if (npmExecPath) return run(process.execPath, [npmExecPath, ...args], cwd);
   if (process.platform === "win32") {
-    return run(process.env.ComSpec ?? "cmd.exe", ["/d", "/s", "/c", "npm", ...args], cwd);
+    return run("cmd.exe", ["/d", "/s", "/c", "npm", ...args], cwd);
   }
   return run("npm", args, cwd);
 }

@@ -56,6 +56,7 @@ export function randomNonce(): string {
 }
 
 function hmac(secret: string | Buffer, value: string): string {
+  // lgtm[js/insufficient-password-hash] This MAC authenticates IPC frames. Secret persistence uses the credential store KDF, not this envelope MAC.
   return createHmac("sha256", secret).update(value, "utf8").digest("base64url");
 }
 
