@@ -25,6 +25,20 @@ describe("public ATS adapters", () => {
     expect(opportunity.remotePolicy).toBe("remote");
   });
 
+  it("removes malformed script blocks and decodes basic text entities", () => {
+    const opportunity = normalizeGreenhouseJob(
+      {
+        id: 43,
+        title: "Responsible AI Lead",
+        absolute_url: "https://boards.greenhouse.io/example/jobs/43",
+        location: { name: "Remote" },
+        content: "<div>Evidence &amp; safety&nbsp;work</div><script>alert(1)</script ignored=\"true\"><p>Human &lt; review &gt;</p>"
+      },
+      context
+    );
+    expect(opportunity.descriptionText).toBe("Evidence & safety work Human < review >");
+  });
+
   it("normalizes Lever workplace and salary fields", () => {
     const opportunity = normalizeLeverPosting(
       {
