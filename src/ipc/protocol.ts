@@ -1,24 +1,11 @@
 import { createHmac, randomBytes, timingSafeEqual } from "node:crypto";
 import type { Socket } from "node:net";
 import { stableStringify } from "../hash.js";
+import type { AuthorityOperation } from "@vocation-os/sdk";
 
 export const MAX_IPC_FRAME_BYTES = 1024 * 1024;
 
-export type AuthorityOperation =
-  | "health"
-  | "auto-apply-status"
-  | "auto-apply-kill"
-  | "auto-apply-rearm"
-  | "auto-apply-enable"
-  | "auto-apply-evaluate"
-  | "legacy-import-plan"
-  | "legacy-import-apply"
-  | "checkpoint-create"
-  | "checkpoint-verify"
-  | "approver-list"
-  | "approver-register"
-  | "approver-revoke"
-  | "audit-export";
+export type { AuthorityOperation } from "@vocation-os/sdk";
 
 export interface IpcRequest {
   type: "request";
