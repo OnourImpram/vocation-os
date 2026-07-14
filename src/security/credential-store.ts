@@ -284,13 +284,8 @@ export interface RuntimeSecrets {
 export async function loadOrCreateRuntimeSecrets(store: CredentialStore): Promise<RuntimeSecrets> {
   const databasePassphrase = await getOrCreateCredential(store, CREDENTIAL_ACCOUNTS.databasePassphrase, 32);
   const ipcSecret = await getOrCreateIpcSecret(store);
-  const rollbackBackupPassphrase = await getOrCreateCredential(
-    store,
-    CREDENTIAL_ACCOUNTS.rollbackBackupPassphrase,
-    32
-  );
   const artifactVaultKey = await getOrCreateCredential(store, CREDENTIAL_ACCOUNTS.artifactVaultKey, 32);
-  if (new Set([databasePassphrase, ipcSecret, rollbackBackupPassphrase, artifactVaultKey]).size !== 4) {
+  if (new Set([databasePassphrase, ipcSecret, artifactVaultKey]).size !== 3) {
     throw new Error("Runtime credential separation invariant failed");
   }
   return { databasePassphrase, ipcSecret, artifactVaultKey };
