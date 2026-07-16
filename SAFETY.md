@@ -42,11 +42,21 @@ Negative signals such as verification code, incomplete application, resubmit, or
 
 A local signature provides origin and tamper evidence within the configured trust boundary. It is not an independent public notarization.
 
-Version 0.5.0 compiles only the synthetic `local-fixture` execution adapter. A config, caller, or plugin cannot enable a production ATS execution adapter. `vocationd` owns the runtime adapter decision, but no production execution adapter ships in this release.
+Version 0.6.0 compiles only the synthetic `local-fixture` execution adapter. A config, caller, plugin, MCP client, agent integration, model provider, TUI, or workbench cannot enable a production ATS execution adapter. `vocationd` owns the runtime adapter decision, but no production execution adapter ships in this release.
 
 Profile import does not convert extracted text into verified public claims. Candidates are stored as operator supplied, Low confidence, internal, and analysis only. Applying an import requires the exact persisted plan hash. Long lines are split without dropping their tail, and candidate overflow blocks plan creation. Onboarding mode cannot switch between demo and profile, and the active plan is recoverable from authenticated state. PDF and DOCX parsing runs in a bounded local child process with structural resource preflight, an allowlisted environment, built-runtime read-only filesystem permissions, network deny guards, a bounded heap, confirmed timeout termination, and no plaintext disk fallback. PDF.js requires a pinned native canvas addon, so this boundary is process containment and input hardening rather than a complete operating system sandbox.
 
 Document AST v2 rendering requires one verified claim and canonical text hash per content node. Structural text uses a constrained vocabulary and cannot carry free form claims. PDF and DOCX output must pass parse back verification before being written. Application records cannot bypass lifecycle transitions through generic put or archive operations. Confirmed attempts persist the signed collector proof, its evaluation, the lifecycle transition, and the ledger evidence together. Answer memory requires exact prompt identity. EEO answers are not resolved for reuse. Sensitive answers require per opportunity confirmation. Restricted answers are assist only and non reusable.
+
+## Discovery and Decision Safety
+
+Remote discovery is disabled without a signed `NetworkAccessGrant`. All remote requests pass through the governed fetch broker. HTTPS, DNS and redirect revalidation, private address denial, response and timeout bounds, content type policy, rate controls, encrypted cache handling, and egress manifests are enforced at that boundary.
+
+HTTP success is not job liveness evidence by itself. Provider identity, active state, and application endpoint evidence are evaluated separately. Timeouts and provider failures remain unresolved. Dedupe projections preserve the most cautious relation in the latest run and send ambiguous merge or review states to human review.
+
+Career Assurance Case cannot issue a positive recommendation while a hard defeater or mandatory unresolved field remains. A changed claim, source observation, policy, taxonomy mapping, or packet hash invalidates the previous case. The generator and evaluator must have different worker identities.
+
+Credential Passport separates structural, signature, issuer, subject, temporal, revocation, and refresh results. Compact JWS and `eddsa-rdfc-2022` Data Integrity proofs use real cryptographic verification. Data Integrity verification requires an issuer-controlled `assertionMethod`, rejects multiple-proof ambiguity, loads pinned standard contexts locally, and resolves `did:key` without network access. HTTPS issuer and verification method documents require an explicitly injected bounded loader. Missing documents, unsupported suites, malformed contexts, forged signatures, and unauthorized keys fail closed. A signature pass proves only the bounded cryptographic check. Credential-to-claim mapping requires explicit review and defaults to private, non-automation use.
 
 ## Local Data Security
 

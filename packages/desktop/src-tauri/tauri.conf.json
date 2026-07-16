@@ -1,0 +1,70 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "VocationOS",
+  "version": "0.6.0",
+  "identifier": "com.onourimpram.vocationos",
+  "mainBinaryName": "vocation-os",
+  "build": {
+    "beforeBuildCommand": "npm run build --workspace @vocation-os/workbench",
+    "beforeDevCommand": "npm run build --workspace @vocation-os/workbench",
+    "frontendDist": "../frontend",
+    "removeUnusedCommands": true
+  },
+  "app": {
+    "withGlobalTauri": false,
+    "windows": [],
+    "security": {
+      "pattern": {
+        "use": "brownfield"
+      },
+      "freezePrototype": true,
+      "dangerousDisableAssetCspModification": false,
+      "assetProtocol": {
+        "enable": false,
+        "scope": []
+      },
+      "capabilities": [],
+      "csp": {
+        "default-src": "'none'",
+        "script-src": "'none'",
+        "style-src": "'none'",
+        "connect-src": "'none'",
+        "img-src": "'none'",
+        "font-src": "'none'",
+        "object-src": "'none'",
+        "base-uri": "'none'",
+        "form-action": "'none'",
+        "frame-src": "'none'",
+        "frame-ancestors": "'none'",
+        "media-src": "'none'",
+        "worker-src": "'none'",
+        "manifest-src": "'none'"
+      },
+      "devCsp": {
+        "default-src": "'none'",
+        "script-src": "'none'",
+        "style-src": "'none'",
+        "connect-src": "'none'",
+        "img-src": "'none'",
+        "font-src": "'none'",
+        "object-src": "'none'",
+        "base-uri": "'none'",
+        "form-action": "'none'",
+        "frame-src": "'none'",
+        "frame-ancestors": "'none'",
+        "media-src": "'none'",
+        "worker-src": "'none'",
+        "manifest-src": "'none'"
+      }
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "category": "Productivity",
+    "shortDescription": "Evidence grounded career decision safety.",
+    "longDescription": "A local first workbench for evidence grounded career decision safety and human authorized career operations.",
+    "createUpdaterArtifacts": false
+  },
+  "plugins": {}
+}

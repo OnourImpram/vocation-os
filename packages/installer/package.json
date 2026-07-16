@@ -1,0 +1,26 @@
+{
+  "name": "@vocation-os/installer",
+  "version": "0.6.0",
+  "description": "Copy-only, checksum-gated local bundle installer for VocationOS integrations.",
+  "type": "module",
+  "license": "MIT",
+  "private": true,
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run --config vitest.config.ts"
+  },
+  "engines": {
+    "node": ">=22.13.0"
+  }
+}

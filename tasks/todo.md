@@ -1,5 +1,32 @@
 # VocationOS Implementation Checklist
 
+## v0.6.0 Market Leadership Mega Release
+
+- [x] Freeze public contracts and create the release workspace boundaries.
+- [x] Add the governed network boundary and provider SDK.
+- [x] Ship 36 contract-tested discovery providers and a 250-entry portal catalog.
+- [x] Add source observations, opportunity truth, liveness, dedupe, and taxonomy normalization.
+- [x] Upgrade the Career Digital Twin, portfolio intelligence, campaigns, documents, and tracker.
+- [x] Ship the daemon-backed TUI, workbench, agent skill, MCP, and model gateway surfaces.
+- [x] Add Career Assurance Case, Credential Passport, Interview, Network, Offer, and outcome learning systems.
+- [x] Expand VocationBench and pass safety, benchmark, coverage, packaging, privacy, and release gates.
+- [x] Complete an independent adversarial review with no open P0 or P1 finding.
+- [ ] Publish one reviewable pull request without npm publication.
+
+### v0.6.0 Baseline Evidence
+
+- 2026-07-14: clean worktree created from `origin/main` at `d15f660a1b02a7e01e20dc817e8346cd3eee7c17`.
+- 2026-07-14: existing dirty product checkout was left unchanged.
+- 2026-07-14: `npm ci` completed with zero reported vulnerabilities.
+- 2026-07-14: baseline `npm run safe:publish-check` passed with 55 test files, 298 tests, 30 schemas, 19 evaluator cases, 23 citation records, a 458 component SBOM, 2 Astro pages, external CLI smoke, and production tarball install verification.
+- 2026-07-16: 36 provider contracts, 278 identity-confirmed portal routes, 209 separately retained unresolved routes, 53 schemas, and 73 CLI commands are present in the release tree.
+- 2026-07-16: focused authority, SDK, TUI, workbench, installer, model gateway, assurance, credential, discovery, taxonomy, and product command tests passed before the full release gate.
+- 2026-07-16: dedupe review projection now aggregates every relation in the latest result and conservatively preserves `review` over `merge` or `distinct`.
+- 2026-07-17: real `eddsa-rdfc-2022` verification passed for controlled HTTPS issuer documents and the offline `did:key` daemon resolver. Altered content, unauthorized controllers, unresolved issuers, and multiple proofs fail closed.
+- 2026-07-17: final local `npm run safe:publish-check` passed with 103 test files, 676 tests, 53 schemas, 19 evaluator cases, 23 citation records, a 530 component SBOM, 2 Astro pages, external CLI smoke, and a clean production tarball install.
+- 2026-07-17: combined coverage passed at 80.91 percent statements, 71.62 percent branches, 91.77 percent functions, and 85.21 percent lines.
+- 2026-07-17: independent read-only review inspected the complete diff and reported no open P0 or P1 finding. Its sandbox could not execute Node or npm, so the static verdict supplements the complete local release gate.
+
 - [x] Build clean public repo boundary.
 - [x] Enforce privacy and brand scans.
 - [x] Add strict TypeScript and schema validation.
@@ -109,24 +136,24 @@
 
 ### Phase 2, v0.6 Discovery and Company Catalog
 
-- [ ] Add a centrally governed fetch broker and typed provider SDK.
-- [ ] Ship 24 GA discovery connectors and keep dynamic high-maintenance connectors assist-only until contract gates pass.
-- [ ] Add a versioned catalog with at least 150 verified company entries and domain-specific source packs.
-- [ ] Add provider health, liveness, pagination, retry, cache, provenance, dedupe, and campaign controls.
+- [x] Add a centrally governed fetch broker and typed provider SDK.
+- [x] Ship 36 contract-tested discovery adapters and keep unsupported dynamic routes outside execution authority.
+- [x] Add a versioned catalog with at least 250 identity-confirmed company entries and domain-specific source packs.
+- [x] Add provider health, liveness, pagination, retry, cache, provenance, dedupe, and campaign controls.
 
 ### Phase 3, v0.7 Product Workbench
 
-- [ ] Add a TypeScript TUI backed only by the typed daemon SDK.
-- [ ] Add a secure loopback web gateway and production React workbench.
-- [ ] Add Today, Discovery, Opportunity Review, Documents, Pipeline, Evidence, Approvals, Audit, Provider Health, and Settings views.
-- [ ] Pass keyboard, WCAG 2.2 AA, responsive, recovery, and state parity gates.
+- [x] Add a TypeScript TUI backed only by the typed daemon SDK.
+- [x] Add a secure loopback web gateway and React workbench.
+- [x] Add Today, Discovery, Opportunity Review, Documents, Pipeline, Evidence, Approvals, Audit, Provider Health, and Settings views.
+- [ ] Pass independent WCAG 2.2 AA, signed cross-platform native artifact, recovery, and state parity gates.
 
 ### Phase 4, v0.8 Agent Ecosystem
 
-- [ ] Add a read-first local MCP server and canonical Open Agent Skill.
-- [ ] Add install, update, doctor, and uninstall flows for Codex, Claude Code, OpenCode, Gemini or Antigravity, Qwen Code, Kimi CLI, Grok Build, and GitHub Copilot CLI.
-- [ ] Separate discovered, invocable, and verified support levels with conformance tests.
-- [ ] Keep every mutating agent operation behind daemon capability and scoped approval.
+- [x] Add a read-first local MCP server and canonical Open Agent Skill.
+- [x] Add install, update, doctor, and uninstall flows for Codex, Claude Code, OpenCode, Gemini or Antigravity, Qwen Code, Kimi CLI, Grok Build, and GitHub Copilot CLI.
+- [x] Separate discovered, invocable, and verified support levels with conformance tests.
+- [x] Keep every mutating agent operation behind daemon capability and scoped approval.
 
 ### Phase 5, v0.9 to v1.0 Stable Product
 

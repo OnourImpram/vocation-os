@@ -1,5 +1,28 @@
 # Changelog
 
+## 0.6.0
+
+Released as a source-first GitHub decision intelligence release. No npm publication or production ATS execution adapter is included.
+
+### Added
+
+1. Added `GovernedFetchBroker`, signed network access grants, egress manifests, encrypted cache policy, SSRF controls, and a broker-only network boundary check.
+2. Added 36 contract-tested discovery adapters and a versioned catalog with 278 identity-confirmed career portal routes plus 209 unresolved verification attempts retained separately.
+3. Added immutable source observations, opportunity truth, liveness, conservative dedupe, bounded discovery review projections, and versioned ESCO and O*NET taxonomy snapshots and mappings.
+4. Added Career Digital Twin, portfolio, campaign, ATS document, interview, network, offer, outcome, and sequential experiment intelligence contracts.
+5. Added the Ink application and discovery review queue, React loopback workbench, Tauri desktop shell, typed provider SDK, read-first MCP server, canonical agent skill, and explicit agent install, verify, update, and uninstall lifecycle.
+6. Added Career Assurance Case JSON, Markdown, and document report surfaces plus Credential Passport import, verification, mapping, encrypted retention, and export contracts.
+7. Added a policy-bound model gateway with exact payload hash binding, egress decisions, request and response limits, and configured provider capability manifests.
+8. Expanded VocationBench to 94 executable cases and deterministic synthetic manifests for 500 profiles, 2,000 opportunities, 300 adversarial cases, 200 proof cases, and 100 credential cases.
+
+### Security
+
+1. Protected truth, taxonomy, assurance, credential, campaign, and outcome records with dedicated daemon operations rather than generic domain writes.
+2. Preserved the most cautious dedupe result across all candidate relations in the latest run so ambiguous evidence cannot be overwritten by a later distinct pair.
+3. Kept TUI discovery actions review-only and kept the workbench, MCP, agent, and model surfaces behind daemon authority.
+4. Retained the synthetic `local-fixture` as the only compiled execution adapter. Production auto apply remains unavailable.
+5. Added real Compact JWS and `eddsa-rdfc-2022` credential proof verification with pinned JSON LD contexts, offline `did:key` resolution, issuer assertion authorization, bounded document loading, and fail-closed multi-proof handling.
+
 ## 0.5.0
 
 Local profile, document, and application operations release.

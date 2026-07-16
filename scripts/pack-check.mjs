@@ -19,6 +19,13 @@ const tempRoot = mkdtempSync(path.join(tmpdir(), "vocation-pack-check-"));
 const packDir = path.join(tempRoot, "pack");
 const consumerDir = path.join(tempRoot, "consumer");
 const bundledSdkPrefix = "node_modules/@vocation-os/sdk/";
+const approvedWorkspaceReleasePaths = [
+  /^packages\/agent-skill\/checksums\.json$/u,
+  /^packages\/agent-skill\/integrations\/[a-z0-9-]+\.json$/u,
+  /^packages\/agent-skill\/skill\/vocation-os\/SKILL\.md$/u,
+  /^packages\/(installer|mcp|provider-sdk|tui)\/dist\//u,
+  /^packages\/workbench\/dist\/workbench\//u
+];
 const binaryExtensions = new Set([".gif", ".ico", ".jpeg", ".jpg", ".png", ".ttf", ".woff", ".woff2"]);
 const forbiddenBrandTokens = [
   [99, 97, 114, 101, 101, 114, 45, 97, 103, 101, 110, 116],
@@ -157,7 +164,19 @@ try {
     "assets/fonts/NotoSans-LICENSE.txt",
     `${bundledSdkPrefix}package.json`,
     `${bundledSdkPrefix}dist/index.js`,
-    `${bundledSdkPrefix}dist/index.d.ts`
+    `${bundledSdkPrefix}dist/index.d.ts`,
+    "packages/tui/dist/entry.js",
+    "packages/tui/dist/entry.d.ts",
+    "packages/workbench/dist/workbench/index.html",
+    "packages/mcp/dist/bin.js",
+    "packages/mcp/dist/index.js",
+    "packages/provider-sdk/dist/index.js",
+    "packages/installer/dist/index.js",
+    "benchmarks/vocation-bench/liveness.json",
+    "benchmarks/vocation-bench/dedupe.json",
+    "benchmarks/vocation-bench/safety-proof.json",
+    "benchmarks/vocation-bench/claim-trace.json",
+    "benchmarks/vocation-bench/calibration.json"
   ]) {
     if (!files.has(requiredFile)) failures.push(`${requiredFile} is missing from package`);
   }
@@ -171,7 +190,12 @@ try {
     if (file.startsWith("dist/test/")) failures.push(`test build leaked into package: ${file}`);
     if (file.startsWith("dist/src/")) failures.push(`nested src build leaked into package: ${file}`);
     if (file.startsWith(".vocationos/")) failures.push(`runtime artifact leaked into package: ${file}`);
-    if (file.startsWith("packages/")) failures.push(`workspace source leaked into package: ${file}`);
+    if (
+      file.startsWith("packages/")
+      && !approvedWorkspaceReleasePaths.some((pattern) => pattern.test(file))
+    ) {
+      failures.push(`unapproved workspace source leaked into package: ${file}`);
+    }
     if (file.startsWith("node_modules/") && !file.startsWith(bundledSdkPrefix)) {
       failures.push(`unexpected dependency artifact leaked into package: ${file}`);
     }
@@ -197,6 +221,7 @@ try {
         scripts: {
           "smoke:vocation:help": "vocation help",
           "smoke:vocation:doctor": "vocation doctor",
+          "smoke:vocation:mcp": "vocation-mcp --help",
           "smoke:vocationd:invalid": "vocationd invalid-command"
         }
       },
@@ -270,6 +295,10 @@ try {
   requireSuccess(
     "installed vocation doctor",
     runNpm(["run", "--silent", "smoke:vocation:doctor"], consumerDir)
+  );
+  requireSuccess(
+    "installed vocation MCP help",
+    runNpm(["run", "--silent", "smoke:vocation:mcp"], consumerDir)
   );
 
   const invalidDaemon = runNpm(["run", "--silent", "smoke:vocationd:invalid"], consumerDir);

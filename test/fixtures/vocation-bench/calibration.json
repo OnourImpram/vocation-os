@@ -1,0 +1,26 @@
+{
+  "suiteVersion": "1.0.0",
+  "bins": 5,
+  "cases": [
+    { "caseId": "VB-CAL-LOW-001", "predictedProbability": 0.1, "observedOutcome": 1 },
+    { "caseId": "VB-CAL-LOW-002", "predictedProbability": 0.1, "observedOutcome": 0 },
+    { "caseId": "VB-CAL-LOW-003", "predictedProbability": 0.1, "observedOutcome": 0 },
+    { "caseId": "VB-CAL-LOW-004", "predictedProbability": 0.1, "observedOutcome": 0 },
+    { "caseId": "VB-CAL-LOW-005", "predictedProbability": 0.1, "observedOutcome": 0 },
+    { "caseId": "VB-CAL-LOW-006", "predictedProbability": 0.1, "observedOutcome": 0 },
+    { "caseId": "VB-CAL-LOW-007", "predictedProbability": 0.1, "observedOutcome": 0 },
+    { "caseId": "VB-CAL-LOW-008", "predictedProbability": 0.1, "observedOutcome": 0 },
+    { "caseId": "VB-CAL-LOW-009", "predictedProbability": 0.1, "observedOutcome": 0 },
+    { "caseId": "VB-CAL-LOW-010", "predictedProbability": 0.1, "observedOutcome": 0 },
+    { "caseId": "VB-CAL-HIGH-001", "predictedProbability": 0.9, "observedOutcome": 0 },
+    { "caseId": "VB-CAL-HIGH-002", "predictedProbability": 0.9, "observedOutcome": 1 },
+    { "caseId": "VB-CAL-HIGH-003", "predictedProbability": 0.9, "observedOutcome": 1 },
+    { "caseId": "VB-CAL-HIGH-004", "predictedProbability": 0.9, "observedOutcome": 1 },
+    { "caseId": "VB-CAL-HIGH-005", "predictedProbability": 0.9, "observedOutcome": 1 },
+    { "caseId": "VB-CAL-HIGH-006", "predictedProbability": 0.9, "observedOutcome": 1 },
+    { "caseId": "VB-CAL-HIGH-007", "predictedProbability": 0.9, "observedOutcome": 1 },
+    { "caseId": "VB-CAL-HIGH-008", "predictedProbability": 0.9, "observedOutcome": 1 },
+    { "caseId": "VB-CAL-HIGH-009", "predictedProbability": 0.9, "observedOutcome": 1 },
+    { "caseId": "VB-CAL-HIGH-010", "predictedProbability": 0.9, "observedOutcome": 1 }
+  ]
+}

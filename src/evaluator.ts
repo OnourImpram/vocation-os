@@ -301,7 +301,12 @@ export const EVALUATOR_TESTS: EvaluatorCase[] = [
     name: "VocationBench materializes the committed fixture scale",
     run: () => {
       const manifest = createVocationBenchManifest(EVALUATOR_NOW);
-      return manifest.profileCount === 500 && manifest.opportunityCount === 1000 && manifest.adversarialCaseCount === 200 && manifest.proofCaseCount === 100;
+      return manifest.profileCount === 500
+        && manifest.opportunityCount === 2000
+        && manifest.adversarialCaseCount === 300
+        && manifest.proofCaseCount === 200
+        && manifest.credentialCaseCount === 100
+        && manifest.providerContractCount === 36;
     }
   },
   {

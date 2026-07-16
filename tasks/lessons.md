@@ -1,5 +1,19 @@
 # Lessons
 
+## 2026-07-14
+
+Keep source availability, parsed field availability, and action route liveness as separate contracts. A reachable provider payload may support extracted fields while the opportunity remains unresolved because a valid application endpoint is absent. Encode that distinction explicitly instead of weakening source observation invariants.
+
+Do not spawn one shell process per binary candidate for support-status reporting. Resolve executables against a bounded PATH snapshot in-process so a diagnostic command cannot inherit network-path latency or exceed the test budget.
+
+When Onour lists concrete capabilities while asking for a broad product program, do not reinterpret the list as a scope ceiling unless he explicitly says that the list is exhaustive.
+
+Treat enumerated capabilities as mandatory minimums. Reconcile them with the existing roadmap, competitor baseline, product architecture, and release objective before reducing scope. Any deliberate deferral must be named, justified, and approved rather than silently omitted.
+
+Network boundary checks must detect indirect transport aliases and injected global fetch references, not only direct `fetch()` calls. A claim that every egress route is governed requires scanner and runtime tests against aliases.
+
+When workspace source files are included in coverage, their workspace tests must be included in the same coverage run. Counting source without its tests creates a misleading release signal.
+
 ## 2026-07-05
 
 When external review text is shared in chat, treat it as implementation input unless the user explicitly says it exists on GitHub. Do not infer that it is already a public issue, PR comment, or review thread.

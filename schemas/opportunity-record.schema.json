@@ -32,7 +32,45 @@
     },
     "source": {
       "type": "string",
-      "enum": ["greenhouse", "lever", "ashby", "manual"]
+      "enum": [
+        "greenhouse",
+        "lever",
+        "ashby",
+        "workable",
+        "workday",
+        "smartrecruiters",
+        "teamtailor",
+        "bamboohr",
+        "breezy-hr",
+        "recruitee",
+        "personio",
+        "schema-org-job-posting",
+        "comeet",
+        "pinpoint",
+        "jazzhr",
+        "rippling",
+        "zoho-recruit",
+        "freshteam",
+        "recruit-crm",
+        "oracle-recruiting",
+        "sap-successfactors",
+        "taleo",
+        "adp-workforce-now",
+        "ukg-pro",
+        "dayforce",
+        "usajobs",
+        "eures",
+        "euraxess",
+        "nhs-jobs",
+        "remote-ok",
+        "remotive",
+        "we-work-remotely",
+        "arbeitnow",
+        "jobicy",
+        "jobvite",
+        "icims",
+        "manual"
+      ]
     },
     "sourceId": {
       "type": "string",
@@ -112,4 +150,3 @@
     }
   }
 }
-

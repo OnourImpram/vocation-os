@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
+import BetterSqlite3 from "better-sqlite3";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { RuntimeAuthority } from "../../src/daemon/authority.js";
 import { startDaemonServer, type DaemonServerHandle } from "../../src/daemon/server.js";
@@ -120,6 +121,21 @@ describe("daemon authority boundary", () => {
     expect((await store.readAll()).map((event) => event.eventType)).toEqual([
       "auto-apply-kill-completed"
     ]);
+
+    const sqlite = new BetterSqlite3(databasePath);
+    try {
+      sqlite.prepare("UPDATE authority_receipts SET completed_at = ? WHERE request_id = ?")
+        .run("2026-07-14T00:00:00.000Z", "REQ-IDEMPOTENT-0001");
+    } finally {
+      sqlite.close();
+    }
+    await expect(callAuthority({
+      endpoint,
+      ipcSecret: IPC_SECRET,
+      operation: "auto-apply-kill",
+      payload: { reason: "operator halt" },
+      requestId: "REQ-IDEMPOTENT-0001"
+    })).rejects.toThrow("completion time is not bound");
 
     await expect(callAuthority({
       endpoint,

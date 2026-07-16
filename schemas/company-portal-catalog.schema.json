@@ -1,0 +1,435 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://vocation-os.dev/schemas/company-portal-catalog.schema.json",
+  "title": "Vocation OS Company Portal Catalog",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "catalogVersion",
+    "publishedAt",
+    "verificationRun",
+    "counts",
+    "sourcePacks",
+    "organizations"
+  ],
+  "properties": {
+    "catalogVersion": {
+      "type": "string",
+      "pattern": "^1\\.[0-9]+\\.[0-9]+$"
+    },
+    "publishedAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "verificationRun": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "startedAt",
+        "completedAt",
+        "method",
+        "timeoutMs",
+        "maxRedirects",
+        "maxResponseBytes"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^catalog-verify-[a-f0-9]{16}$"
+        },
+        "startedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "completedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "method": {
+          "const": "bounded-https-identity-v1"
+        },
+        "timeoutMs": {
+          "type": "integer",
+          "minimum": 1000,
+          "maximum": 15000
+        },
+        "maxRedirects": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 8
+        },
+        "maxResponseBytes": {
+          "type": "integer",
+          "minimum": 16384,
+          "maximum": 1048576
+        }
+      }
+    },
+    "counts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["attempted", "verified", "unresolved", "bySourcePack"],
+      "properties": {
+        "attempted": {
+          "type": "integer",
+          "minimum": 250
+        },
+        "verified": {
+          "type": "integer",
+          "minimum": 250
+        },
+        "unresolved": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "bySourcePack": {
+          "$ref": "#/definitions/sourcePackCounts"
+        }
+      }
+    },
+    "sourcePacks": {
+      "type": "array",
+      "minItems": 10,
+      "maxItems": 10,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "name", "minimumVerified", "verifiedCount"],
+        "properties": {
+          "id": {
+            "$ref": "#/definitions/sourcePackId"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 80
+          },
+          "minimumVerified": {
+            "type": "integer",
+            "minimum": 5,
+            "maximum": 100
+          },
+          "verifiedCount": {
+            "type": "integer",
+            "minimum": 5
+          }
+        }
+      }
+    },
+    "organizations": {
+      "type": "array",
+      "minItems": 250,
+      "items": {
+        "$ref": "#/definitions/verifiedOrganization"
+      }
+    }
+  },
+  "definitions": {
+    "sourcePackId": {
+      "enum": [
+        "ai",
+        "clinical",
+        "academic",
+        "education",
+        "health",
+        "product",
+        "startup",
+        "fellowship",
+        "public",
+        "international-institution"
+      ]
+    },
+    "sourcePackCounts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "ai",
+        "clinical",
+        "academic",
+        "education",
+        "health",
+        "product",
+        "startup",
+        "fellowship",
+        "public",
+        "international-institution"
+      ],
+      "properties": {
+        "ai": { "type": "integer", "minimum": 5 },
+        "clinical": { "type": "integer", "minimum": 5 },
+        "academic": { "type": "integer", "minimum": 5 },
+        "education": { "type": "integer", "minimum": 5 },
+        "health": { "type": "integer", "minimum": 5 },
+        "product": { "type": "integer", "minimum": 5 },
+        "startup": { "type": "integer", "minimum": 5 },
+        "fellowship": { "type": "integer", "minimum": 5 },
+        "public": { "type": "integer", "minimum": 5 },
+        "international-institution": { "type": "integer", "minimum": 5 }
+      }
+    },
+    "verifiedOrganization": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "organizationId",
+        "organizationName",
+        "sectors",
+        "countriesOrRegions",
+        "sourcePackId",
+        "officialCareersUrl",
+        "providerHint",
+        "remoteSignal",
+        "healthState",
+        "lastVerifiedAt",
+        "provenance"
+      ],
+      "properties": {
+        "organizationId": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 128,
+          "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+        },
+        "organizationName": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 180
+        },
+        "sectors": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 8,
+          "uniqueItems": true,
+          "items": {
+            "enum": [
+              "academia",
+              "artificial-intelligence",
+              "biotechnology",
+              "clinical-care",
+              "education",
+              "healthcare",
+              "international-development",
+              "philanthropy",
+              "product",
+              "public-service",
+              "research",
+              "software",
+              "startup",
+              "technology"
+            ]
+          }
+        },
+        "countriesOrRegions": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 24,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "pattern": "^(?:[A-Z]{2}|worldwide|americas|americas-europe|asia-pacific|europe|region-other)$"
+          }
+        },
+        "sourcePackId": {
+          "$ref": "#/definitions/sourcePackId"
+        },
+        "officialCareersUrl": {
+          "type": "string",
+          "format": "uri",
+          "pattern": "^https://",
+          "maxLength": 2048
+        },
+        "providerHint": {
+          "oneOf": [
+            {
+              "enum": [
+                "ashby",
+                "bamboohr",
+                "eightfold",
+                "greenhouse",
+                "icims",
+                "jobvite",
+                "lever",
+                "oracle-hcm",
+                "pageup",
+                "personio",
+                "phenom",
+                "recruitee",
+                "smartrecruiters",
+                "successfactors",
+                "taleo",
+                "teamtailor",
+                "workable",
+                "workday"
+              ]
+            },
+            { "type": "null" }
+          ]
+        },
+        "remoteSignal": {
+          "enum": [
+            "remote-first",
+            "remote-eligible",
+            "hybrid-or-onsite",
+            "not-stated"
+          ]
+        },
+        "healthState": {
+          "const": "verified"
+        },
+        "lastVerifiedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "provenance": {
+          "$ref": "#/definitions/verifiedProvenance"
+        }
+      }
+    },
+    "verifiedProvenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["discovery", "verification"],
+      "properties": {
+        "discovery": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "sourceId",
+            "sourceUrl",
+            "officialWebsiteUrl",
+            "sourceLicense",
+            "sourceRevision",
+            "retrievedAt"
+          ],
+          "properties": {
+            "sourceId": {
+              "enum": ["official-organization-site", "remoteintech-remote-jobs"]
+            },
+            "sourceUrl": {
+              "type": "string",
+              "format": "uri",
+              "pattern": "^https://",
+              "maxLength": 2048
+            },
+            "officialWebsiteUrl": {
+              "type": "string",
+              "format": "uri",
+              "pattern": "^https://",
+              "maxLength": 2048
+            },
+            "sourceLicense": {
+              "oneOf": [
+                { "type": "string", "minLength": 2, "maxLength": 80 },
+                { "type": "null" }
+              ]
+            },
+            "sourceRevision": {
+              "oneOf": [
+                { "type": "string", "minLength": 7, "maxLength": 64 },
+                { "type": "null" }
+              ]
+            },
+            "retrievedAt": {
+              "type": "string",
+              "format": "date-time"
+            }
+          }
+        },
+        "verification": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "method",
+            "outcome",
+            "checkedAt",
+            "statusCode",
+            "finalUrl",
+            "redirectChain",
+            "identity",
+            "careerSignal",
+            "responseBytes",
+            "responseSha256"
+          ],
+          "properties": {
+            "method": {
+              "const": "bounded-https-identity-v1"
+            },
+            "outcome": {
+              "const": "identity-confirmed"
+            },
+            "checkedAt": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "statusCode": {
+              "type": "integer",
+              "minimum": 200,
+              "maximum": 299
+            },
+            "finalUrl": {
+              "type": "string",
+              "format": "uri",
+              "pattern": "^https://",
+              "maxLength": 2048
+            },
+            "redirectChain": {
+              "type": "array",
+              "maxItems": 8,
+              "uniqueItems": true,
+              "items": {
+                "type": "string",
+                "format": "uri",
+                "pattern": "^https://",
+                "maxLength": 2048
+              }
+            },
+            "identity": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["kind", "matchedValue"],
+              "properties": {
+                "kind": {
+                  "enum": [
+                    "ats-tenant-and-page",
+                    "official-domain",
+                    "page-title"
+                  ]
+                },
+                "matchedValue": {
+                  "type": "string",
+                  "minLength": 2,
+                  "maxLength": 240
+                }
+              }
+            },
+            "careerSignal": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["kind", "matchedValue"],
+              "properties": {
+                "kind": {
+                  "enum": ["ats-provider", "page-title", "url-path"]
+                },
+                "matchedValue": {
+                  "type": "string",
+                  "minLength": 2,
+                  "maxLength": 120
+                }
+              }
+            },
+            "responseBytes": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 1048576
+            },
+            "responseSha256": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{64}$"
+            }
+          }
+        }
+      }
+    }
+  }
+}

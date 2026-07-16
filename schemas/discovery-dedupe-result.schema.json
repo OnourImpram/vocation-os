@@ -1,0 +1,75 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://vocation-os.dev/schemas/discovery-dedupe-result.schema.json",
+  "title": "DedupeResult",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "resultId", "clusters", "decisions"],
+  "properties": {
+    "schemaVersion": { "const": "1.0.0" },
+    "resultId": { "type": "string", "pattern": "^DEDUP-[A-F0-9]{32}$" },
+    "clusters": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["clusterId", "memberCandidateIds"],
+        "properties": {
+          "clusterId": { "type": "string", "pattern": "^DUP-[A-F0-9]{32}$" },
+          "memberCandidateIds": {
+            "type": "array",
+            "minItems": 1,
+            "uniqueItems": true,
+            "items": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{1,127}$" }
+          }
+        }
+      }
+    },
+    "decisions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "leftCandidateId",
+          "rightCandidateId",
+          "outcome",
+          "reason",
+          "companyDomainMatch",
+          "taxonomyAdjacency"
+        ],
+        "properties": {
+          "leftCandidateId": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{1,127}$" },
+          "rightCandidateId": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{1,127}$" },
+          "outcome": { "enum": ["merge", "review", "distinct"] },
+          "reason": {
+            "enum": [
+              "same-provider-record",
+              "same-application-endpoint",
+              "same-canonical-posting",
+              "same-content-provenance",
+              "provider-record-conflict",
+              "company-domain-conflict",
+              "cluster-identity-conflict",
+              "taxonomy-adjacent-role",
+              "identity-evidence-insufficient",
+              "material-identity-mismatch"
+            ]
+          },
+          "companyDomainMatch": {
+            "oneOf": [
+              { "type": "boolean" },
+              { "type": "null" }
+            ]
+          },
+          "taxonomyAdjacency": {
+            "oneOf": [
+              { "type": "number", "minimum": 0, "maximum": 1 },
+              { "type": "null" }
+            ]
+          }
+        }
+      }
+    }
+  }
+}

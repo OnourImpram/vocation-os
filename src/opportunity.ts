@@ -1,10 +1,14 @@
 import { sha256, stableStringify } from "./hash.js";
 import { assertSchema } from "./schema.js";
+import {
+  REQUIRED_DISCOVERY_PROVIDER_IDS,
+  type DiscoveryProviderId
+} from "./discovery/providers.js";
 
-export const OPPORTUNITY_SOURCES = ["greenhouse", "lever", "ashby", "manual"] as const;
+export const OPPORTUNITY_SOURCES = [...REQUIRED_DISCOVERY_PROVIDER_IDS, "manual"] as const;
 export const REMOTE_POLICIES = ["remote", "hybrid", "on-site", "unspecified"] as const;
 
-export type OpportunitySource = (typeof OPPORTUNITY_SOURCES)[number];
+export type OpportunitySource = DiscoveryProviderId | "manual";
 export type RemotePolicy = (typeof REMOTE_POLICIES)[number];
 export type ExtractionConfidence = "high" | "medium" | "low";
 
@@ -275,4 +279,3 @@ export function evaluateOpportunityIntake(record: OpportunityRecord, policy: Opp
   assertSchema("opportunity-intake", decision);
   return decision;
 }
-

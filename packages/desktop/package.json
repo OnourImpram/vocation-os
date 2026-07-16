@@ -1,0 +1,23 @@
+{
+  "name": "@vocation-os/desktop",
+  "version": "0.6.0",
+  "description": "Fail-closed Tauri 2 bootstrap for the authenticated local VocationOS workbench.",
+  "private": true,
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "build": "npm run build:frontend && npm run validate",
+    "build:desktop": "tauri build",
+    "build:frontend": "npm run build --workspace @vocation-os/workbench",
+    "dev": "tauri dev",
+    "test": "node --test test/*.test.mjs",
+    "typecheck": "npm run validate",
+    "validate": "node scripts/validate-contract.mjs && node --test test/*.test.mjs"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "2.11.4"
+  },
+  "engines": {
+    "node": ">=22.13.0"
+  }
+}

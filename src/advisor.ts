@@ -47,7 +47,6 @@ export interface RemoteClientOptions {
   timeoutMs?: number | undefined;
   maxResponseBytes?: number | undefined;
   allowInsecureLocalhost?: boolean | undefined;
-  fetchImpl?: typeof fetch | undefined;
 }
 
 export interface SanitizationReport {
@@ -66,8 +65,8 @@ export interface AdvisoryResult {
 
 const NARRATIVE_MAX_LENGTH = 2000;
 const OPPORTUNITY_SUMMARY_MAX_LENGTH = 20_000;
-const DEFAULT_REMOTE_TIMEOUT_MS = 15_000;
-const DEFAULT_REMOTE_MAX_RESPONSE_BYTES = 65_536;
+const LEGACY_REMOTE_DISABLED =
+  "Legacy remote advisory transport is disabled. Use the governed model gateway.";
 
 function publicVerifiedClaims(context: AdvisoryContext) {
   return context.claimGraph.claims.filter((claim) => claim.evidenceStatus === "verified" && claim.publiclyAssertable);
@@ -138,89 +137,8 @@ export class OfflineTemplateClient implements LlmClient {
   }
 }
 
-function positiveInteger(value: string | undefined, fallback: number, label: string): number {
-  if (value === undefined || value.trim() === "") {
-    return fallback;
-  }
-  const parsed = Number(value);
-  if (!Number.isInteger(parsed) || parsed <= 0) {
-    throw new Error(`${label} must be a positive integer`);
-  }
-  return parsed;
-}
-
-function endpointUrl(options: RemoteClientOptions): URL {
-  const endpoint = new URL(options.endpoint);
-  if (endpoint.username || endpoint.password) {
-    throw new Error("Advisory endpoint must not contain embedded credentials");
-  }
-  const hostname = endpoint.hostname.toLowerCase();
-  const allowedHosts = new Set(options.allowedHosts.map((host) => host.trim().toLowerCase()).filter(Boolean));
-  if (!allowedHosts.has(hostname)) {
-    throw new Error(`Advisory endpoint host is not allowlisted: ${hostname}`);
-  }
-  const localHost = hostname === "localhost" || hostname === "127.0.0.1" || hostname === "::1";
-  if (endpoint.protocol !== "https:" && !(endpoint.protocol === "http:" && localHost && options.allowInsecureLocalhost === true)) {
-    throw new Error("Advisory endpoint must use HTTPS unless insecure localhost is explicitly enabled");
-  }
-  endpoint.hash = "";
-  return endpoint;
-}
-
-export function createRemoteClient(options: RemoteClientOptions): LlmClient {
-  const endpoint = endpointUrl(options);
-  const timeoutMs = options.timeoutMs ?? DEFAULT_REMOTE_TIMEOUT_MS;
-  const maxResponseBytes = options.maxResponseBytes ?? DEFAULT_REMOTE_MAX_RESPONSE_BYTES;
-  if (!Number.isInteger(timeoutMs) || timeoutMs <= 0) {
-    throw new Error("Remote advisory timeout must be a positive integer");
-  }
-  if (!Number.isInteger(maxResponseBytes) || maxResponseBytes <= 0) {
-    throw new Error("Remote advisory response limit must be a positive integer");
-  }
-  const fetchImpl = options.fetchImpl ?? fetch;
-  return {
-    name: "remote-endpoint",
-    boundary: "remote",
-    async complete(prompt: string): Promise<string> {
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), timeoutMs);
-      try {
-        const response = await fetchImpl(endpoint, {
-          method: "POST",
-          redirect: "error",
-          signal: controller.signal,
-          headers: {
-            accept: "application/json",
-            "content-type": "application/json",
-            authorization: `Bearer ${options.apiKey}`
-          },
-          body: JSON.stringify({ model: options.model, prompt })
-        });
-        if (!response.ok) {
-          throw new Error(`Advisory endpoint returned ${response.status}`);
-        }
-        const contentType = response.headers.get("content-type")?.toLowerCase() ?? "";
-        if (!contentType.includes("application/json")) {
-          throw new Error("Advisory endpoint must return application/json");
-        }
-        const declaredLength = Number(response.headers.get("content-length") ?? "0");
-        if (Number.isFinite(declaredLength) && declaredLength > maxResponseBytes) {
-          throw new Error("Advisory endpoint response exceeds the configured byte limit");
-        }
-        const body = await response.text();
-        if (Buffer.byteLength(body, "utf8") > maxResponseBytes) {
-          throw new Error("Advisory endpoint response exceeds the configured byte limit");
-        }
-        const payload = JSON.parse(body) as { text?: unknown };
-        if (typeof payload.text !== "string") {
-          throw new Error("Advisory endpoint returned no text field");
-        }
-        return payload.text;
-      } finally {
-        clearTimeout(timeout);
-      }
-    }
-  };
+export function createRemoteClient(_options: RemoteClientOptions): never {
+  throw new Error(LEGACY_REMOTE_DISABLED);
 }
 
 export function createRemoteClientFromEnv(): LlmClient | null {
@@ -231,29 +149,7 @@ export function createRemoteClientFromEnv(): LlmClient | null {
   if (configured === 0) {
     return null;
   }
-  if (!endpoint || !apiKey || !model) {
-    throw new Error("ADVISOR_ENDPOINT, ADVISOR_API_KEY, and ADVISOR_MODEL must be configured together");
-  }
-  const allowedHosts = (process.env["ADVISOR_ALLOWED_HOSTS"] ?? "")
-    .split(",")
-    .map((host) => host.trim())
-    .filter(Boolean);
-  if (allowedHosts.length === 0) {
-    throw new Error("ADVISOR_ALLOWED_HOSTS is required for remote advisory calls");
-  }
-  return createRemoteClient({
-    endpoint,
-    apiKey,
-    model,
-    allowedHosts,
-    timeoutMs: positiveInteger(process.env["ADVISOR_TIMEOUT_MS"], DEFAULT_REMOTE_TIMEOUT_MS, "ADVISOR_TIMEOUT_MS"),
-    maxResponseBytes: positiveInteger(
-      process.env["ADVISOR_MAX_RESPONSE_BYTES"],
-      DEFAULT_REMOTE_MAX_RESPONSE_BYTES,
-      "ADVISOR_MAX_RESPONSE_BYTES"
-    ),
-    allowInsecureLocalhost: process.env["ADVISOR_ALLOW_INSECURE_LOCALHOST"] === "1"
-  });
+  throw new Error(LEGACY_REMOTE_DISABLED);
 }
 
 function stripCodeFences(raw: string): string {
@@ -380,4 +276,3 @@ export async function generateAdvisoryNote(client: LlmClient, context: AdvisoryC
 
   return { note, sanitization: report, clientName: client.name };
 }
-

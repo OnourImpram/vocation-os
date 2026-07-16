@@ -1,0 +1,125 @@
+{
+  "suiteVersion": "1.0.0",
+  "cases": [
+    {
+      "caseId": "VB-DEDUPE-SAME-PROVIDER-RECORD",
+      "expectedOutcome": "merge",
+      "left": {
+        "candidateId": "VB-CANDIDATE-001A", "observationId": "OBS-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA", "providerId": "greenhouse", "sourceRecordId": "GH-001", "canonicalUrl": "https://jobs.acme.example/roles/001", "applyUrl": "https://jobs.acme.example/roles/001/apply", "company": "Acme Labs", "companyDomain": "acme.example", "roleTitle": "AI Safety Researcher", "location": "Remote Europe", "postedAt": "2026-07-10T00:00:00.000Z", "descriptionDigest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "right": {
+        "candidateId": "VB-CANDIDATE-001B", "observationId": "OBS-BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB", "providerId": "greenhouse", "sourceRecordId": "GH-001", "canonicalUrl": "https://jobs.acme.example/roles/001", "applyUrl": "https://jobs.acme.example/roles/001/apply", "company": "ACME LABS", "companyDomain": "www.acme.example", "roleTitle": "AI Safety Researcher", "location": "Remote Europe", "postedAt": "2026-07-10T00:00:00.000Z", "descriptionDigest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      }
+    },
+    {
+      "caseId": "VB-DEDUPE-SAME-RECORD-URL-CONFLICT",
+      "expectedOutcome": "review",
+      "left": {
+        "candidateId": "VB-CANDIDATE-002A", "observationId": "OBS-CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC", "providerId": "greenhouse", "sourceRecordId": "GH-002", "canonicalUrl": "https://jobs.acme.example/roles/002", "applyUrl": null, "company": "Acme Labs", "companyDomain": "acme.example", "roleTitle": "Clinical AI Scientist", "location": "London", "postedAt": null, "descriptionDigest": null
+      },
+      "right": {
+        "candidateId": "VB-CANDIDATE-002B", "observationId": "OBS-DDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDD", "providerId": "greenhouse", "sourceRecordId": "GH-002", "canonicalUrl": "https://jobs.acme.example/roles/002-republished", "applyUrl": null, "company": "Acme Labs", "companyDomain": "acme.example", "roleTitle": "Clinical AI Scientist", "location": "London", "postedAt": null, "descriptionDigest": null
+      }
+    },
+    {
+      "caseId": "VB-DEDUPE-RECORD-COLLISION",
+      "expectedOutcome": "distinct",
+      "left": {
+        "candidateId": "VB-CANDIDATE-003A", "observationId": "OBS-EEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE", "providerId": "greenhouse", "sourceRecordId": "GH-003", "canonicalUrl": "https://jobs.acme.example/roles/003", "applyUrl": null, "company": "Acme Labs", "companyDomain": "acme.example", "roleTitle": "Product Manager", "location": "Dublin", "postedAt": null, "descriptionDigest": null
+      },
+      "right": {
+        "candidateId": "VB-CANDIDATE-003B", "observationId": "OBS-FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF", "providerId": "greenhouse", "sourceRecordId": "GH-003", "canonicalUrl": "https://jobs.acme.example/roles/003", "applyUrl": null, "company": "Acme Labs", "companyDomain": "acme.example", "roleTitle": "Finance Director", "location": "Dublin", "postedAt": null, "descriptionDigest": null
+      }
+    },
+    {
+      "caseId": "VB-DEDUPE-CROSS-SOURCE-CANONICAL",
+      "expectedOutcome": "merge",
+      "left": {
+        "candidateId": "VB-CANDIDATE-004A", "observationId": "OBS-11111111111111111111111111111111", "providerId": "greenhouse", "sourceRecordId": "GH-004", "canonicalUrl": "https://careers.acme.example/jobs/004?utm_source=feed", "applyUrl": "https://careers.acme.example/jobs/004/apply", "company": "Acme Labs", "companyDomain": "acme.example", "roleTitle": "Research Engineer", "location": "Athens", "postedAt": "2026-07-11T00:00:00.000Z", "descriptionDigest": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+      },
+      "right": {
+        "candidateId": "VB-CANDIDATE-004B", "observationId": "OBS-22222222222222222222222222222222", "providerId": "lever", "sourceRecordId": "LEV-004", "canonicalUrl": "https://careers.acme.example/jobs/004", "applyUrl": "https://careers.acme.example/jobs/004/apply", "company": "Acme Labs", "companyDomain": "acme.example", "roleTitle": "Research Engineer", "location": "Athens", "postedAt": "2026-07-11T00:00:00.000Z", "descriptionDigest": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+      }
+    },
+    {
+      "caseId": "VB-DEDUPE-SAME-APPLICATION-ENDPOINT",
+      "expectedOutcome": "merge",
+      "left": {
+        "candidateId": "VB-CANDIDATE-005A", "observationId": "OBS-33333333333333333333333333333333", "providerId": "greenhouse", "sourceRecordId": "GH-005", "canonicalUrl": "https://boards.example/jobs/research-005", "applyUrl": "https://apply.example/jobs/005", "company": "Northstar Research", "companyDomain": "northstar.example", "roleTitle": "Research Fellow", "location": "Remote", "postedAt": "2026-07-12T00:00:00.000Z", "descriptionDigest": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+      },
+      "right": {
+        "candidateId": "VB-CANDIDATE-005B", "observationId": "OBS-44444444444444444444444444444444", "providerId": "lever", "sourceRecordId": "LEV-005", "canonicalUrl": "https://mirror.example/opportunities/005", "applyUrl": "https://apply.example/jobs/005", "company": "Northstar Research", "companyDomain": "northstar.example", "roleTitle": "Research Fellow", "location": "Remote", "postedAt": "2026-07-12T00:00:00.000Z", "descriptionDigest": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+      }
+    },
+    {
+      "caseId": "VB-DEDUPE-SAME-CONTENT-PROVENANCE",
+      "expectedOutcome": "merge",
+      "left": {
+        "candidateId": "VB-CANDIDATE-006A", "observationId": "OBS-55555555555555555555555555555555", "providerId": "ashby", "sourceRecordId": "ASH-006", "canonicalUrl": "https://source-a.example/jobs/006", "applyUrl": "https://source-a.example/jobs/006/apply", "company": "Evidence Works", "companyDomain": "evidence.example", "roleTitle": "Evidence Engineer", "location": "Istanbul", "postedAt": "2026-07-13T00:00:00.000Z", "descriptionDigest": "sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+      },
+      "right": {
+        "candidateId": "VB-CANDIDATE-006B", "observationId": "OBS-66666666666666666666666666666666", "providerId": "workable", "sourceRecordId": "WRK-006", "canonicalUrl": "https://source-b.example/jobs/006", "applyUrl": "https://source-b.example/jobs/006/apply", "company": "Evidence Works", "companyDomain": "evidence.example", "roleTitle": "Evidence Engineer", "location": "Istanbul", "postedAt": "2026-07-13T00:00:00.000Z", "descriptionDigest": "sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+      }
+    },
+    {
+      "caseId": "VB-DEDUPE-DOMAIN-CONFLICT",
+      "expectedOutcome": "distinct",
+      "left": {
+        "candidateId": "VB-CANDIDATE-007A", "observationId": "OBS-77777777777777777777777777777777", "providerId": "greenhouse", "sourceRecordId": "GH-007", "canonicalUrl": "https://alpha.example/jobs/007", "applyUrl": null, "company": "Common Name", "companyDomain": "alpha.example", "roleTitle": "Data Scientist", "location": "Berlin", "postedAt": null, "descriptionDigest": null
+      },
+      "right": {
+        "candidateId": "VB-CANDIDATE-007B", "observationId": "OBS-88888888888888888888888888888888", "providerId": "lever", "sourceRecordId": "LEV-007", "canonicalUrl": "https://beta.example/jobs/007", "applyUrl": null, "company": "Common Name", "companyDomain": "beta.example", "roleTitle": "Data Scientist", "location": "Berlin", "postedAt": null, "descriptionDigest": null
+      }
+    },
+    {
+      "caseId": "VB-DEDUPE-LOCATION-CONFLICT",
+      "expectedOutcome": "review",
+      "left": {
+        "candidateId": "VB-CANDIDATE-008A", "observationId": "OBS-99999999999999999999999999999999", "providerId": "greenhouse", "sourceRecordId": "GH-008", "canonicalUrl": "https://acme.example/jobs/008-london", "applyUrl": null, "company": "Acme Labs", "companyDomain": "acme.example", "roleTitle": "Program Lead", "location": "London", "postedAt": null, "descriptionDigest": null
+      },
+      "right": {
+        "candidateId": "VB-CANDIDATE-008B", "observationId": "OBS-ABCDEFABCDEFABCDEFABCDEFABCDEFAB", "providerId": "lever", "sourceRecordId": "LEV-008", "canonicalUrl": "https://acme.example/jobs/008-dublin", "applyUrl": null, "company": "Acme Labs", "companyDomain": "acme.example", "roleTitle": "Program Lead", "location": "Dublin", "postedAt": null, "descriptionDigest": null
+      }
+    },
+    {
+      "caseId": "VB-DEDUPE-PROVIDER-RECORD-CONFLICT",
+      "expectedOutcome": "distinct",
+      "left": {
+        "candidateId": "VB-CANDIDATE-009A", "observationId": "OBS-BCDEFABCDEFABCDEFABCDEFABCDEFABC", "providerId": "greenhouse", "sourceRecordId": "GH-009-A", "canonicalUrl": "https://acme.example/jobs/009", "applyUrl": null, "company": "Acme Labs", "companyDomain": "acme.example", "roleTitle": "Lecturer", "location": "Remote", "postedAt": null, "descriptionDigest": null
+      },
+      "right": {
+        "candidateId": "VB-CANDIDATE-009B", "observationId": "OBS-CDEFABCDEFABCDEFABCDEFABCDEFABCD", "providerId": "greenhouse", "sourceRecordId": "GH-009-B", "canonicalUrl": "https://acme.example/jobs/009", "applyUrl": null, "company": "Acme Labs", "companyDomain": "acme.example", "roleTitle": "Lecturer", "location": "Remote", "postedAt": null, "descriptionDigest": null
+      }
+    },
+    {
+      "caseId": "VB-DEDUPE-TITLE-MISMATCH",
+      "expectedOutcome": "distinct",
+      "left": {
+        "candidateId": "VB-CANDIDATE-010A", "observationId": "OBS-DEFABCDEFABCDEFABCDEFABCDEFABCDE", "providerId": "ashby", "sourceRecordId": "ASH-010", "canonicalUrl": "https://acme.example/jobs/010-a", "applyUrl": null, "company": "Acme Labs", "companyDomain": "acme.example", "roleTitle": "Clinical Researcher", "location": "Remote", "postedAt": null, "descriptionDigest": null
+      },
+      "right": {
+        "candidateId": "VB-CANDIDATE-010B", "observationId": "OBS-EFABCDEFABCDEFABCDEFABCDEFABCDEF", "providerId": "workable", "sourceRecordId": "WRK-010", "canonicalUrl": "https://acme.example/jobs/010-b", "applyUrl": null, "company": "Acme Labs", "companyDomain": "acme.example", "roleTitle": "Clinical Director", "location": "Remote", "postedAt": null, "descriptionDigest": null
+      }
+    },
+    {
+      "caseId": "VB-DEDUPE-INSUFFICIENT-IDENTITY",
+      "expectedOutcome": "review",
+      "left": {
+        "candidateId": "VB-CANDIDATE-011A", "observationId": "OBS-0123456789ABCDEF0123456789ABCDEF", "providerId": "greenhouse", "sourceRecordId": "GH-011", "canonicalUrl": "https://acme.example/jobs/011-a", "applyUrl": null, "company": "Acme Labs", "companyDomain": "acme.example", "roleTitle": "AI Researcher", "location": "Remote", "postedAt": "2026-07-13T00:00:00.000Z", "descriptionDigest": "sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
+      },
+      "right": {
+        "candidateId": "VB-CANDIDATE-011B", "observationId": "OBS-123456789ABCDEF0123456789ABCDEF0", "providerId": "lever", "sourceRecordId": "LEV-011", "canonicalUrl": "https://mirror.example/jobs/011-b", "applyUrl": null, "company": "Acme Labs", "companyDomain": "acme.example", "roleTitle": "AI Researcher", "location": "Remote", "postedAt": "2026-07-12T00:00:00.000Z", "descriptionDigest": "sha256:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+      }
+    },
+    {
+      "caseId": "VB-DEDUPE-TRACKING-NORMALIZATION",
+      "expectedOutcome": "merge",
+      "left": {
+        "candidateId": "VB-CANDIDATE-012A", "observationId": "OBS-23456789ABCDEF0123456789ABCDEF01", "providerId": "greenhouse", "sourceRecordId": "GH-012", "canonicalUrl": "https://acme.example/jobs/012?utm_campaign=summer&referrer=board", "applyUrl": null, "company": "Acme Labs", "companyDomain": "acme.example", "roleTitle": "Policy Researcher", "location": "Brussels", "postedAt": null, "descriptionDigest": null
+      },
+      "right": {
+        "candidateId": "VB-CANDIDATE-012B", "observationId": "OBS-3456789ABCDEF0123456789ABCDEF012", "providerId": "lever", "sourceRecordId": "LEV-012", "canonicalUrl": "https://acme.example/jobs/012", "applyUrl": null, "company": "Acme Labs", "companyDomain": "acme.example", "roleTitle": "Policy Researcher", "location": "Brussels", "postedAt": null, "descriptionDigest": null
+      }
+    }
+  ]
+}

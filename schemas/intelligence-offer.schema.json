@@ -1,0 +1,40 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://vocation-os.dev/schemas/intelligence-offer.schema.json",
+  "title": "OfferScenarioEvaluations",
+  "type": "array",
+  "items": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["scenarioId", "status", "currency", "guaranteedAnnualRange", "modeledAnnualRange", "nonFinancialScore", "paretoEfficient", "hardGates", "specialistQuestionCodes", "evidenceRefs", "assertions"],
+    "properties": {
+      "scenarioId": { "type": "string", "minLength": 1 },
+      "status": { "enum": ["hard-gated", "scenario-only"] },
+      "currency": { "oneOf": [{ "type": "string", "pattern": "^[A-Z]{3}$" }, { "type": "null" }] },
+      "guaranteedAnnualRange": { "oneOf": [{ "$ref": "#/definitions/range" }, { "type": "null" }] },
+      "modeledAnnualRange": { "oneOf": [{ "$ref": "#/definitions/range" }, { "type": "null" }] },
+      "nonFinancialScore": { "type": "number", "minimum": 0, "maximum": 100 },
+      "paretoEfficient": { "type": "boolean" },
+      "hardGates": {
+        "type": "array",
+        "uniqueItems": true,
+        "items": { "enum": ["terms-unverified", "work-authorization-unresolved", "licensing-unresolved", "tax-treatment-unresolved", "relocation-unresolved", "payment-risk", "currency-unresolved"] }
+      },
+      "specialistQuestionCodes": {
+        "type": "array",
+        "uniqueItems": true,
+        "items": { "enum": ["equity-terms-review", "tax-review", "relocation-review", "work-authorization-review", "licensing-review", "currency-review"] }
+      },
+      "evidenceRefs": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "type": "string", "minLength": 1 } },
+      "assertions": { "type": "array", "minItems": 2, "items": { "$ref": "https://vocation-os.dev/schemas/intelligence-assertion.schema.json" } }
+    }
+  },
+  "definitions": {
+    "range": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 2,
+      "items": [{ "type": "number" }, { "type": "number" }]
+    }
+  }
+}
