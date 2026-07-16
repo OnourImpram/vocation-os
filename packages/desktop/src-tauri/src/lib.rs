@@ -2,8 +2,7 @@ use serde::Deserialize;
 use std::{
     env,
     error::Error,
-    fmt,
-    fs,
+    fmt, fs,
     io::Read,
     path::{Path, PathBuf},
     process::{Child, Command, Stdio},

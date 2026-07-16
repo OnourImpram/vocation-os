@@ -6,6 +6,7 @@ import {
   WORKBENCH_ROUTES,
   createLoopbackClient,
   createWorkbenchViewModel,
+  routeFromPath,
   validateLoopbackOrigin
 } from "../src/index.js";
 
@@ -38,6 +39,12 @@ describe("workbench contracts", () => {
       .toThrow("explicit loopback host");
     expect(() => validateLoopbackOrigin("http://user:pass@127.0.0.1:9443/"))
       .toThrow("must not contain credentials");
+  });
+
+  it("normalizes query, fragment, and long trailing slash input in linear time", () => {
+    const pathname = `/today${"/".repeat(250_000)}?view=review#focus`;
+    expect(routeFromPath(pathname)?.id).toBe("today");
+    expect(routeFromPath("/discovery/#queue")?.id).toBe("discovery");
   });
 
   it("uses bearer, CSRF, and capability bindings without ambient credentials", async () => {

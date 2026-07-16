@@ -1,10 +1,11 @@
 import { createHash, randomUUID } from "node:crypto";
+import { constants as fsConstants } from "node:fs";
 import {
   access,
   lstat,
   mkdir,
+  open,
   readdir,
-  readFile,
   realpath,
   rename,
   rm,
@@ -177,6 +178,10 @@ function isMissing(error: unknown): boolean {
   return !!error && typeof error === "object" && "code" in error && error.code === "ENOENT";
 }
 
+function hasErrorCode(error: unknown, code: string): boolean {
+  return !!error && typeof error === "object" && "code" in error && error.code === code;
+}
+
 async function pathExists(value: string): Promise<boolean> {
   try {
     await access(value);
@@ -268,36 +273,53 @@ async function readVerifiedFile(
   entry: ChecksumEntry
 ): Promise<{ receipt: VerifiedFile; bytes: Buffer }> {
   const source = resolveContained(root, entry.path);
-  let metadata;
+  let handle;
   try {
-    metadata = await lstat(source);
+    handle = await open(source, fsConstants.O_RDONLY | (fsConstants.O_NOFOLLOW ?? 0));
   } catch (error) {
     if (isMissing(error)) throw new InstallerError("missing-file", `Bundle file is missing: ${entry.path}`);
+    if (hasErrorCode(error, "ELOOP")) {
+      throw new InstallerError("unsupported-file", `Bundle entry must not be a symbolic link: ${entry.path}`);
+    }
     throw error;
   }
-  if (!metadata.isFile() || metadata.isSymbolicLink()) {
-    throw new InstallerError("unsupported-file", `Bundle entry must be a regular file: ${entry.path}`);
+  try {
+    const metadata = await handle.stat();
+    if (!metadata.isFile()) {
+      throw new InstallerError("unsupported-file", `Bundle entry must be a regular file: ${entry.path}`);
+    }
+    if (metadata.size > MAX_INSTALL_FILE_BYTES) {
+      throw new InstallerError("bundle-too-large", `Bundle file exceeds the size limit: ${entry.path}`);
+    }
+    const sourceRealPath = await realpath(source);
+    const fromRoot = relative(rootRealPath, sourceRealPath);
+    if (fromRoot === ".." || fromRoot.startsWith(`..${sep}`) || isAbsolute(fromRoot)) {
+      throw new InstallerError("unsafe-path", `Bundle file resolves outside the source root: ${entry.path}`);
+    }
+    const pathMetadata = await lstat(source);
+    if (
+      !pathMetadata.isFile()
+      || pathMetadata.isSymbolicLink()
+      || pathMetadata.dev !== metadata.dev
+      || pathMetadata.ino !== metadata.ino
+    ) {
+      throw new InstallerError("unsupported-file", `Bundle entry changed during verification: ${entry.path}`);
+    }
+    const bytes = await handle.readFile();
+    if (bytes.byteLength > MAX_INSTALL_FILE_BYTES) {
+      throw new InstallerError("bundle-too-large", `Bundle file exceeds the size limit: ${entry.path}`);
+    }
+    const actual = digestBytes(bytes);
+    if (actual !== entry.sha256) {
+      throw new InstallerError("checksum-mismatch", `Checksum mismatch for bundle file: ${entry.path}`);
+    }
+    return {
+      receipt: Object.freeze({ path: entry.path, sha256: actual, size: bytes.byteLength }),
+      bytes
+    };
+  } finally {
+    await handle.close();
   }
-  if (metadata.size > MAX_INSTALL_FILE_BYTES) {
-    throw new InstallerError("bundle-too-large", `Bundle file exceeds the size limit: ${entry.path}`);
-  }
-  const sourceRealPath = await realpath(source);
-  const fromRoot = relative(rootRealPath, sourceRealPath);
-  if (fromRoot === ".." || fromRoot.startsWith(`..${sep}`) || isAbsolute(fromRoot)) {
-    throw new InstallerError("unsafe-path", `Bundle file resolves outside the source root: ${entry.path}`);
-  }
-  const bytes = await readFile(source);
-  if (bytes.byteLength > MAX_INSTALL_FILE_BYTES) {
-    throw new InstallerError("bundle-too-large", `Bundle file exceeds the size limit: ${entry.path}`);
-  }
-  const actual = digestBytes(bytes);
-  if (actual !== entry.sha256) {
-    throw new InstallerError("checksum-mismatch", `Checksum mismatch for bundle file: ${entry.path}`);
-  }
-  return {
-    receipt: Object.freeze({ path: entry.path, sha256: actual, size: bytes.byteLength }),
-    bytes
-  };
 }
 
 async function collectVerifiedFiles(

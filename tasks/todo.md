@@ -23,10 +23,11 @@
 - 2026-07-16: focused authority, SDK, TUI, workbench, installer, model gateway, assurance, credential, discovery, taxonomy, and product command tests passed before the full release gate.
 - 2026-07-16: dedupe review projection now aggregates every relation in the latest result and conservatively preserves `review` over `merge` or `distinct`.
 - 2026-07-17: real `eddsa-rdfc-2022` verification passed for controlled HTTPS issuer documents and the offline `did:key` daemon resolver. Altered content, unauthorized controllers, unresolved issuers, and multiple proofs fail closed.
-- 2026-07-17: final local `npm run safe:publish-check` passed with 103 test files, 676 tests, 53 schemas, 19 evaluator cases, 23 citation records, a 530 component SBOM, 2 Astro pages, external CLI smoke, and a clean production tarball install.
-- 2026-07-17: combined coverage passed at 80.91 percent statements, 71.62 percent branches, 91.77 percent functions, and 85.21 percent lines.
+- 2026-07-17: final local `npm run safe:publish-check` passed with 103 test files, 679 tests, 53 schemas, 19 evaluator cases, 23 citation records, a 530 component SBOM, 2 Astro pages, external CLI smoke, and a clean production tarball install.
+- 2026-07-17: combined coverage passed at 80.95 percent statements, 71.63 percent branches, 91.82 percent functions, and 85.24 percent lines.
 - 2026-07-17: independent read-only review inspected the complete diff and reported no open P0 or P1 finding. Its sandbox could not execute Node or npm, so the static verdict supplements the complete local release gate.
 - 2026-07-17: pull request `#14` published the hash-verified release branch for protected-branch review. No npm publication was performed.
+- 2026-07-17: the first protected-branch run caught clean workspace dependency ordering, two path check then read boundaries, repetition-sensitive route normalization, and Rust formatting drift. The remediations passed focused tests, clean SDK build reproduction, and the complete local release gate.
 
 - [x] Build clean public repo boundary.
 - [x] Enforce privacy and brand scans.

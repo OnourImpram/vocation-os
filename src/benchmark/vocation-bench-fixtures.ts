@@ -1,4 +1,4 @@
-import { readFileSync, statSync } from "node:fs";
+import { closeSync, constants as fsConstants, fstatSync, openSync, readFileSync } from "node:fs";
 import path from "node:path";
 import type { DedupeCandidate, DedupeOutcome } from "../discovery/dedupe.js";
 import type { LivenessState } from "../discovery/liveness.js";
@@ -406,15 +406,22 @@ export function assertVocationBenchFixtures(value: unknown): asserts value is Vo
 
 function readFixtureFile(directory: string, fileName: string): unknown {
   const filePath = path.resolve(directory, fileName);
-  const size = statSync(filePath).size;
-  if (size > MAX_FIXTURE_FILE_BYTES) {
-    throw new Error(`${fileName} exceeds the ${MAX_FIXTURE_FILE_BYTES} byte fixture bound`);
-  }
+  const descriptor = openSync(filePath, fsConstants.O_RDONLY | (fsConstants.O_NOFOLLOW ?? 0));
   try {
-    return JSON.parse(readFileSync(filePath, "utf8")) as unknown;
+    const size = fstatSync(descriptor).size;
+    if (size > MAX_FIXTURE_FILE_BYTES) {
+      throw new Error(`${fileName} exceeds the ${MAX_FIXTURE_FILE_BYTES} byte fixture bound`);
+    }
+    const source = readFileSync(descriptor, "utf8");
+    if (Buffer.byteLength(source, "utf8") > MAX_FIXTURE_FILE_BYTES) {
+      throw new Error(`${fileName} exceeds the ${MAX_FIXTURE_FILE_BYTES} byte fixture bound`);
+    }
+    return JSON.parse(source) as unknown;
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     throw new Error(`Cannot parse VocationBench fixture ${fileName}: ${message}`);
+  } finally {
+    closeSync(descriptor);
   }
 }
 

@@ -87,7 +87,14 @@ export function routeById(id: WorkbenchRouteId): WorkbenchRoute {
 }
 
 export function routeFromPath(pathname: string): WorkbenchRoute | null {
-  const cleanPath = pathname.split(/[?#]/u, 1)[0]?.replace(/\/+$/u, "") || "/";
+  const queryIndex = pathname.indexOf("?");
+  const fragmentIndex = pathname.indexOf("#");
+  const boundaries = [queryIndex, fragmentIndex].filter((index) => index >= 0);
+  const pathEnd = boundaries.length === 0 ? pathname.length : Math.min(...boundaries);
+  const routePath = pathname.slice(0, pathEnd);
+  let cleanEnd = routePath.length;
+  while (cleanEnd > 1 && routePath.charCodeAt(cleanEnd - 1) === 47) cleanEnd -= 1;
+  const cleanPath = routePath.slice(0, cleanEnd) || "/";
   return WORKBENCH_ROUTES.find((route) => route.path === cleanPath) ?? null;
 }
 

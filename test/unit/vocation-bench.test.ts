@@ -184,6 +184,16 @@ describe("VocationBench", () => {
     }
   });
 
+  it("rejects an oversized fixture through the opened descriptor before parsing", () => {
+    const directory = mkdtempSync(path.join(tmpdir(), "vocation-bench-file-bound-"));
+    try {
+      writeFileSync(path.join(directory, VOCATION_BENCH_FIXTURE_FILES.liveness), "0".repeat(1_000_001), "utf8");
+      expect(() => loadVocationBenchFixtures(directory)).toThrow("byte fixture bound");
+    } finally {
+      rmSync(directory, { recursive: true, force: true });
+    }
+  });
+
   it("computes ranking, calibration, classification, and safety primitives", () => {
     const perfect = [
       { relevance: 3, predictedProbability: 0.9, observedOutcome: 1 as const },

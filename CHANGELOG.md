@@ -22,6 +22,7 @@ Released as a source-first GitHub decision intelligence release. No npm publicat
 3. Kept TUI discovery actions review-only and kept the workbench, MCP, agent, and model surfaces behind daemon authority.
 4. Retained the synthetic `local-fixture` as the only compiled execution adapter. Production auto apply remains unavailable.
 5. Added real Compact JWS and `eddsa-rdfc-2022` credential proof verification with pinned JSON LD contexts, offline `did:key` resolution, issuer assertion authorization, bounded document loading, and fail-closed multi-proof handling.
+6. Made clean workspace builds dependency ordered, replaced path check then read sequences with descriptor-bound reads, removed repetition-sensitive route normalization, and aligned the desktop shell with `rustfmt`.
 
 ## 0.5.0
 

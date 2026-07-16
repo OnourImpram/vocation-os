@@ -1,5 +1,13 @@
 # Lessons
 
+## 2026-07-17
+
+Build internal type providers such as the SDK before any dependent workspace typecheck. A release gate must also be reproduced from a tree without ignored `dist` output so stale local builds cannot hide dependency ordering defects.
+
+A size or path check followed by a second path based read is a TOCTOU boundary. Open once, validate the file descriptor, and read from that same descriptor.
+
+Normalize uncontrolled route input with bounded index and character operations instead of repetition-sensitive regular expressions.
+
 ## 2026-07-14
 
 Keep source availability, parsed field availability, and action route liveness as separate contracts. A reachable provider payload may support extracted fields while the opportunity remains unresolved because a valid application endpoint is absent. Encode that distinction explicitly instead of weakening source observation invariants.

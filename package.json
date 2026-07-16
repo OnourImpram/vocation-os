@@ -82,7 +82,7 @@
     "build:workspaces": "npm run build --workspaces --if-present",
     "build": "npm run build:workspaces && node scripts/clean-dist.mjs && tsc -p tsconfig.build.json",
     "typecheck:workspaces": "npm run typecheck --workspaces --if-present",
-    "typecheck": "npm run typecheck:workspaces && npm run build:workspaces && tsc --noEmit",
+    "typecheck": "npm run build:sdk && npm run typecheck:workspaces && npm run build:workspaces && tsc --noEmit",
     "test": "vitest run",
     "test:workspaces": "npm run test --workspaces --if-present",
     "test:watch": "vitest",

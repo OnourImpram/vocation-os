@@ -92,6 +92,23 @@ describe("checksum gated installer", () => {
     })).rejects.toMatchObject<Partial<InstallerError>>({ code: "remote-source" });
   });
 
+  it("rejects source file symlinks before reading bundle bytes", async () => {
+    const input = await fixture();
+    const sourceFile = join(input.source, "vocation-os", "SKILL.md");
+    const linkTarget = join(input.root, "linked-skill.md");
+    await writeFile(linkTarget, "---\nname: vocation-os\n---\n");
+    await rm(sourceFile);
+    try {
+      await symlink(linkTarget, sourceFile, "file");
+    } catch (error) {
+      if (process.platform === "win32" && error && typeof error === "object" && "code" in error && error.code === "EPERM") return;
+      throw error;
+    }
+
+    await expect(verifyBundle({ bundleRoot: input.source, manifest: input.manifest }))
+      .rejects.toMatchObject<Partial<InstallerError>>({ code: "unsupported-file" });
+  });
+
   it("atomically updates a verified installation and records both manifests", async () => {
     const input = await fixture();
     await installVerifiedBundle({ bundleRoot: input.source, targetDirectory: input.target, manifest: input.manifest });
