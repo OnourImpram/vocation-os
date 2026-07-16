@@ -49,13 +49,13 @@ jobs:
       - name: Install Rust validation components
         shell: pwsh
         run: |
-          rustup toolchain install stable --profile minimal --component rustfmt,clippy
-          rustup default stable
+          rustup toolchain install 1.97.1 --profile minimal --component rustfmt,clippy
+          rustup default 1.97.1
       - name: Build and validate desktop package
         run: npm run build --workspace @vocation-os/desktop
       - name: Check Rust formatting
         run: cargo fmt --manifest-path packages/desktop/src-tauri/Cargo.toml -- --check
       - name: Run Rust tests
-        run: cargo test --manifest-path packages/desktop/src-tauri/Cargo.toml --all-targets
+        run: cargo test --locked --manifest-path packages/desktop/src-tauri/Cargo.toml --all-targets
       - name: Run Clippy
-        run: cargo clippy --manifest-path packages/desktop/src-tauri/Cargo.toml --all-targets -- -D warnings
+        run: cargo clippy --locked --manifest-path packages/desktop/src-tauri/Cargo.toml --all-targets -- -D warnings

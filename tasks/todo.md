@@ -28,6 +28,7 @@
 - 2026-07-17: independent read-only review inspected the complete diff and reported no open P0 or P1 finding. Its sandbox could not execute Node or npm, so the static verdict supplements the complete local release gate.
 - 2026-07-17: pull request `#14` published the hash-verified release branch for protected-branch review. No npm publication was performed.
 - 2026-07-17: the first protected-branch run caught clean workspace dependency ordering, two path check then read boundaries, repetition-sensitive route normalization, and Rust formatting drift. The remediations passed focused tests, clean SDK build reproduction, and the complete local release gate.
+- 2026-07-17: the second protected-branch run passed CodeQL, dependency review, and Ubuntu CI. Windows checks exposed direct symlink classification order and the missing Tauri icon. The release now carries validated PNG and ICO assets, `Cargo.lock`, an exact Rust `1.97.1` toolchain, and locked native commands.
 
 - [x] Build clean public repo boundary.
 - [x] Enforce privacy and brand scans.

@@ -291,11 +291,6 @@ async function readVerifiedFile(
     if (metadata.size > MAX_INSTALL_FILE_BYTES) {
       throw new InstallerError("bundle-too-large", `Bundle file exceeds the size limit: ${entry.path}`);
     }
-    const sourceRealPath = await realpath(source);
-    const fromRoot = relative(rootRealPath, sourceRealPath);
-    if (fromRoot === ".." || fromRoot.startsWith(`..${sep}`) || isAbsolute(fromRoot)) {
-      throw new InstallerError("unsafe-path", `Bundle file resolves outside the source root: ${entry.path}`);
-    }
     const pathMetadata = await lstat(source);
     if (
       !pathMetadata.isFile()
@@ -304,6 +299,11 @@ async function readVerifiedFile(
       || pathMetadata.ino !== metadata.ino
     ) {
       throw new InstallerError("unsupported-file", `Bundle entry changed during verification: ${entry.path}`);
+    }
+    const sourceRealPath = await realpath(source);
+    const fromRoot = relative(rootRealPath, sourceRealPath);
+    if (fromRoot === ".." || fromRoot.startsWith(`..${sep}`) || isAbsolute(fromRoot)) {
+      throw new InstallerError("unsafe-path", `Bundle file resolves outside the source root: ${entry.path}`);
     }
     const bytes = await handle.readFile();
     if (bytes.byteLength > MAX_INSTALL_FILE_BYTES) {

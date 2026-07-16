@@ -8,6 +8,8 @@ A size or path check followed by a second path based read is a TOCTOU boundary. 
 
 Normalize uncontrolled route input with bounded index and character operations instead of repetition-sensitive regular expressions.
 
+Desktop release validation requires the assets and native dependency lock that the platform build actually consumes. Keep the Tauri icon set, `Cargo.lock`, exact Rust toolchain, and `--locked` CI commands in the release contract.
+
 ## 2026-07-14
 
 Keep source availability, parsed field availability, and action route liveness as separate contracts. A reachable provider payload may support extracted fields while the opportunity remains unresolved because a valid application endpoint is absent. Encode that distinction explicitly instead of weakening source observation invariants.

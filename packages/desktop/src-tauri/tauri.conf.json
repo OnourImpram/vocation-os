@@ -61,6 +61,10 @@
   "bundle": {
     "active": true,
     "targets": "all",
+    "icon": [
+      "icons/icon.ico",
+      "icons/icon.png"
+    ],
     "category": "Productivity",
     "shortDescription": "Evidence grounded career decision safety.",
     "longDescription": "A local first workbench for evidence grounded career decision safety and human authorized career operations.",
