@@ -32,39 +32,39 @@
 
 ## v0.6 Opportunity and Campaign Engine
 
-1. Ship twenty four contract tested GA discovery connectors.
-2. Add source liveness, cross source deduplication, salary provenance, and title adjacency.
-3. Add O*NET and ESCO data ingestion with versioned caches.
-4. Add an Opportunity Truth Engine for stale posting, duplicate, contradiction, and unresolved eligibility signals without presenting inference as fact.
-5. Add a Career Assurance Case that binds each consequential recommendation to evidence, uncertainty, defeaters, policy decisions, approval, and outcome receipts.
-6. Add campaign quotas, quality thresholds, diversity controls, and follow up cadence.
-7. Add read only import from supported career workflow exports.
-8. Ship a versioned catalog containing at least 150 verified company portal entries and domain source packs.
+1. Shipped 36 contract-tested discovery adapters behind a governed network broker and signed access grants.
+2. Shipped immutable source observations, liveness, conservative cross-source dedupe, opportunity truth, and bounded review projections.
+3. Shipped O*NET and ESCO snapshot import and deterministic mapping with versioned artifact provenance.
+4. Shipped a versioned catalog with 278 identity-confirmed career portal routes, 209 separately retained unresolved attempts, and ten domain source packs.
+5. Shipped Career Digital Twin, portfolio, campaign, document, interview, network, offer, and outcome intelligence foundations.
+6. Shipped Career Assurance Case and Credential Passport authority surfaces.
+7. Shipped an Ink review queue, React loopback workbench, Tauri shell, typed SDK, read-first MCP server, canonical agent skill, installer lifecycle, and model gateway.
+8. Expanded VocationBench to executable safety, proof, liveness, dedupe, claim trace, and calibration suites. Comparative baselines remain unexecuted.
 
 See `docs/V0.6_DIFFERENTIATION.md` for the acceptance contract.
 
-## v0.7 Workbench
+## v0.7 Workbench Hardening
 
-1. Ship Tauri 2 and React desktop workbench.
-2. Add Today cockpit, evidence graph, market map, opportunity board, route comparison, review queue, and analytics.
-3. Meet WCAG 2.2 AA and Windows end to end release gates.
+1. Add persistent pagination, bulk-safe review, richer evidence graph navigation, and route comparison views.
+2. Complete independent WCAG 2.2 AA audit and signed Windows, macOS, and Linux desktop artifacts.
+3. Add portable encrypted vault migration and documented device recovery drills.
 4. Keep all local workflows usable without a cloud account.
 
 ## v0.8 Browser Copilot
 
 1. Add WXT extension and native messaging to `vocationd`.
 2. Add supervised form mapping and application answer review.
-3. Add production Greenhouse, Lever, and Ashby proof collectors.
+3. Add separately reviewed production Greenhouse, Lever, and Ashby execution and proof collectors.
 4. Keep unsupported ATS routes assist only.
 5. Preserve CAPTCHA, ToS, payment, identity, and high stakes hard blocks.
 
 ## v0.9 Career Labs
 
-1. Add Interview Studio, local transcription, evidence bound story bank, and debrief.
-2. Add Network Intelligence with relationship fatigue controls.
-3. Add Offer Lab for compensation, BATNA, relocation, and specialist questions.
+1. Expand Interview Studio with local transcription, adaptive mock sessions, evidence bound story bank, and debrief.
+2. Expand Network Intelligence with relationship history and fatigue controls over explicitly permitted data.
+3. Expand Offer Lab with current tax and cost inputs, BATNA, relocation, and specialist referral workflows.
 4. Add multilingual English and Turkish product surfaces.
-5. Add a Credential Passport for standards-based verified achievements and provenance-preserving evidence exchange.
+5. Add additional Credential Passport proof suites only after cryptographic interoperability tests pass.
 
 ## v0.10 Evaluation and Learning
 

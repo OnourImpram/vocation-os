@@ -16,13 +16,13 @@ Website: [onourimpram.github.io/vocation-os](https://onourimpram.github.io/vocat
 
 ## Current Release
 
-Version 0.5.0 is the canonical local profile, document, and application operations release.
+Version 0.6.0 is the source-first decision intelligence release.
 
-It includes the deterministic safety kernel, claim and packet integrity, persistent kill switch state, scoped approvals, trusted submission collectors, a migrated encrypted SQLite event store, checksummed schema migrations, encrypted backup and restore, a content addressed encrypted artifact vault, resumable onboarding, real PDF and DOCX profile parsing, hash bound import plans, event sourced product repositories, claim bound PDF and DOCX rendering with parse back verification, an application tracker, policy bound answer memory, and the existing Career Digital Twin, opportunity, portfolio, outcome, theory, and VocationBench foundations.
+It adds 36 contract-tested discovery adapters, a governed network boundary, 278 identity-confirmed career portal routes, source observations, opportunity truth, liveness, conservative deduplication, versioned ESCO and O*NET normalization, campaign and portfolio intelligence, an Ink review queue, a React loopback workbench, Career Assurance Case reports, Credential Passport verification, interview, network, offer, and outcome foundations, a read-first MCP server, a canonical agent skill, verified agent integration lifecycle tools, and a policy-bound model gateway.
 
-`vocationd` is the shipped single writer for consequential local runtime mutations. Product domain records, artifact manifests, profile import plans, onboarding transitions, tracker transitions, auto apply state, legacy import, audit checkpoints, and approver changes go through authenticated IPC with request idempotency. Desktop workbench, browser extension, twenty four GA discovery connectors, the verified company catalog, full interview and offer labs, production collector key custody, and production execution adapters remain roadmap work.
+`vocationd` remains the single writer for consequential local mutations. Discovery, truth, taxonomy, assurance, credential, campaign, application, approval, receipt, and outcome records use dedicated authenticated operations with idempotency and encrypted event history. Remote discovery is off by default and requires a signed, scoped `NetworkAccessGrant`. The portal catalog keeps 209 unresolved routes outside the verified set instead of upgrading failed checks into evidence.
 
-Version 0.5.0 ships no production auto apply adapter. Its compiled execution boundary permits only `local-fixture` with a synthetic profile. Adding an adapter string to config cannot grant production execution authority.
+Version 0.6.0 still ships no production auto apply adapter. Its compiled execution boundary permits only `local-fixture` with a synthetic profile. Adding an adapter string, agent integration, MCP client, or model provider cannot grant production execution authority.
 
 ## Why It Exists
 
@@ -54,7 +54,7 @@ Most career tooling optimizes output volume. VocationOS optimizes decision quali
 
 ## Quick Start
 
-Version 0.5.0 is a source-first GitHub release. Registry installation remains intentionally unavailable until the typed SDK and root package complete a separate npm release pass.
+Version 0.6.0 is a source-first GitHub release. Registry installation remains intentionally unavailable until the typed SDK and root package complete a separate npm release pass.
 
 ```bash
 npm ci
@@ -144,11 +144,13 @@ No LLM, plugin, adapter, or worker owns the final side effect boundary. The dete
 
 Temporal facts carry validity windows, evidence status, source pointers, confidence, sensitivity, and allowed uses. Sensitive facts cannot be exposed through public profile use.
 
-### Opportunity Graph
+### Opportunity Truth and Taxonomy
 
-Greenhouse, Lever, and Ashby payloads have pure normalization adapters. Opportunity records retain canonical URLs, source payload hashes, description hashes, fingerprints, freshness, remote eligibility, and extraction confidence.
+Thirty six provider adapters share a versioned parser contract covering malformed payloads, pagination, schema drift, and provider-specific identity. Every governed retrieval produces an immutable source observation. Opportunity records retain canonical URLs, source payload hashes, description hashes, fingerprints, freshness, remote eligibility, and extraction confidence.
 
-O*NET, ESCO, and local occupation concepts can be attached with taxonomy version provenance. Current matching is a deterministic foundation, not a learned labor market model.
+Liveness requires provider identity, active state, and a usable application endpoint. Timeouts and provider failures remain `unresolved`. Dedupe uses source identity, canonical apply routes, organization domain, normalized role and location, content provenance, and taxonomy adjacency. Ambiguous relations enter the review queue and cannot be silently merged.
+
+O*NET, ESCO, and local occupation concepts use versioned snapshots and deterministic mappings with source codes or URIs, matched terms, and confidence. Model suggestions are advisory and cannot become authoritative taxonomy mappings.
 
 ### Portfolio Analysis
 
@@ -163,6 +165,10 @@ Every content node in Document AST v2 uses `verbatim-claim` binding to exactly o
 Profiles, opportunities, documents, campaigns, applications, tasks, outcomes, and application answers are versioned encrypted aggregates. Optimistic concurrency and request replay checks protect mutations. Application records use lifecycle specific tracker operations, so generic domain writes cannot manufacture an approved or confirmed status.
 
 Answer memory is scope, sensitivity, expiry, evidence, and use mode aware. Work authorization, visa, relocation, compensation, and licensing answers require per opportunity confirmation and cannot be used in Approved Auto. EEO responses are never resolved for reuse.
+
+The Ink TUI presents separate application and discovery queues through the typed SDK. Discovery actions create audited review tasks only. The React workbench uses a bearer, CSRF, capability-bound loopback gateway on `127.0.0.1`; it does not read SQLite directly. The Tauri shell packages the same workbench and has a dedicated Windows Rust validation workflow.
+
+Career Assurance Case exports bind recommendations to evidence, uncertainty, defeaters, policy decisions, approvals, receipts, and version manifests. Credential Passport imports preserve original artifacts and separate schema, signature, issuer, subject, time, revocation, and refresh results. Compact JWS and `eddsa-rdfc-2022` Data Integrity proofs receive real cryptographic verification. Pinned VC, Open Badges, Data Integrity, and Multikey contexts plus `did:key` resolution remain offline. HTTPS issuer material is accepted only through an explicitly supplied bounded document loader. A valid credential signature is never treated as proof that every real-world career claim is true.
 
 ## CLI
 
@@ -187,6 +193,15 @@ vocation artifact-list
 vocation domain-list profiles
 vocation tracker-list
 vocation document-render ./document-v2.json ./claim-graph.json ./exports
+vocation discover help
+vocation taxonomy help
+vocation assurance help
+vocation credential help
+vocation tui --queue all
+vocation workbench --no-open
+vocation agents status
+vocation models status
+vocation benchmark
 ```
 
 With `vocationd` stopped, verify the canonical encrypted store or create an interactive encrypted backup:
@@ -200,7 +215,7 @@ vocation store-backup ./backups/vocation.vocationbak
 
 ## VocationBench
 
-VocationBench materializes deterministic synthetic stubs for 500 profiles, 1,000 opportunities, 200 adversarial cases, and 100 completion proof cases. Full synthetic Career Digital Twins and executable baseline adapters remain part of the benchmark expansion.
+VocationBench materializes deterministic synthetic stubs for 500 profiles, 2,000 opportunities, 300 adversarial cases, 200 completion proof cases, and 100 credential cases. Its committed executable fixture set contains 94 bounded liveness, dedupe, safety, proof, claim trace, and calibration cases.
 
 The harness implements NDCG, Brier score, expected calibration error, F1, false allow rate, and false confirmation rate. Current code establishes the benchmark protocol and metric engine. A public competitor leaderboard requires reproducible baseline runs and is not yet claimed.
 
@@ -215,8 +230,8 @@ The values below are checked by `npm run docs:check`.
 | Modes | 21 |
 | Theories | 28 |
 | Rubric dimensions | 20 |
-| Schemas | 30 |
-| CLI commands | 65 |
+| Schemas | 53 |
+| CLI commands | 73 |
 | Evaluator tests | 19 |
 
 ## What This Is Not
@@ -231,7 +246,7 @@ It does not bypass CAPTCHA, anti bot controls, identity checks, platform terms, 
 
 It does not treat an application as complete from caller supplied text or tracker status.
 
-It is not yet a finished v1 desktop product. Version 0.5.0 is a tested local profile, document, and application operations foundation for that product.
+It is not a cloud-hosted application-volume service, a generic browser automation system, or evidence of competitor superiority. Comparative superiority remains `not-assessed` until reproducible baseline runs meet the published VocationBench contract.
 
 ## Governance
 

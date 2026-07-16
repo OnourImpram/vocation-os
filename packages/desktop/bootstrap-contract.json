@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "status": "running",
+  "authority": "vocationd",
+  "network": "127.0.0.1-only",
+  "scheme": "http",
+  "host": "127.0.0.1",
+  "launchPathPrefix": "/launch/",
+  "launchTokenBytes": 32,
+  "maxEnvelopeBytes": 4096,
+  "timeoutMs": 15000
+}

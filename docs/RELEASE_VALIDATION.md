@@ -1,5 +1,50 @@
 # Release Validation
 
+## v0.6.0 Decision Intelligence Evidence
+
+Date: 2026-07-17
+
+Base: clean `origin/main` worktree at `d15f660a1b02a7e01e20dc817e8346cd3eee7c17`. The existing dirty checkout was not modified.
+
+Version 0.6.0 adds governed discovery, 36 provider contracts, a 278-route identity-confirmed portal catalog, opportunity truth, liveness, conservative dedupe, ESCO and O*NET normalization, Career Digital Twin and portfolio intelligence, campaign operations, TUI and workbench review surfaces, Career Assurance Case, Credential Passport, agent integrations, MCP, model egress policy, and VocationBench. It does not enable a production ATS execution adapter or npm publication.
+
+| Check | Result |
+| --- | --- |
+| Privacy and brand | PASS |
+| Workflow pinning | 5 workflow files passed |
+| Governed network boundary | PASS. Production network access is confined to `GovernedFetchBroker` |
+| Provider catalog | 278 verified routes, 209 unresolved routes retained separately |
+| Strict TypeScript | Root and all workspaces passed |
+| Workspace tests | Agent skill, desktop, installer, MCP, provider SDK, SDK type contracts, TUI, and workbench passed |
+| Combined Vitest | 103 files, 680 tests passed |
+| Coverage | 80.95 statements, 71.63 branches, 91.82 functions, 85.24 lines |
+| JSON Schema | 53 schemas valid |
+| Evaluator | 19 of 19 passed |
+| Citation contract | 23 offline records passed |
+| SBOM | 530 CycloneDX components parsed |
+| Astro | 2 pages built |
+| Package | Real tarball scan, production-only install, bundled SDK, external CLI, and bounded PDF and DOCX parser smokes passed |
+| Dependency audit | Zero high-severity or higher npm vulnerabilities reported |
+| Independent review | PASS. No open P0 or P1 finding |
+
+Credential Passport focused tests use the official `eddsa-rdfc-2022` cryptosuite to generate and verify a real Open Badges compatible Data Integrity proof. The suite also rejects altered credential text, an issuer controller that no longer authorizes the key, an unavailable issuer document, and ambiguous multiple proofs. A separate route verifies a `did:key` issuer through the offline daemon resolver without a network delegate. Compact JWS verification remains independently covered.
+
+VocationBench reports liveness precision `1.0`, dedupe F1 `1.0`, safety false allows `0`, false confirmations `0`, claim trace coverage `1.0`, and calibration ECE `0.0` on the shipped deterministic fixtures. These are internal benchmark results, not competitor superiority evidence. Competitor superiority remains `not-assessed`, and mutation score remains `not-evaluated`.
+
+The workbench was exercised at 1440 by 900 and 390 by 844 through the real loopback gateway. Both routes had no horizontal overflow, clipped controls, console errors, or page errors. Rust `1.97.1` was installed locally from the official rustup distribution after checksum verification. Rust formatting, locked metadata, and dependency target checks passed locally. The machine does not include the MSVC linker, so Rust tests and Clippy remain authoritative in the dedicated Windows `desktop-native` workflow before merge.
+
+An independent read-only review inspected the complete v0.6.0 diff against `origin/main`, including signed network grants, governed fetch and SSRF boundaries, persistent grant budgets, MCP capabilities, scoped approvals, loopback workbench protections, and release claims. It reported no supported P0 or P1 finding. The isolated reviewer could not execute Node or npm commands under its sandbox policy, so its static verdict supplements rather than replaces the complete local release gate above. A requested legacy Codex model identifier was unavailable for the authenticated account. The review was rerun with the supported default Codex model instead.
+
+The first protected-branch run exposed four clean-platform release defects that stale local build output and missing Rust tooling had concealed. The SDK is now built before dependent workspace typechecks. Installer and benchmark reads are bound to the same validated file descriptor. Workbench route normalization uses bounded index and character operations. The Rust shell matches `rustfmt`. Focused regression tests and a fresh complete local release gate passed after remediation. Remote CodeQL and platform workflows remain authoritative before merge.
+
+The second protected-branch run passed CodeQL, dependency review, and Ubuntu CI. Windows CI exposed a platform-specific direct symlink classification order, and the native build exposed the missing Windows icon consumed by `tauri-build`. Direct symlinks are now rejected before containment resolution. The desktop package includes validated PNG and ICO assets, `Cargo.lock`, Rust `1.97.1`, and `--locked` native test and Clippy commands. Local Rust formatting and locked metadata resolution passed. Local native linking was unavailable because this machine does not include the MSVC linker, so the dedicated Windows workflow remains the authority for Rust tests and Clippy.
+
+The third protected-branch run passed CodeQL and both JavaScript platform jobs. Native Rust tests passed, then Clippy identified two denied warnings that were corrected with direct expression return and integer `div_ceil`. Dependency review identified `GHSA-wrw7-89jp-8q8g` in Tauri's Linux-only GTK graph. Stable Tauri `2.11.5` and Wry `0.55.1` still use that graph. Version 0.6 now fails closed to Windows `msi` and `nsis` targets. A dedicated dependency boundary gate proves the vulnerable package is absent from the supported Windows graph and makes the exact advisory exception stale on any upstream dependency drift.
+
+The release remains source first. GitHub artifact attestation, SBOM attestation, and durable release evidence are produced by the tag workflow. No npm publish, native code-signing certificate, production auto apply adapter, independent compliance certification, or competitor superiority claim is part of this release.
+
+GitHub pull request [#14](https://github.com/OnourImpram/vocation-os/pull/14) publishes the hash-verified release tree for protected-branch review and remote release gates.
+
 ## v0.5.0 Product Foundation Evidence
 
 Version 0.5.0 adds product operations without enabling production auto apply. The release gate covers the following executable contracts.

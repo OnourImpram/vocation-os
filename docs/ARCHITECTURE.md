@@ -12,9 +12,10 @@
 ## Runtime Flow
 
 ```text
-CLI, typed SDK, and vocationd today, TUI, desktop, and extension later
+CLI, typed SDK, TUI, loopback workbench, MCP, and desktop shell
   -> authenticated local IPC
   -> vocationd single writer
+  -> governed fetch broker and dedicated decision repositories
   -> versioned product repositories and encrypted artifact vault
   -> deterministic controller
   -> worker and model advisory processes
@@ -25,7 +26,7 @@ CLI, typed SDK, and vocationd today, TUI, desktop, and extension later
   -> encrypted event and outcome store
 ```
 
-Version 0.5.0 exposes one command onboarding, profile import planning, product domain repositories, tracker operations, and read only or demo surfaces through the CLI. Consequential local runtime mutations go through `vocationd` as the authenticated single writer. Tauri and WXT are not yet shipped.
+Version 0.6.0 exposes one command onboarding, governed discovery, truth and liveness assessment, dedupe review, taxonomy snapshots, campaign and portfolio intelligence, Career Assurance Case, Credential Passport, application operations, TUI review, a React loopback workbench, MCP, agent skills, and model gateway surfaces. Consequential local runtime mutations go through `vocationd` as the authenticated single writer. The Tauri shell is included and validated in a dedicated Windows workflow. A browser extension is not shipped.
 
 IPC uses length prefixed JSON frames with a one MiB frame limit, a bounded complete-frame queue, a bounded pending-handshake pool, and separate authenticated connection capacity. A random client nonce and server challenge authenticate with HMAC without transmitting the IPC secret. Per connection keys bind request and response MACs. Request sequences are monotonic. Mutating request IDs are durable and idempotent. Reusing an ID with different canonical parameters fails closed. Long-running commands expose their request ID when a response deadline expires so the same request can recover the canonical result. Receipt rows are reconstructable caches. Replay also verifies the deterministic event ID and the request, operation, response, and hash binding inside the authenticated event.
 
@@ -39,6 +40,10 @@ The encrypted SQLite event store is the canonical local runtime authority. Legac
 
 Profiles, opportunities, Document AST records, campaigns, application attempts, tasks, outcomes, and answer memory are optimistic concurrency controlled encrypted aggregates. A shared mutation coordinator serializes domain writes across the one event chain. Generic application put and archive operations are blocked at the daemon boundary. Application lifecycle transitions use the tracker service.
 
+Source observations, opportunity truth records, liveness assessments, dedupe results, taxonomy snapshots and mappings, assurance cases, credential passport records, and credential mapping plans use dedicated daemon operations. Generic domain writes cannot create or overwrite these authorities. Remote discovery runs only through `GovernedFetchBroker`, which enforces HTTPS, address and redirect checks, private network denial, bounded responses, content type policy, rate controls, encrypted caching, and a signed `NetworkAccessGrant`.
+
+Thirty six provider adapters implement one versioned normalization contract. Provider errors remain explicit and do not become positive liveness evidence. The company portal catalog stores identity-confirmed routes separately from unresolved verification attempts. ESCO and O*NET snapshots retain source version, attribution, retrieval time, and artifact hash.
+
 The artifact vault stores CV, PDF, DOCX, and generated binaries under HMAC SHA 256 locators. AES 256 GCM encryption and locator keys are independently derived from a dedicated credential using HKDF. Manifests do not contain source paths or file names. Profile parsing receives decrypted bytes through local process IPC and never creates a plaintext parser file. PDF and DOCX resource preflight runs before fork. The built child receives read-only package and dependency access, network deny guards, a bounded heap, and hard timeout termination.
 
 Onboarding stores one immutable initialization mode. Profile onboarding persists the active plan hash in its event projection and can recover the complete plan through authenticated history after a client restart. Demo and profile modes cannot take over each other's session. Mode-specific profile and discovery prerequisites are checked before progression.
@@ -51,7 +56,7 @@ Approval references authorize one bounded action intent. Application tracker int
 
 Answer memory is bound to the exact normalized prompt hash. Sensitive answers require per-opportunity confirmation. Restricted answers are assist only and cannot be reusable.
 
-Approver and collector signatures establish origin inside separate trusted local registries owned by the local runtime authority. Registry management ships in v0.5.0. Production collector keys and ATS collectors do not.
+Approver and collector signatures establish origin inside separate trusted local registries owned by the local runtime authority. Production collector keys and ATS collectors do not ship.
 
 Submission proofs record one collector observation bound to a unique application attempt and action intent. They cannot authorize an action. A successful confirmation stores the signed proof, deterministic evaluation, application transition, and confirmation ledger entry inside the same encrypted event.
 
@@ -73,6 +78,10 @@ Native installations use the OS credential store. Headless installations use a s
 
 Worker manifests bind actor identity, role, phase capability, tool allowlist, budget, timeout, and stop conditions. They are controller inputs, not an operating system sandbox. Process isolation remains roadmap work.
 
+The Ink TUI and React workbench are clients of the typed SDK. They do not read the SQLite store directly. The workbench gateway binds only to loopback and requires bearer, CSRF, and capability checks. TUI discovery actions create audited review tasks instead of mutating truth or submitting applications.
+
+The model gateway validates payload hashes, provider policy, explicit egress decisions, message and response bounds, and token usage around an injected trusted transport. Provider manifests describe configured capabilities. They do not imply that remote provider credentials or live transports ship with the repository.
+
 These controls do not replace platform receipts, legal signatures, independent timestamp authorities, or external compliance review.
 
-The pure policy evaluator accepts injected state for deterministic tests. It is not a production side effect authority. v0.5.0 permits only a synthetic local fixture. Production config, ledger, approval registry, and adapter authority are behind `vocationd`, and real execution adapters still require a separate release gate.
+The pure policy evaluator accepts injected state for deterministic tests. It is not a production side effect authority. Version 0.6.0 permits only a synthetic local fixture. Production config, ledger, approval registry, and adapter authority are behind `vocationd`, and real execution adapters still require a separate release gate.

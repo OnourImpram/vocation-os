@@ -1,0 +1,17 @@
+{
+  "suiteVersion": "1.0.0",
+  "evaluatedAt": "2026-07-14T12:00:00.000Z",
+  "cases": [
+    { "caseId": "VB-TRACE-VALID", "scenario": "valid", "expectedValid": true },
+    { "caseId": "VB-TRACE-CLAIM-INFLATION", "scenario": "claim-inflation", "expectedValid": false },
+    { "caseId": "VB-TRACE-MISSING-CLAIM", "scenario": "missing-claim", "expectedValid": false },
+    { "caseId": "VB-TRACE-UNVERIFIED", "scenario": "unverified-claim", "expectedValid": false },
+    { "caseId": "VB-TRACE-PRIVATE", "scenario": "private-claim", "expectedValid": false },
+    { "caseId": "VB-TRACE-DISALLOWED-USE", "scenario": "disallowed-use", "expectedValid": false },
+    { "caseId": "VB-TRACE-STALE", "scenario": "stale-evidence", "expectedValid": false },
+    { "caseId": "VB-TRACE-PROFILE-MISMATCH", "scenario": "profile-mismatch", "expectedValid": false },
+    { "caseId": "VB-TRACE-HASH-MISMATCH", "scenario": "canonical-hash-mismatch", "expectedValid": false },
+    { "caseId": "VB-TRACE-INJECTED-STRUCTURE", "scenario": "injected-structural-text", "expectedValid": false },
+    { "caseId": "VB-TRACE-UNTRACED-NODE", "scenario": "untraced-node", "expectedValid": false }
+  ]
+}

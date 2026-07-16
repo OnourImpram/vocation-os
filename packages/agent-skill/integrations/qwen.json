@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 1,
+  "clientId": "qwen",
+  "displayName": "Qwen Code",
+  "aliases": ["qwen", "qwen-code"],
+  "protocol": "open-agent-skills",
+  "skill": { "directory": "vocation-os", "entrypoint": "SKILL.md" },
+  "support": { "level": "discovered", "verifiedAt": null },
+  "installation": { "strategy": "copy", "destination": "client-resolved", "requiresExplicitDestination": true },
+  "authority": { "reads": "daemon-or-mcp", "sideEffects": "capability-and-scoped-approval", "directStorage": false }
+}

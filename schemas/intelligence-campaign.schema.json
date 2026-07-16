@@ -1,0 +1,46 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://vocation-os.dev/schemas/intelligence-campaign.schema.json",
+  "title": "CampaignReviewQueue",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["campaignId", "policyVersion", "generatedAt", "entries", "dispositions", "assertions"],
+  "properties": {
+    "campaignId": { "type": "string", "minLength": 1 },
+    "policyVersion": { "type": "string", "minLength": 1 },
+    "generatedAt": { "type": "string", "format": "date-time" },
+    "entries": { "type": "array", "items": { "$ref": "#/definitions/queuedDisposition" } },
+    "dispositions": { "type": "array", "items": { "$ref": "#/definitions/disposition" } },
+    "assertions": { "type": "array", "items": { "$ref": "https://vocation-os.dev/schemas/intelligence-assertion.schema.json" } }
+  },
+  "definitions": {
+    "queuedDisposition": {
+      "allOf": [
+        { "$ref": "#/definitions/disposition" },
+        {
+          "type": "object",
+          "required": ["status", "reviewRequired", "queuePosition"],
+          "properties": {
+            "status": { "const": "queued" },
+            "reviewRequired": { "const": true },
+            "queuePosition": { "type": "integer", "minimum": 1 }
+          }
+        }
+      ]
+    },
+    "disposition": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["opportunityId", "status", "reasonCode", "queuePosition", "reviewRequired", "evidenceRefs", "assertions"],
+      "properties": {
+        "opportunityId": { "type": "string", "minLength": 1 },
+        "status": { "enum": ["queued", "hard-gated", "below-threshold", "deferred", "not-member"] },
+        "reasonCode": { "enum": ["CAMPAIGN_HARD_GATE_BLOCKED", "CAMPAIGN_QUALITY_THRESHOLD_UNMET", "CAMPAIGN_REVIEW_QUEUED", "CAMPAIGN_REVIEW_CAP_REACHED", "CAMPAIGN_ROUTE_QUOTA_REACHED", "CAMPAIGN_NOT_MEMBER"] },
+        "queuePosition": { "oneOf": [{ "type": "integer", "minimum": 1 }, { "type": "null" }] },
+        "reviewRequired": { "type": "boolean" },
+        "evidenceRefs": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "type": "string", "minLength": 1 } },
+        "assertions": { "type": "array", "minItems": 1, "items": { "$ref": "https://vocation-os.dev/schemas/intelligence-assertion.schema.json" } }
+      }
+    }
+  }
+}

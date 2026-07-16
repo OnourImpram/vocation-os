@@ -40,6 +40,10 @@ for (const file of workflowFiles) {
   if (text.includes("actions/setup-node") && !text.includes("node-version-file: .nvmrc")) {
     failures.push(`${path} uses setup-node without node-version-file: .nvmrc`);
   }
+
+  if (text.includes("allow-ghsas:") && !text.includes("npm run native:dependency-boundary")) {
+    failures.push(`${path} allows a security advisory without the native dependency boundary gate`);
+  }
 }
 
 if (failures.length > 0) {

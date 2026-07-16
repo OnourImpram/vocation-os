@@ -1,0 +1,95 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://vocation-os.dev/schemas/taxonomy-mapping-set.schema.json",
+  "title": "TaxonomyMappingSet",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["mappingSetId", "mappingVersion", "createdAt", "fromSnapshot", "toSnapshot", "mappings", "contentHash"],
+  "properties": {
+    "mappingSetId": { "type": "string", "pattern": "^TMSET-[A-F0-9]{24}$" },
+    "mappingVersion": { "type": "string", "minLength": 1, "maxLength": 64 },
+    "createdAt": { "type": "string", "format": "date-time" },
+    "fromSnapshot": { "$ref": "#/definitions/snapshotReference" },
+    "toSnapshot": { "$ref": "#/definitions/snapshotReference" },
+    "mappings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "mappingId",
+          "fromConceptId",
+          "toConceptId",
+          "relation",
+          "confidence",
+          "method",
+          "evidence"
+        ],
+        "properties": {
+          "mappingId": { "type": "string", "pattern": "^TMAP-[A-F0-9]{24}$" },
+          "fromConceptId": { "type": "string", "minLength": 1, "maxLength": 512 },
+          "toConceptId": { "type": "string", "minLength": 1, "maxLength": 512 },
+          "relation": { "enum": ["exact", "close", "broad", "narrow", "related"] },
+          "confidence": { "type": "number", "minimum": 0, "maximum": 1 },
+          "method": { "enum": ["official-crosswalk", "curated", "deterministic-label"] },
+          "evidence": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["sourceUrl", "retrievedAt", "note"],
+              "properties": {
+                "sourceUrl": { "type": "string", "format": "uri", "pattern": "^https://" },
+                "retrievedAt": { "type": "string", "format": "date-time" },
+                "note": { "type": "string", "minLength": 1, "maxLength": 1000 }
+              }
+            }
+          }
+        }
+      }
+    },
+    "contentHash": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" }
+  },
+  "definitions": {
+    "snapshotReference": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "snapshotId",
+        "source",
+        "version",
+        "sourceUrl",
+        "retrievedAt",
+        "publishedAt",
+        "license",
+        "contentHash",
+        "provenanceHash"
+      ],
+      "properties": {
+        "snapshotId": { "type": "string", "pattern": "^TAX-(?:ESCO|ONET)-[A-Z0-9-]+-[A-F0-9]{20}$" },
+        "source": { "enum": ["esco", "onet"] },
+        "version": { "type": "string", "minLength": 1, "maxLength": 64 },
+        "sourceUrl": { "type": "string", "format": "uri", "pattern": "^https://" },
+        "retrievedAt": { "type": "string", "format": "date-time" },
+        "publishedAt": {
+          "oneOf": [
+            { "type": "string", "format": "date-time" },
+            { "type": "null" }
+          ]
+        },
+        "license": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["name", "url"],
+          "properties": {
+            "name": { "type": "string", "minLength": 1, "maxLength": 256 },
+            "url": { "type": "string", "format": "uri", "pattern": "^https://" }
+          }
+        },
+        "contentHash": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+        "provenanceHash": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" }
+      }
+    }
+  }
+}

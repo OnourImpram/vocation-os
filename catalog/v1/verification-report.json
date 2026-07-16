@@ -1,0 +1,43 @@
+{
+  "catalogVersion": "1.0.0",
+  "publishedAt": "2026-07-14T12:15:32.954Z",
+  "verificationRun": {
+    "id": "catalog-verify-cf946f6497c20d41",
+    "startedAt": "2026-07-14T12:14:24.157Z",
+    "completedAt": "2026-07-14T12:15:32.954Z",
+    "method": "bounded-https-identity-v1",
+    "timeoutMs": 8000,
+    "maxRedirects": 5,
+    "maxResponseBytes": 524288
+  },
+  "counts": {
+    "attempted": 487,
+    "verified": 278,
+    "unresolved": 209,
+    "bySourcePack": {
+      "ai": 8,
+      "clinical": 8,
+      "academic": 12,
+      "education": 11,
+      "health": 10,
+      "product": 97,
+      "startup": 99,
+      "fellowship": 10,
+      "public": 8,
+      "international-institution": 15
+    }
+  },
+  "failureReasons": {
+    "career-signal-not-found": 28,
+    "http-client-error": 61,
+    "http-server-error": 2,
+    "identity-not-confirmed": 22,
+    "network-error": 36,
+    "non-https-redirect": 7,
+    "redirect-loop": 1,
+    "response-too-large": 42,
+    "timeout": 10
+  },
+  "catalogSha256": "2476be884d79a53cbc6212593770ee72718aebf27654b834feec0539731d177d",
+  "unresolvedSha256": "1752e985209861d0546dafc31f4a8c4d8076431d47c238b3dced891118097605"
+}

@@ -1,0 +1,91 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://vocation-os.dev/schemas/taxonomy-snapshot.schema.json",
+  "title": "TaxonomySnapshot",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "snapshotId",
+    "source",
+    "version",
+    "completeness",
+    "sourceUrl",
+    "retrievedAt",
+    "publishedAt",
+    "license",
+    "conceptCount",
+    "concepts",
+    "contentHash",
+    "provenanceHash"
+  ],
+  "properties": {
+    "snapshotId": { "type": "string", "pattern": "^TAX-(?:ESCO|ONET)-[A-Z0-9-]+-[A-F0-9]{20}$" },
+    "source": { "enum": ["esco", "onet"] },
+    "version": { "type": "string", "minLength": 1, "maxLength": 64 },
+    "completeness": { "enum": ["full", "partial"] },
+    "sourceUrl": { "type": "string", "format": "uri", "pattern": "^https://" },
+    "retrievedAt": { "type": "string", "format": "date-time" },
+    "publishedAt": {
+      "oneOf": [
+        { "type": "string", "format": "date-time" },
+        { "type": "null" }
+      ]
+    },
+    "license": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "url"],
+      "properties": {
+        "name": { "type": "string", "minLength": 1, "maxLength": 256 },
+        "url": { "type": "string", "format": "uri", "pattern": "^https://" }
+      }
+    },
+    "conceptCount": { "type": "integer", "minimum": 0 },
+    "concepts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "conceptId",
+          "code",
+          "preferredLabel",
+          "language",
+          "alternateLabels",
+          "description",
+          "broaderConceptIds",
+          "skillIds"
+        ],
+        "properties": {
+          "conceptId": { "type": "string", "minLength": 1, "maxLength": 512 },
+          "code": { "type": "string", "minLength": 1, "maxLength": 128 },
+          "preferredLabel": { "type": "string", "minLength": 1, "maxLength": 512 },
+          "language": { "type": "string", "pattern": "^[A-Za-z]{2,3}(?:-[A-Za-z0-9]{2,8})*$" },
+          "alternateLabels": {
+            "type": "array",
+            "uniqueItems": true,
+            "items": { "type": "string", "minLength": 1, "maxLength": 512 }
+          },
+          "description": {
+            "oneOf": [
+              { "type": "string", "minLength": 1, "maxLength": 20000 },
+              { "type": "null" }
+            ]
+          },
+          "broaderConceptIds": {
+            "type": "array",
+            "uniqueItems": true,
+            "items": { "type": "string", "minLength": 1, "maxLength": 512 }
+          },
+          "skillIds": {
+            "type": "array",
+            "uniqueItems": true,
+            "items": { "type": "string", "minLength": 1, "maxLength": 512 }
+          }
+        }
+      }
+    },
+    "contentHash": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+    "provenanceHash": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" }
+  }
+}

@@ -1,0 +1,96 @@
+{
+  "suiteVersion": "1.0.0",
+  "assessedAt": "2026-07-14T12:00:00.000Z",
+  "cases": [
+    {
+      "caseId": "VB-LIVE-CURRENT",
+      "expectedState": "live",
+      "observations": [
+        { "observedAt": "2026-07-14T11:55:00.000Z", "availability": "available", "uncertainty": [] }
+      ]
+    },
+    {
+      "caseId": "VB-LIVE-CURRENT-UNCERTAIN",
+      "expectedState": "live",
+      "observations": [
+        { "observedAt": "2026-07-14T11:50:00.000Z", "availability": "available", "uncertainty": ["Optional salary field was not extracted"] }
+      ]
+    },
+    {
+      "caseId": "VB-LIVE-STALE-POSITIVE",
+      "expectedState": "stale",
+      "observations": [
+        { "observedAt": "2026-07-13T11:59:00.000Z", "availability": "available", "uncertainty": [] }
+      ]
+    },
+    {
+      "caseId": "VB-LIVE-CLOSED-CONFIRMED",
+      "expectedState": "closed",
+      "observations": [
+        { "observedAt": "2026-07-14T11:50:00.000Z", "availability": "not-found", "uncertainty": ["HTTP 404 observed"] },
+        { "observedAt": "2026-07-14T11:40:00.000Z", "availability": "gone", "uncertainty": ["HTTP 410 observed"] }
+      ]
+    },
+    {
+      "caseId": "VB-LIVE-SINGLE-NEGATIVE",
+      "expectedState": "unresolved",
+      "observations": [
+        { "observedAt": "2026-07-14T11:55:00.000Z", "availability": "not-found", "uncertainty": ["Only one negative observation exists"] }
+      ]
+    },
+    {
+      "caseId": "VB-LIVE-STALE-NEGATIVE",
+      "expectedState": "stale",
+      "observations": [
+        { "observedAt": "2026-07-13T23:59:00.000Z", "availability": "gone", "uncertainty": ["Negative evidence exceeded the age limit"] }
+      ]
+    },
+    {
+      "caseId": "VB-LIVE-ACCESS-DENIED",
+      "expectedState": "unreachable",
+      "observations": [
+        { "observedAt": "2026-07-14T11:58:00.000Z", "availability": "access-denied", "uncertainty": ["The source returned HTTP 403"] }
+      ]
+    },
+    {
+      "caseId": "VB-LIVE-RATE-LIMITED",
+      "expectedState": "unreachable",
+      "observations": [
+        { "observedAt": "2026-07-14T11:58:00.000Z", "availability": "rate-limited", "uncertainty": ["The source returned HTTP 429"] }
+      ]
+    },
+    {
+      "caseId": "VB-LIVE-TRANSPORT-ERROR",
+      "expectedState": "unreachable",
+      "observations": [
+        { "observedAt": "2026-07-14T11:58:00.000Z", "availability": "transport-error", "uncertainty": ["TLS connection failed"] }
+      ]
+    },
+    {
+      "caseId": "VB-LIVE-PARSE-ERROR",
+      "expectedState": "unresolved",
+      "observations": [
+        { "observedAt": "2026-07-14T11:58:00.000Z", "availability": "parse-error", "uncertainty": ["Retrieved content could not be parsed"] }
+      ]
+    },
+    {
+      "caseId": "VB-LIVE-UNCERTAIN",
+      "expectedState": "unresolved",
+      "observations": [
+        { "observedAt": "2026-07-14T11:58:00.000Z", "availability": "uncertain", "uncertainty": ["The response did not establish availability"] }
+      ]
+    },
+    {
+      "caseId": "VB-LIVE-FUTURE-SKEW",
+      "expectedState": "unresolved",
+      "observations": [
+        { "observedAt": "2026-07-14T12:06:00.000Z", "availability": "available", "uncertainty": [] }
+      ]
+    },
+    {
+      "caseId": "VB-LIVE-NO-EVIDENCE",
+      "expectedState": "unresolved",
+      "observations": []
+    }
+  ]
+}

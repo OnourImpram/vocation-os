@@ -1,0 +1,62 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://vocation-os.dev/schemas/intelligence-portfolio.schema.json",
+  "title": "MultiRoutePortfolioEvaluations",
+  "type": "array",
+  "items": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["portfolioId", "routeIds", "status", "quotaStatus", "scores", "uncertaintyBand", "utility", "weightedRegret", "paretoEfficient", "hardGatedRouteIds", "capacityHardGate", "evidenceRefs", "assertions"],
+    "properties": {
+      "portfolioId": { "type": "string", "minLength": 1 },
+      "routeIds": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "type": "string", "minLength": 1 } },
+      "status": { "enum": ["feasible", "hard-gated"] },
+      "quotaStatus": { "enum": ["met", "not-met"] },
+      "scores": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["income", "learning", "prestige", "immigration-evidence", "health-sustainability", "family-fit", "identity-congruence", "reputation", "optionality"],
+        "properties": {
+          "income": { "type": "number", "minimum": 0, "maximum": 100 },
+          "learning": { "type": "number", "minimum": 0, "maximum": 100 },
+          "prestige": { "type": "number", "minimum": 0, "maximum": 100 },
+          "immigration-evidence": { "type": "number", "minimum": 0, "maximum": 100 },
+          "health-sustainability": { "type": "number", "minimum": 0, "maximum": 100 },
+          "family-fit": { "type": "number", "minimum": 0, "maximum": 100 },
+          "identity-congruence": { "type": "number", "minimum": 0, "maximum": 100 },
+          "reputation": { "type": "number", "minimum": 0, "maximum": 100 },
+          "optionality": { "type": "number", "minimum": 0, "maximum": 100 }
+        }
+      },
+      "uncertaintyBand": { "type": "array", "minItems": 2, "maxItems": 2, "items": [{ "type": "number", "minimum": 0, "maximum": 100 }, { "type": "number", "minimum": 0, "maximum": 100 }] },
+      "utility": { "oneOf": [{ "type": "number" }, { "type": "null" }] },
+      "weightedRegret": { "oneOf": [{ "type": "number" }, { "type": "null" }] },
+      "paretoEfficient": { "type": "boolean" },
+      "hardGatedRouteIds": { "type": "array", "uniqueItems": true, "items": { "type": "string", "minLength": 1 } },
+      "capacityHardGate": { "type": "boolean" },
+      "evidenceRefs": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "type": "string", "minLength": 1 } },
+      "assertions": { "type": "array", "minItems": 2, "items": { "$ref": "https://vocation-os.dev/schemas/intelligence-assertion.schema.json" } }
+    },
+    "allOf": [
+      {
+        "if": { "required": ["status"], "properties": { "status": { "const": "hard-gated" } } },
+        "then": {
+          "properties": {
+            "utility": { "type": "null" },
+            "weightedRegret": { "type": "null" },
+            "paretoEfficient": { "const": false }
+          }
+        }
+      },
+      {
+        "if": { "required": ["status"], "properties": { "status": { "const": "feasible" } } },
+        "then": {
+          "properties": {
+            "utility": { "type": "number" },
+            "weightedRegret": { "type": "number" }
+          }
+        }
+      }
+    ]
+  }
+}

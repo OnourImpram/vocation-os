@@ -1,0 +1,32 @@
+{
+  "name": "@vocation-os/agent-skill",
+  "version": "0.6.0",
+  "description": "Portable Open Agent Skills package and client integration manifests for VocationOS.",
+  "type": "module",
+  "license": "MIT",
+  "private": true,
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./skill": "./skill/vocation-os/SKILL.md",
+    "./integrations/*": "./integrations/*.json",
+    "./checksums": "./checksums.json"
+  },
+  "files": [
+    "dist",
+    "skill",
+    "integrations",
+    "checksums.json"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run --config vitest.config.ts"
+  },
+  "engines": {
+    "node": ">=22.13.0"
+  }
+}

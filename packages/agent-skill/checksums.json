@@ -1,0 +1,42 @@
+{
+  "schemaVersion": 1,
+  "algorithm": "sha256",
+  "files": [
+    {
+      "path": "integrations/claude-code.json",
+      "sha256": "aefd96958af808cbe277e49b29421caf23d8bb2e4640f993a7b8d05482c63995"
+    },
+    {
+      "path": "integrations/codex.json",
+      "sha256": "83bd1b80fa66d4cefb536a64548695087109f00c5a28cb60875a24df8086d9c6"
+    },
+    {
+      "path": "integrations/gemini-antigravity.json",
+      "sha256": "96fd1669e95900e12f83a2c848871f9e653a221da9635ef5bd86ed14a8e2ca4b"
+    },
+    {
+      "path": "integrations/github-copilot.json",
+      "sha256": "58b7df83aef999d622dd0d1bd307b11aaa1b620760a013940ae3578cb0231967"
+    },
+    {
+      "path": "integrations/grok.json",
+      "sha256": "f0611518699e3b3d2c09477fcaa682752edc24b79fdd856da17edf1ff4937c32"
+    },
+    {
+      "path": "integrations/kimi.json",
+      "sha256": "5ea8d08f987c85e2acbf88dcab6fb675f3092fc25994d7efd7e48353baa33590"
+    },
+    {
+      "path": "integrations/opencode.json",
+      "sha256": "306d5af88f4458407573a41e965039d4ff38ef1d247f6fb6dff38015ccd506d6"
+    },
+    {
+      "path": "integrations/qwen.json",
+      "sha256": "9946f6ed35709be9d8782a97bb28ae7a956faeb90de91e29097900205a2d455b"
+    },
+    {
+      "path": "skill/vocation-os/SKILL.md",
+      "sha256": "537ee5d5b7fb0ab315e497b177f5e63c572ab700420d00e9410c6d26aa62c236"
+    }
+  ]
+}

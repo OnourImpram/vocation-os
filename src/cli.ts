@@ -3,13 +3,25 @@ import { generateKeyPairSync } from "node:crypto";
 import { existsSync, readFileSync } from "node:fs";
 import { spawn } from "node:child_process";
 import path from "node:path";
-import { VocationClient, type VocationRequestOptions } from "@vocation-os/sdk";
+import { pathToFileURL } from "node:url";
+import {
+  VocationClient,
+  type ArtifactManifest,
+  type AutoApplyEvaluatePayload,
+  type AuthorityOperationPayload,
+  type AuthorityOperationResult,
+  type JsonObject,
+  type JsonValue,
+  type RegisterApproverPayload,
+  type RegisterCollectorPayload,
+  type VocationRequestOptions
+} from "@vocation-os/sdk";
 import { WORKER_ROLES } from "./agent-controller.js";
 import { defaultLedgerPath } from "./action-ledger.js";
 import { createApprovalReference, type TrustedApprover } from "./approval.js";
 import { decideAutoApply, defaultAutoApplyConfig } from "./auto-apply.js";
 import { OfflineTemplateClient, generateAdvisoryNote } from "./advisor.js";
-import { createVocationBenchManifest } from "./benchmark/vocation-bench.js";
+import { runVocationBenchFromDirectory } from "./benchmark/vocation-bench.js";
 import { createCareerTwin } from "./career-twin.js";
 import { validateApplicationPacket, validateClaimGraph } from "./claim-graph.js";
 import { buildCoachingPlan, PHT_SKILLS } from "./coach.js";
@@ -49,9 +61,57 @@ import { CLI_COMMANDS, HIGH_STAKES_FLAGS, MODE_NAMES, PRODUCT_NAME, TAGLINE, typ
 import { runProductInitialization, type ProductInitMode } from "./product-init.js";
 import { writeDocumentBundle } from "./documents/document-renderer.js";
 import type { DocumentAstV2 } from "./documents/document-ast-v2.js";
+import { PROFILE_IMPORT_FORMATS, type ProfileImportFormat } from "./import/profile-parser-worker.js";
+import { PRODUCT_DOMAIN_NAMES, type ProductDomainName } from "./storage/product-repositories.js";
+import { createTuiDaemonQueueClient } from "./tui/index.js";
+import { startLoopbackGateway } from "./workbench/index.js";
+import {
+  agentIntegrationCommand,
+  assuranceCommand,
+  credentialCommand,
+  discoveryCommand,
+  modelProviderStatus,
+  taxonomyCommand
+} from "./commands/product-commands.js";
 
 function printJson(value: unknown): void {
   console.log(JSON.stringify(value, null, 2));
+}
+
+function isJsonValue(value: unknown): value is JsonValue {
+  if (value === null || typeof value === "string" || typeof value === "boolean") return true;
+  if (typeof value === "number") return Number.isFinite(value);
+  if (Array.isArray(value)) return value.every(isJsonValue);
+  if (typeof value !== "object") return false;
+  return Object.values(value).every(isJsonValue);
+}
+
+function readJsonValue(filePath: string): JsonValue {
+  const value = JSON.parse(readFileSync(path.resolve(filePath), "utf8")) as unknown;
+  if (!isJsonValue(value)) throw new Error(`JSON file contains a non-canonical value: ${filePath}`);
+  return value;
+}
+
+function readJsonObject<T>(filePath: string, label: string): T {
+  const value = readJsonValue(filePath);
+  if (value === null || typeof value !== "object" || Array.isArray(value)) {
+    throw new Error(`${label} must be a JSON object`);
+  }
+  return value as T;
+}
+
+function parseProductDomain(value: string): ProductDomainName {
+  if (!PRODUCT_DOMAIN_NAMES.includes(value as ProductDomainName)) {
+    throw new Error(`Unknown product domain: ${value}`);
+  }
+  return value as ProductDomainName;
+}
+
+function parseProfileImportFormat(value: string): ProfileImportFormat {
+  if (!PROFILE_IMPORT_FORMATS.includes(value as ProfileImportFormat)) {
+    throw new Error(`Unsupported profile import format: ${value}`);
+  }
+  return value as ProfileImportFormat;
 }
 
 async function cliCredentialStore(): Promise<CredentialStore> {
@@ -90,14 +150,25 @@ async function openDaemonClient(): Promise<{ client: VocationClient; close(): Pr
   };
 }
 
-async function callDaemon(
-  operation: AuthorityOperation,
-  payload: unknown = {},
+async function callDaemon<O extends AuthorityOperation>(
+  operation: O,
+  payload: AuthorityOperationPayload<O> = {} as AuthorityOperationPayload<O>,
   options: VocationRequestOptions = {}
-): Promise<unknown> {
+): Promise<AuthorityOperationResult<O>> {
   const daemon = await openDaemonClient();
   try {
-    return await daemon.client.request(operation, payload, options);
+    const dynamicOperation: AuthorityOperation = operation;
+    return await daemon.client.request(dynamicOperation, payload, options) as AuthorityOperationResult<O>;
+  } finally {
+    await daemon.close();
+  }
+}
+
+async function withDaemonClient<T>(operation: (client: VocationClient) => Promise<T>): Promise<T> {
+  await ensureDaemonStarted();
+  const daemon = await openDaemonClient();
+  try {
+    return await operation(daemon.client);
   } finally {
     await daemon.close();
   }
@@ -420,7 +491,166 @@ async function demoAdvisory(): Promise<void> {
 }
 
 function benchmark(): void {
-  printJson(createVocationBenchManifest());
+  const result = runVocationBenchFromDirectory(path.join(PACKAGE_ROOT, "benchmarks", "vocation-bench"));
+  printJson(result);
+  if (!result.overall.passed) process.exitCode = 1;
+}
+
+async function discover(): Promise<void> {
+  printJson(await withDaemonClient((client) => discoveryCommand(client, process.argv.slice(3))));
+}
+
+async function taxonomy(): Promise<void> {
+  printJson(await withDaemonClient((client) => taxonomyCommand(client, process.argv.slice(3))));
+}
+
+async function assurance(): Promise<void> {
+  printJson(await withDaemonClient((client) => assuranceCommand(client, process.argv.slice(3))));
+}
+
+async function credential(): Promise<void> {
+  printJson(await withDaemonClient((client) => credentialCommand(client, process.argv.slice(3))));
+}
+
+async function agents(): Promise<void> {
+  printJson(await agentIntegrationCommand(process.argv.slice(3)));
+}
+
+function models(): void {
+  printJson(modelProviderStatus());
+}
+
+interface TuiRuntimeModule {
+  renderVocationTui(options: {
+    daemon: ReturnType<typeof createTuiDaemonQueueClient>;
+    initialFilters: {
+      attentionOnly: boolean;
+      queueKinds: readonly ("applications" | "discovery")[];
+      providers: readonly string[];
+      liveness: readonly string[];
+      duplicateStatuses: readonly string[];
+      truthStatuses: readonly string[];
+      campaignIds: readonly string[];
+      minimumTaxonomyConfidence?: number;
+    };
+    textOnly?: boolean;
+  }): { waitUntilExit(): Promise<void> };
+}
+
+function tuiOption(name: string): string | null {
+  const index = process.argv.indexOf(name);
+  if (index < 0) return null;
+  const value = process.argv[index + 1];
+  if (!value || value.startsWith("--")) throw new Error(`${name} requires a value`);
+  return value;
+}
+
+function tuiListOption(name: string): string[] {
+  const value = tuiOption(name);
+  return value === null ? [] : value.split(",").map((item) => item.trim()).filter(Boolean);
+}
+
+async function tui(): Promise<void> {
+  if (process.argv.includes("--help")) {
+    console.log([
+      "Usage: vocation tui [options]",
+      "",
+      "Options:",
+      "  --queue applications|discovery|all",
+      "  --provider <id[,id]>",
+      "  --liveness <state[,state]>",
+      "  --duplicate <state[,state]>",
+      "  --truth <state[,state]>",
+      "  --campaign <id[,id]>",
+      "  --taxonomy-confidence <0..1>",
+      "  --attention",
+      "  --text"
+    ].join("\n"));
+    return;
+  }
+  const queue = tuiOption("--queue") ?? "all";
+  if (!["applications", "discovery", "all"].includes(queue)) {
+    throw new Error("--queue must be applications, discovery, or all");
+  }
+  const minimumTaxonomyConfidenceText = tuiOption("--taxonomy-confidence");
+  const minimumTaxonomyConfidence = minimumTaxonomyConfidenceText === null
+    ? undefined
+    : Number(minimumTaxonomyConfidenceText);
+  if (minimumTaxonomyConfidence !== undefined && (
+    !Number.isFinite(minimumTaxonomyConfidence)
+    || minimumTaxonomyConfidence < 0
+    || minimumTaxonomyConfidence > 1
+  )) throw new Error("--taxonomy-confidence must be between zero and one");
+  await ensureDaemonStarted();
+  const daemon = await openDaemonClient();
+  try {
+    const modulePath = path.join(PACKAGE_ROOT, "packages", "tui", "dist", "entry.js");
+    if (!existsSync(modulePath)) throw new Error("Compiled TUI is missing. Run npm run build first");
+    const runtime = await import(pathToFileURL(modulePath).href) as TuiRuntimeModule;
+    const instance = runtime.renderVocationTui({
+      daemon: createTuiDaemonQueueClient(daemon.client),
+      initialFilters: {
+        attentionOnly: process.argv.includes("--attention"),
+        queueKinds: queue === "all" ? ["applications", "discovery"] : [queue as "applications" | "discovery"],
+        providers: tuiListOption("--provider"),
+        liveness: tuiListOption("--liveness"),
+        duplicateStatuses: tuiListOption("--duplicate"),
+        truthStatuses: tuiListOption("--truth"),
+        campaignIds: tuiListOption("--campaign"),
+        ...(minimumTaxonomyConfidence === undefined ? {} : { minimumTaxonomyConfidence })
+      },
+      ...(process.argv.includes("--text") ? { textOnly: true } : {})
+    });
+    await instance.waitUntilExit();
+  } finally {
+    await daemon.close();
+  }
+}
+
+function openWorkbenchUrl(url: string): void {
+  const child = process.platform === "win32"
+    ? spawn("cmd.exe", ["/d", "/s", "/c", "start", "", url], { stdio: "ignore", windowsHide: true })
+    : process.platform === "darwin"
+      ? spawn("open", [url], { stdio: "ignore" })
+      : spawn("xdg-open", [url], { stdio: "ignore" });
+  child.on("error", () => {
+    process.stderr.write(`Open the local workbench at ${url}\n`);
+  });
+  child.unref();
+}
+
+function workbenchLifetime(): Promise<void> {
+  return new Promise((resolve) => {
+    const stop = () => {
+      process.off("SIGINT", stop);
+      process.off("SIGTERM", stop);
+      resolve();
+    };
+    process.once("SIGINT", stop);
+    process.once("SIGTERM", stop);
+  });
+}
+
+async function workbench(): Promise<void> {
+  await ensureDaemonStarted();
+  const daemon = await openDaemonClient();
+  const staticRoot = path.join(PACKAGE_ROOT, "packages", "workbench", "dist", "workbench");
+  let gateway: Awaited<ReturnType<typeof startLoopbackGateway>> | null = null;
+  try {
+    gateway = await startLoopbackGateway({ authority: daemon.client, staticRoot });
+    if (!gateway.workbenchUrl) throw new Error("Workbench launch URL was not created");
+    printJson({
+      status: "running",
+      url: gateway.workbenchUrl,
+      authority: "vocationd",
+      network: "127.0.0.1-only"
+    });
+    if (!process.argv.includes("--no-open")) openWorkbenchUrl(gateway.workbenchUrl);
+    await workbenchLifetime();
+  } finally {
+    await gateway?.close();
+    await daemon.close();
+  }
 }
 
 async function storeVerify(): Promise<void> {
@@ -470,7 +700,7 @@ async function autoApplyEnable(): Promise<void> {
 async function autoApplyEvaluate(): Promise<void> {
   const filePath = process.argv[3];
   if (!filePath) throw new Error("auto-apply-evaluate requires a JSON input file");
-  const value = JSON.parse(readFileSync(path.resolve(filePath), "utf8")) as unknown;
+  const value = readJsonObject<AutoApplyEvaluatePayload>(filePath, "Auto apply evaluation input");
   printJson(await callDaemon("auto-apply-evaluate", value));
 }
 
@@ -511,7 +741,7 @@ async function approverList(): Promise<void> {
 async function approverRegister(): Promise<void> {
   const filePath = process.argv[3];
   if (!filePath) throw new Error("approver-register requires a JSON file containing approvedBy, keyId, and publicKeyPem");
-  const value = JSON.parse(readFileSync(path.resolve(filePath), "utf8")) as unknown;
+  const value = readJsonObject<RegisterApproverPayload>(filePath, "Trusted approver");
   printJson(await callDaemon("approver-register", value));
 }
 
@@ -528,7 +758,7 @@ async function collectorList(): Promise<void> {
 async function collectorRegister(): Promise<void> {
   const filePath = process.argv[3];
   if (!filePath) throw new Error("collector-register requires a trusted collector JSON file");
-  const value = JSON.parse(readFileSync(path.resolve(filePath), "utf8")) as unknown;
+  const value = readJsonObject<RegisterCollectorPayload>(filePath, "Trusted collector");
   assertSchema("trusted-collector", value);
   printJson(await callDaemon("collector-register", value));
 }
@@ -594,14 +824,15 @@ async function artifactList(): Promise<void> {
 }
 
 async function domainPut(): Promise<void> {
-  const domain = process.argv[3];
+  const domainValue = process.argv[3];
   const filePath = process.argv[4];
   const version = Number(process.argv[5] ?? "0");
-  if (!domain || !filePath) throw new Error("domain-put requires <domain> <json-file> [expected-version]");
-  const value = JSON.parse(readFileSync(path.resolve(filePath), "utf8")) as unknown;
+  if (!domainValue || !filePath) throw new Error("domain-put requires <domain> <json-file> [expected-version]");
+  const domain = parseProductDomain(domainValue);
+  const value = readJsonValue(filePath);
   const claimGraphPath = argumentAfter("--claim-graph");
   const claimGraph = claimGraphPath
-    ? JSON.parse(readFileSync(path.resolve(claimGraphPath), "utf8")) as unknown
+    ? readJsonObject<JsonObject>(claimGraphPath, "Claim graph")
     : undefined;
   printJson(await callDaemon("domain-put", {
     domain,
@@ -612,25 +843,28 @@ async function domainPut(): Promise<void> {
 }
 
 async function domainGet(): Promise<void> {
-  const domain = process.argv[3];
+  const domainValue = process.argv[3];
   const recordId = process.argv[4];
-  if (!domain || !recordId) throw new Error("domain-get requires <domain> <record-id>");
+  if (!domainValue || !recordId) throw new Error("domain-get requires <domain> <record-id>");
+  const domain = parseProductDomain(domainValue);
   printJson(await callDaemon("domain-get", { domain, recordId, includeArchived: process.argv.includes("--all") }));
 }
 
 async function domainList(): Promise<void> {
-  const domain = process.argv[3];
-  if (!domain) throw new Error("domain-list requires <domain>");
+  const domainValue = process.argv[3];
+  if (!domainValue) throw new Error("domain-list requires <domain>");
+  const domain = parseProductDomain(domainValue);
   printJson(await callDaemon("domain-list", { domain, includeArchived: process.argv.includes("--all") }));
 }
 
 async function domainArchive(): Promise<void> {
-  const domain = process.argv[3];
+  const domainValue = process.argv[3];
   const recordId = process.argv[4];
   const version = Number(process.argv[5]);
-  if (!domain || !recordId || !Number.isSafeInteger(version) || version < 0) {
+  if (!domainValue || !recordId || !Number.isSafeInteger(version) || version < 0) {
     throw new Error("domain-archive requires <domain> <record-id> <expected-version>");
   }
+  const domain = parseProductDomain(domainValue);
   printJson(await callDaemon("domain-archive", { domain, recordId, expectedVersion: version }));
 }
 
@@ -640,9 +874,11 @@ async function onboardingStatus(): Promise<void> {
 
 async function profileImportPlan(): Promise<void> {
   const manifestPath = process.argv[3];
-  const format = process.argv[4];
-  if (!manifestPath || !format) throw new Error("profile-import-plan requires <manifest-json> <pdf|docx|markdown|text>");
-  const manifest = JSON.parse(readFileSync(path.resolve(manifestPath), "utf8")) as unknown;
+  const formatValue = process.argv[4];
+  if (!manifestPath || !formatValue) throw new Error("profile-import-plan requires <manifest-json> <pdf|docx|markdown|text>");
+  const format = parseProfileImportFormat(formatValue);
+  const manifest = readJsonObject<ArtifactManifest>(manifestPath, "Artifact manifest");
+  assertSchema("artifact-manifest", manifest);
   printJson(await callDaemon("profile-import-plan", { manifest, format }, { timeoutMs: 45_000 }));
 }
 
@@ -681,7 +917,7 @@ async function trackerGet(): Promise<void> {
 async function trackerCreate(): Promise<void> {
   const inputPath = process.argv[3];
   if (!inputPath) throw new Error("tracker-create requires <input-json>");
-  const input = JSON.parse(readFileSync(path.resolve(inputPath), "utf8")) as unknown;
+  const input = readJsonObject<JsonObject>(inputPath, "Tracker input");
   printJson(await callDaemon("tracker-create", { input }));
 }
 
@@ -692,7 +928,7 @@ async function trackerApprove(): Promise<void> {
   if (!attemptId || !Number.isSafeInteger(version) || version < 0 || !approvalPath) {
     throw new Error("tracker-approve requires <attempt-id> <expected-version> <approval-json>");
   }
-  const approval = JSON.parse(readFileSync(path.resolve(approvalPath), "utf8")) as unknown;
+  const approval = readJsonObject<JsonObject>(approvalPath, "Tracker approval");
   printJson(await callDaemon("tracker-approve", { attemptId, expectedVersion: version, approval }));
 }
 
@@ -722,7 +958,7 @@ async function trackerConfirm(): Promise<void> {
   if (!attemptId || !Number.isSafeInteger(version) || version < 0 || !proofPath) {
     throw new Error("tracker-confirm requires <attempt-id> <expected-version> <proof-json>");
   }
-  const proof = JSON.parse(readFileSync(path.resolve(proofPath), "utf8")) as unknown;
+  const proof = readJsonObject<JsonObject>(proofPath, "Submission proof");
   printJson(await callDaemon("tracker-confirm", { attemptId, expectedVersion: version, proof }));
 }
 
@@ -962,6 +1198,30 @@ async function main(): Promise<void> {
     break;
   case "benchmark":
     benchmark();
+    break;
+  case "discover":
+    await discover();
+    break;
+  case "taxonomy":
+    await taxonomy();
+    break;
+  case "assurance":
+    await assurance();
+    break;
+  case "credential":
+    await credential();
+    break;
+  case "agents":
+    await agents();
+    break;
+  case "models":
+    models();
+    break;
+  case "tui":
+    await tui();
+    break;
+  case "workbench":
+    await workbench();
     break;
   case "list-workers":
     printJson(WORKER_ROLES);

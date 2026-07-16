@@ -1,0 +1,98 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://vocation-os.dev/schemas/intelligence-career-twin.schema.json",
+  "title": "CareerTwinIntelligenceResult",
+  "oneOf": [
+    { "$ref": "#/definitions/snapshotDiff" },
+    { "$ref": "#/definitions/counterfactualResult" }
+  ],
+  "definitions": {
+    "assertions": {
+      "type": "array",
+      "items": { "$ref": "https://vocation-os.dev/schemas/intelligence-assertion.schema.json" }
+    },
+    "hash": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+    "evidenceRefs": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "factChange": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["factId", "change", "changedFields", "beforeHash", "afterHash", "evidenceRefs", "assertion"],
+      "properties": {
+        "factId": { "type": "string", "minLength": 1 },
+        "change": { "enum": ["added", "removed", "changed"] },
+        "changedFields": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "enum": ["category", "label", "value", "claimId", "validFrom", "validTo", "observedAt", "evidenceStatus", "sourcePointer", "confidence", "sensitivity", "allowedUses"] }
+        },
+        "beforeHash": { "oneOf": [{ "$ref": "#/definitions/hash" }, { "type": "null" }] },
+        "afterHash": { "oneOf": [{ "$ref": "#/definitions/hash" }, { "type": "null" }] },
+        "evidenceRefs": { "$ref": "#/definitions/evidenceRefs" },
+        "assertion": { "$ref": "https://vocation-os.dev/schemas/intelligence-assertion.schema.json" }
+      }
+    },
+    "goalChange": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["goalId", "change", "changedFields", "beforeHash", "afterHash", "assertion"],
+      "properties": {
+        "goalId": { "type": "string", "minLength": 1 },
+        "change": { "enum": ["added", "removed", "changed"] },
+        "changedFields": { "type": "array", "uniqueItems": true, "items": { "enum": ["label", "horizon", "priority", "status"] } },
+        "beforeHash": { "oneOf": [{ "$ref": "#/definitions/hash" }, { "type": "null" }] },
+        "afterHash": { "oneOf": [{ "$ref": "#/definitions/hash" }, { "type": "null" }] },
+        "assertion": { "$ref": "https://vocation-os.dev/schemas/intelligence-assertion.schema.json" }
+      }
+    },
+    "snapshotDiff": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["twinId", "fromVersion", "toVersion", "fromSnapshotHash", "toSnapshotHash", "factChanges", "goalChanges", "assertions"],
+      "properties": {
+        "twinId": { "type": "string", "minLength": 1 },
+        "fromVersion": { "type": "integer", "minimum": 1 },
+        "toVersion": { "type": "integer", "minimum": 2 },
+        "fromSnapshotHash": { "$ref": "#/definitions/hash" },
+        "toSnapshotHash": { "$ref": "#/definitions/hash" },
+        "factChanges": { "type": "array", "items": { "$ref": "#/definitions/factChange" } },
+        "goalChanges": { "type": "array", "items": { "$ref": "#/definitions/goalChange" } },
+        "assertions": { "$ref": "#/definitions/assertions" }
+      }
+    },
+    "hardGate": {
+      "enum": ["eligibility-unresolved", "license-unverified", "work-authorization-unresolved", "financial-floor-unmet", "health-boundary-conflict", "family-boundary-conflict", "evidence-missing"]
+    },
+    "routeState": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["routeId", "feasible", "missingFactIds", "hardGates", "evidenceRefs"],
+      "properties": {
+        "routeId": { "type": "string", "minLength": 1 },
+        "feasible": { "type": "boolean" },
+        "missingFactIds": { "type": "array", "uniqueItems": true, "items": { "type": "string", "minLength": 1 } },
+        "hardGates": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/definitions/hardGate" } },
+        "evidenceRefs": { "$ref": "#/definitions/evidenceRefs" }
+      }
+    },
+    "counterfactualResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["scenarioId", "interpretation", "baseline", "counterfactual", "openedRouteIds", "closedRouteIds", "modeledOptionalityDelta", "evidenceRefs", "assertions"],
+      "properties": {
+        "scenarioId": { "type": "string", "minLength": 1 },
+        "interpretation": { "const": "scenario-comparison-not-causal" },
+        "baseline": { "type": "array", "items": { "$ref": "#/definitions/routeState" } },
+        "counterfactual": { "type": "array", "items": { "$ref": "#/definitions/routeState" } },
+        "openedRouteIds": { "type": "array", "uniqueItems": true, "items": { "type": "string", "minLength": 1 } },
+        "closedRouteIds": { "type": "array", "uniqueItems": true, "items": { "type": "string", "minLength": 1 } },
+        "modeledOptionalityDelta": { "type": "integer" },
+        "evidenceRefs": { "$ref": "#/definitions/evidenceRefs" },
+        "assertions": { "$ref": "#/definitions/assertions" }
+      }
+    }
+  }
+}

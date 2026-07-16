@@ -1,0 +1,62 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://vocation-os.dev/schemas/intelligence-outcome-experiment.schema.json",
+  "title": "SequentialExperimentEvaluation",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["experimentId", "inferenceMode", "decision", "nextStatus", "rollbackVariantId", "baseline", "candidate", "observedRateDifference", "reasonCodes", "safetyBreaches", "evidenceRefs", "assertions"],
+  "properties": {
+    "experimentId": { "type": "string", "minLength": 1 },
+    "inferenceMode": { "const": "descriptive-sequential-observation-not-causal" },
+    "decision": { "enum": ["continue", "pause-for-review", "rollback"] },
+    "nextStatus": { "enum": ["active", "stopped", "rolled-back"] },
+    "rollbackVariantId": { "oneOf": [{ "type": "string", "minLength": 1 }, { "type": "null" }] },
+    "baseline": { "$ref": "#/definitions/variantMetrics" },
+    "candidate": { "$ref": "#/definitions/variantMetrics" },
+    "observedRateDifference": { "oneOf": [{ "type": "number", "minimum": -1, "maximum": 1 }, { "type": "null" }] },
+    "reasonCodes": {
+      "type": "array",
+      "minItems": 2,
+      "uniqueItems": true,
+      "items": { "enum": ["EXPERIMENT_DESCRIPTIVE_ONLY", "EXPERIMENT_INSUFFICIENT_SAMPLE", "EXPERIMENT_CONTINUE", "EXPERIMENT_PAUSE_FOR_REVIEW", "EXPERIMENT_ROLLBACK_SAFETY", "EXPERIMENT_ROLLBACK_CALIBRATION", "EXPERIMENT_ROLLBACK_ADVERSE_RATE", "EXPERIMENT_MAX_SAMPLE_REACHED"] }
+    },
+    "safetyBreaches": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": { "enum": ["claim-integrity-failure", "authorization-bypass", "privacy-incident", "hard-gate-bypass", "confirmation-failure"] }
+    },
+    "evidenceRefs": { "type": "array", "uniqueItems": true, "items": { "type": "string", "minLength": 1 } },
+    "assertions": { "type": "array", "minItems": 2, "items": { "$ref": "https://vocation-os.dev/schemas/intelligence-assertion.schema.json" } }
+  },
+  "allOf": [
+    {
+      "if": { "required": ["decision"], "properties": { "decision": { "const": "rollback" } } },
+      "then": {
+        "properties": {
+          "nextStatus": { "const": "rolled-back" },
+          "rollbackVariantId": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    {
+      "if": { "required": ["decision"], "properties": { "decision": { "enum": ["continue", "pause-for-review"] } } },
+      "then": { "properties": { "rollbackVariantId": { "type": "null" } } }
+    }
+  ],
+  "definitions": {
+    "metric": { "oneOf": [{ "type": "number", "minimum": 0, "maximum": 1 }, { "type": "null" }] },
+    "variantMetrics": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["variantId", "sampleSize", "observedRate", "brierScore", "expectedCalibrationError", "evidenceRefs"],
+      "properties": {
+        "variantId": { "type": "string", "minLength": 1 },
+        "sampleSize": { "type": "integer", "minimum": 0 },
+        "observedRate": { "$ref": "#/definitions/metric" },
+        "brierScore": { "$ref": "#/definitions/metric" },
+        "expectedCalibrationError": { "$ref": "#/definitions/metric" },
+        "evidenceRefs": { "type": "array", "uniqueItems": true, "items": { "type": "string", "minLength": 1 } }
+      }
+    }
+  }
+}

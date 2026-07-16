@@ -1,0 +1,34 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://vocation-os.dev/schemas/intelligence-network.schema.json",
+  "title": "PermissionBoundedNetworkPlan",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["contactDiscovery", "dispositions", "plannedRequestIds", "blockedRequestIds", "assertions"],
+  "properties": {
+    "contactDiscovery": { "const": "disabled" },
+    "dispositions": { "type": "array", "items": { "$ref": "#/definitions/disposition" } },
+    "plannedRequestIds": { "type": "array", "uniqueItems": true, "items": { "type": "string", "minLength": 1 } },
+    "blockedRequestIds": { "type": "array", "uniqueItems": true, "items": { "type": "string", "minLength": 1 } },
+    "assertions": { "type": "array", "items": { "$ref": "https://vocation-os.dev/schemas/intelligence-assertion.schema.json" } }
+  },
+  "definitions": {
+    "reasonCode": {
+      "enum": ["NETWORK_CONTACT_NOT_SUPPLIED", "NETWORK_PERMISSION_BLOCKED", "NETWORK_CHANNEL_BLOCKED", "NETWORK_FATIGUE_LIMIT_REACHED", "NETWORK_SPACING_REQUIRED", "NETWORK_ACTION_REVIEW_REQUIRED", "NETWORK_ACTION_PLANNED"]
+    },
+    "disposition": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["requestId", "contactId", "status", "requiresHumanApproval", "reasonCodes", "evidenceRefs", "assertions"],
+      "properties": {
+        "requestId": { "type": "string", "minLength": 1 },
+        "contactId": { "type": "string", "minLength": 1 },
+        "status": { "enum": ["planned-for-review", "blocked"] },
+        "requiresHumanApproval": { "const": true },
+        "reasonCodes": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "$ref": "#/definitions/reasonCode" } },
+        "evidenceRefs": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "type": "string", "minLength": 1 } },
+        "assertions": { "type": "array", "minItems": 1, "items": { "$ref": "https://vocation-os.dev/schemas/intelligence-assertion.schema.json" } }
+      }
+    }
+  }
+}

@@ -11,21 +11,29 @@ VocationOS is differentiated by conditional, evidence bound automation and longi
 | Signed, scoped ApprovalReference | Implemented and tested. Trusted approver registry authority and local key custody are behind `vocationd`. Production collector key custody remains roadmap. |
 | Complete risk observations and ledger rate limits | Implemented and tested |
 | Attempt and action bound trusted collector receipt model | Implemented and tested with synthetic keys |
-| Production ATS collector keys | Roadmap |
+| Production ATS collector keys | Not shipped |
 | Encrypted SQLite event store and authenticated chain head | Implemented and tested |
 | Canonical migration of legacy CLI state | Implemented and tested with deterministic plan hashes, source preservation, encrypted rollback backup, and idempotent receipts. |
 | Temporal Career Digital Twin contract | Implemented and tested |
 | Claim first Document AST | Implemented and tested for exact, single-claim `verbatim-claim` rendering. Human-approved synthesis remains roadmap. |
 | Multi objective portfolio analysis | Implemented and tested |
-| Opportunity provenance and three public ATS normalizers | Implemented and tested |
-| O*NET and ESCO concept provenance contract | Implemented and tested |
-| Full taxonomy data ingestion | Roadmap |
+| Governed discovery and 36 provider adapters | Implemented and contract tested. Live access still depends on public route availability and a signed network grant. |
+| Verified company portal catalog | Implemented with 278 identity-confirmed routes and 209 unresolved attempts retained separately. |
+| Opportunity truth, liveness, and conservative dedupe | Implemented and tested. Comparative precision thresholds remain benchmark claims, not release prose. |
+| O*NET and ESCO snapshot import and deterministic mapping | Implemented and tested with version and provenance binding. Complete ontology coverage depends on the imported snapshot. |
 | Agent worker capability and phase controller | Implemented and tested. OS process isolation remains roadmap. |
 | Outcome and sequential experiment contracts | Implemented and tested |
 | VocationBench fixture and metric engine | Implemented and tested |
 | Reproducible competitor benchmark results | Roadmap |
-| Desktop workbench and browser copilot | Roadmap |
-| Runtime adapter authority behind `vocationd` | Implemented and tested. v0.5.0 remains compile limited to a synthetic local fixture and ships no production execution adapter. |
+| Ink TUI review queue | Implemented and tested for application and discovery review. It cannot submit applications. |
+| React loopback workbench | Implemented and tested. The Tauri shell has a dedicated Windows native validation workflow. |
+| Browser copilot | Not shipped |
+| Career Assurance Case | Implemented and tested with JSON, Markdown, and claim-bound document report surfaces. |
+| Credential Passport | Implemented and tested for bounded import, real Compact JWS and `eddsa-rdfc-2022` verification, issuer authorization, mapping, encrypted artifact retention, and export. Formal schema, revocation, and refresh checks remain separately reported. |
+| MCP and Open Agent Skill | Implemented and tested with read-first defaults and daemon authority for mutations. |
+| Agent integration lifecycle | Implemented and tested for explicit install, verify, update, and uninstall targets. |
+| Policy-bound model gateway | Implemented and tested around an injected trusted transport. Live provider credentials and transports are not bundled. |
+| Runtime adapter authority behind `vocationd` | Implemented and tested. Version 0.6.0 remains compile limited to a synthetic local fixture and ships no production execution adapter. |
 
 ## Positioning
 

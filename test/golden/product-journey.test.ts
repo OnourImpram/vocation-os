@@ -152,8 +152,8 @@ describe("golden local first product journey", () => {
     });
     await authority.execute({
       id: "REQ-GOLDEN-OUTCOME-PUT",
-      operation: "domain-put",
-      payload: { domain: "outcomes", expectedVersion: 0, value: outcome }
+      operation: "outcome-record",
+      payload: { expectedVersion: 0, value: outcome }
     }, new Date(NOW.getTime() + 33_000));
     const answerText = "Fully remote roles with explicit applicant geography";
     const answerPrompt = "What work arrangement do you prefer?";
@@ -193,7 +193,7 @@ describe("golden local first product journey", () => {
       .resolves.toHaveLength(1);
     await expect(authority.execute({ id: "REQ-GOLDEN-TASK-LIST", operation: "domain-list", payload: { domain: "tasks" } }))
       .resolves.toHaveLength(1);
-    await expect(authority.execute({ id: "REQ-GOLDEN-OUTCOME-LIST", operation: "domain-list", payload: { domain: "outcomes" } }))
+    await expect(authority.execute({ id: "REQ-GOLDEN-OUTCOME-LIST", operation: "outcome-list", payload: { includeArchived: false } }))
       .resolves.toHaveLength(1);
     await expect(authority.execute({ id: "REQ-GOLDEN-ANSWER-LIST", operation: "domain-list", payload: { domain: "answers" } }))
       .resolves.toHaveLength(1);

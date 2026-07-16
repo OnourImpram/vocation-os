@@ -1,0 +1,177 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://vocation-os.dev/schemas/discovery-source-observation.schema.json",
+  "title": "SourceObservation",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "observationId",
+    "providerId",
+    "providerManifestVersion",
+    "sourceKey",
+    "requestedUrl",
+    "finalUrl",
+    "observedAt",
+    "availability",
+    "httpStatus",
+    "contentType",
+    "bodyDigest",
+    "cacheState",
+    "redirectCount",
+    "fields",
+    "uncertainty"
+  ],
+  "properties": {
+    "schemaVersion": { "const": "1.0.0" },
+    "observationId": { "type": "string", "pattern": "^OBS-[A-F0-9]{32}$" },
+    "providerId": { "type": "string", "pattern": "^[a-z][a-z0-9-]{1,63}$" },
+    "providerManifestVersion": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$" },
+    "sourceKey": { "type": "string", "minLength": 1, "maxLength": 512 },
+    "requestedUrl": { "type": "string", "format": "uri", "pattern": "^https://" },
+    "finalUrl": {
+      "oneOf": [
+        { "type": "string", "format": "uri", "pattern": "^https://" },
+        { "type": "null" }
+      ]
+    },
+    "observedAt": { "type": "string", "format": "date-time" },
+    "availability": {
+      "enum": [
+        "available",
+        "not-found",
+        "gone",
+        "access-denied",
+        "rate-limited",
+        "transport-error",
+        "parse-error",
+        "uncertain"
+      ]
+    },
+    "httpStatus": {
+      "oneOf": [
+        { "type": "integer", "minimum": 100, "maximum": 599 },
+        { "type": "null" }
+      ]
+    },
+    "contentType": {
+      "oneOf": [
+        { "type": "string", "pattern": "^[a-z0-9!#$&^_.+-]+/[a-z0-9!#$&^_.+-]+$" },
+        { "type": "null" }
+      ]
+    },
+    "bodyDigest": {
+      "oneOf": [
+        { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+        { "type": "null" }
+      ]
+    },
+    "cacheState": { "enum": ["hit", "miss", "bypass"] },
+    "redirectCount": { "type": "integer", "minimum": 0, "maximum": 10 },
+    "fields": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["field", "value", "confidence", "evidencePointer"],
+        "properties": {
+          "field": { "type": "string", "pattern": "^[a-z][a-zA-Z0-9.-]{0,63}$" },
+          "value": { "$ref": "#/definitions/jsonValue" },
+          "confidence": { "enum": ["high", "medium", "low"] },
+          "evidencePointer": { "type": "string", "minLength": 1, "maxLength": 2048 }
+        }
+      }
+    },
+    "uncertainty": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": { "type": "string", "minLength": 1, "maxLength": 1024 }
+    }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "availability": { "const": "available" } } },
+      "then": {
+        "properties": {
+          "httpStatus": { "type": "integer", "minimum": 200, "maximum": 299 },
+          "finalUrl": { "type": "string", "format": "uri", "pattern": "^https://" },
+          "contentType": { "type": "string" },
+          "bodyDigest": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" }
+        }
+      },
+      "else": {
+        "properties": {
+          "uncertainty": {
+            "type": "array",
+            "minItems": 1
+          },
+          "fields": { "type": "array", "maxItems": 0 }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "availability": { "const": "not-found" } } },
+      "then": { "properties": { "httpStatus": { "const": 404 }, "fields": { "type": "array", "maxItems": 0 } } }
+    },
+    {
+      "if": { "properties": { "availability": { "const": "gone" } } },
+      "then": { "properties": { "httpStatus": { "const": 410 }, "fields": { "type": "array", "maxItems": 0 } } }
+    },
+    {
+      "if": { "properties": { "availability": { "const": "access-denied" } } },
+      "then": {
+        "properties": {
+          "httpStatus": {
+            "oneOf": [
+              { "enum": [401, 403] },
+              { "type": "null" }
+            ]
+          },
+          "fields": { "type": "array", "maxItems": 0 }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "availability": { "const": "rate-limited" } } },
+      "then": {
+        "properties": {
+          "httpStatus": {
+            "oneOf": [
+              { "const": 429 },
+              { "type": "null" }
+            ]
+          },
+          "fields": { "type": "array", "maxItems": 0 }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "availability": { "const": "transport-error" } } },
+      "then": { "properties": { "httpStatus": { "type": "null" }, "fields": { "type": "array", "maxItems": 0 } } }
+    },
+    {
+      "if": { "properties": { "availability": { "const": "parse-error" } } },
+      "then": {
+        "properties": {
+          "httpStatus": { "type": "integer", "minimum": 200, "maximum": 299 },
+          "finalUrl": { "type": "string", "format": "uri", "pattern": "^https://" },
+          "contentType": { "type": "string" },
+          "bodyDigest": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+          "fields": { "type": "array", "maxItems": 0 }
+        }
+      }
+    }
+  ],
+  "definitions": {
+    "jsonValue": {
+      "oneOf": [
+        { "type": "null" },
+        { "type": "string" },
+        { "type": "number" },
+        { "type": "boolean" },
+        { "type": "array", "items": { "$ref": "#/definitions/jsonValue" } },
+        { "type": "object", "additionalProperties": { "$ref": "#/definitions/jsonValue" } }
+      ]
+    }
+  }
+}

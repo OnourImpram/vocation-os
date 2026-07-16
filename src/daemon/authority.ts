@@ -1,5 +1,5 @@
 import { decideAutoApply, enableAutoApply, engageKillSwitch, rearmAutoApplyAuthorized } from "../auto-apply.js";
-import { existsSync } from "node:fs";
+import { existsSync, lstatSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import {
   assertExecutableAdapter,
@@ -26,6 +26,7 @@ import { ArtifactVault, assertArtifactManifest, type ArtifactManifest } from "..
 import {
   PRODUCT_DOMAIN_NAMES,
   ProductRepositories,
+  type CampaignRecord,
   type ProductDomainName,
   type VersionedDomainRecord
 } from "../storage/product-repositories.js";
@@ -49,7 +50,55 @@ import {
 } from "../import/profile-import.js";
 import { PROFILE_IMPORT_FORMATS, type ProfileImportFormat } from "../import/profile-parser-worker.js";
 import { ApplicationTracker } from "../storage/application-tracker.js";
+import { DecisionIntelligenceRepositories, type CredentialMappingPlan } from "../storage/decision-intelligence-repositories.js";
+import {
+  NetworkAccessGrantRepository,
+  PersistentGovernedRateGate,
+  type StoredNetworkAccessGrantRecord
+} from "../storage/network-access-grant-repository.js";
+import type { SourceObservation } from "../discovery/source-observation.js";
+import type { OpportunityTruthRecord } from "../discovery/opportunity-truth.js";
+import type { LivenessAssessment } from "../discovery/liveness.js";
+import {
+  deduplicateCandidates,
+  type DedupeCandidate,
+  type DedupeDecision,
+  type DedupeResult
+} from "../discovery/dedupe.js";
+import {
+  createDefaultGovernedFetchBroker,
+  type GovernedFetchBroker,
+  type GovernedRateGate
+} from "../discovery/governed-fetch-broker.js";
+import {
+  createSignedNetworkAccessGrantVerifier,
+  verifySignedNetworkAccessGrant,
+  type SignedNetworkAccessGrantEnvelope,
+  type TrustedNetworkAccessGrantIssuer
+} from "../discovery/network-access-grant.js";
+import {
+  buildOperatorScopedEgressManifest,
+  GovernedProviderRuntime
+} from "../discovery/provider-runtime.js";
+import {
+  providerManifestById,
+  type DiscoveryProviderId
+} from "../discovery/providers.js";
+import { deriveDiscoveryPosting } from "../discovery/discovery-records.js";
+import { validateTaxonomySnapshot, type TaxonomySnapshot } from "../taxonomy/snapshot.js";
+import { rankTaxonomyConcepts, type TaxonomyMappingSet } from "../taxonomy/mapping.js";
+import type { CareerAssuranceCase } from "../assurance/index.js";
+import {
+  createCredentialCryptoVerifier,
+  createCredentialPassportExport,
+  createLocalCredentialDocumentLoader,
+  importCredential,
+  type CredentialInputFormat,
+  type CredentialPassportEntry
+} from "../credentials/index.js";
 import type { ApplicationAttemptInput } from "../application-lifecycle.js";
+import type { CareerOutcomeEvent } from "../outcome-learning.js";
+import type { OpportunityRecord } from "../opportunity.js";
 import type { SubmissionProof, TrustedCollector } from "../submission-proof.js";
 import type {
   ActionLedgerEntry,
@@ -78,6 +127,37 @@ interface AuthorityEventPayload {
   config?: unknown;
 }
 
+const DECISION_INTELLIGENCE_RECORD_OPERATIONS = new Set<AuthorityOperation>([
+  "source-observation-record",
+  "opportunity-truth-record",
+  "liveness-assessment-record",
+  "dedupe-result-record",
+  "taxonomy-snapshot-record",
+  "taxonomy-mapping-record",
+  "assurance-case-record",
+  "credential-passport-record",
+  "credential-mapping-record"
+]);
+
+const MAX_INLINE_AUTHORITY_VALUE_BYTES = 512 * 1024;
+const MAX_INLINE_AUTHORITY_RESPONSE_BYTES = 768 * 1024;
+const MAX_TAXONOMY_ARTIFACT_BYTES = 32 * 1024 * 1024;
+const DEFAULT_DECISION_PAGE_LIMIT = 50;
+const MAX_DECISION_PAGE_LIMIT = 100;
+const MAX_DISCOVERY_POSTINGS_PER_RUN = 500;
+const MAX_INCREMENTAL_DEDUPE_CANDIDATES = 1_000;
+
+export interface GovernedDiscoveryBrokerContext {
+  readonly grantVerifier: Parameters<typeof createDefaultGovernedFetchBroker>[0];
+  readonly rateGate: GovernedRateGate;
+}
+
+export interface RuntimeAuthorityOptions {
+  readonly createGovernedDiscoveryBroker?: (
+    context: GovernedDiscoveryBrokerContext
+  ) => GovernedFetchBroker;
+}
+
 export interface AuthorityRequest {
   id: string;
   operation: AuthorityOperation;
@@ -97,8 +177,286 @@ function objectPayload(value: unknown): Record<string, unknown> {
   return value as Record<string, unknown>;
 }
 
+function exactObjectPayload(value: unknown, expectedKeys: readonly string[]): Record<string, unknown> {
+  const payload = objectPayload(value);
+  const actualKeys = Object.keys(payload).sort();
+  const requiredKeys = [...expectedKeys].sort();
+  if (stableStringify(actualKeys) !== stableStringify(requiredKeys)) {
+    throw new Error(`Authority operation payload must contain exactly: ${requiredKeys.join(", ") || "no fields"}`);
+  }
+  return payload;
+}
+
+function jsonByteLength(value: unknown): number {
+  return Buffer.byteLength(stableStringify(value), "utf8");
+}
+
+function assertInlineAuthorityValue(value: unknown): void {
+  if (jsonByteLength(value) > MAX_INLINE_AUTHORITY_VALUE_BYTES) {
+    throw new Error("Inline authority value exceeds the safe IPC budget. Use an artifact-backed operation");
+  }
+}
+
+function boundedAuthorityResponse<T>(value: T, label: string): T {
+  if (jsonByteLength(value) > MAX_INLINE_AUTHORITY_RESPONSE_BYTES) {
+    throw new Error(`${label} exceeds the safe IPC response budget. Use a query or artifact-backed export operation`);
+  }
+  return value;
+}
+
+function discoveryProviderId(value: unknown): DiscoveryProviderId {
+  const providerId = requiredString(value, "Discovery provider id");
+  return providerManifestById(providerId).providerId as DiscoveryProviderId;
+}
+
+function networkGrantSummary(record: StoredNetworkAccessGrantRecord): Record<string, unknown> {
+  return {
+    grantId: record.grantId,
+    grantDigest: record.grantDigest,
+    providerId: record.envelope.grant.providerId,
+    manifestId: record.envelope.grant.manifestId,
+    manifestVersion: record.envelope.grant.manifestVersion,
+    approvedBy: record.envelope.approvedBy,
+    keyId: record.envelope.keyId,
+    issuedAt: record.envelope.grant.issuedAt,
+    expiresAt: record.envelope.grant.expiresAt,
+    requestBudget: record.envelope.grant.requestBudget,
+    registeredAt: record.recordedAt
+  };
+}
+
+function networkGrantPage(
+  records: readonly StoredNetworkAccessGrantRecord[],
+  payloadValue: unknown
+): unknown {
+  const { cursor, limit } = decisionPagePayload(payloadValue);
+  const normalized = records
+    .map(networkGrantSummary)
+    .sort((left, right) => String(left["grantId"]).localeCompare(String(right["grantId"])));
+  const eligible = cursor === null
+    ? normalized
+    : normalized.filter((entry) => String(entry["grantId"]) > cursor);
+  const items = eligible.slice(0, limit);
+  const nextCursor = eligible.length > items.length
+    ? String(items.at(-1)?.["grantId"] ?? "") || null
+    : null;
+  const body = { items, nextCursor, limit };
+  return boundedAuthorityResponse(
+    { ...body, pageHash: sha256(stableStringify(body)) },
+    "Network access grant page"
+  );
+}
+
+function stringHeaders(value: unknown): Readonly<Record<string, string>> {
+  const candidate = objectPayload(value);
+  const headers: Record<string, string> = {};
+  for (const [name, headerValue] of Object.entries(candidate)) {
+    if (typeof headerValue !== "string") {
+      throw new Error(`Discovery header must be a string: ${name}`);
+    }
+    headers[name] = headerValue;
+  }
+  return Object.freeze(headers);
+}
+
+function recordSummary(value: unknown): Record<string, unknown> {
+  const record = objectPayload(value);
+  return {
+    domain: requiredString(record["domain"], "Record domain"),
+    recordId: requiredString(record["recordId"], "Record id"),
+    version: requiredVersion(record["version"]),
+    valueHash: requiredString(record["valueHash"], "Record value hash"),
+    recordedAt: requiredString(record["recordedAt"], "Record time")
+  };
+}
+
+function bindPersistentNetworkRateGate(
+  persistentGate: PersistentGovernedRateGate,
+  authorityRequestId: string,
+  grantDigest: string
+): GovernedRateGate {
+  let attemptIndex = 0;
+  return {
+    consume(request) {
+      const currentAttempt = attemptIndex;
+      attemptIndex += 1;
+      return persistentGate.consume({
+        ...request,
+        authorityRequestId,
+        attemptIndex: currentAttempt,
+        grantDigest
+      });
+    }
+  };
+}
+
+function dedupeCandidateForOpportunity(
+  opportunity: OpportunityRecord,
+  observationId: string
+): DedupeCandidate {
+  return {
+    candidateId: opportunity.opportunityId,
+    observationId,
+    providerId: opportunity.source as DiscoveryProviderId,
+    sourceRecordId: opportunity.sourceId,
+    canonicalUrl: opportunity.canonicalUrl,
+    applyUrl: opportunity.applyUrl,
+    company: opportunity.company,
+    companyDomain: null,
+    roleTitle: opportunity.roleTitle,
+    location: opportunity.locationText,
+    postedAt: opportunity.postedAt,
+    descriptionDigest: opportunity.descriptionHash
+  };
+}
+
+function likelyDedupeNeighbor(left: DedupeCandidate, right: DedupeCandidate): boolean {
+  if (left.canonicalUrl === right.canonicalUrl) return true;
+  if (left.applyUrl !== null && left.applyUrl === right.applyUrl) return true;
+  return left.company.trim().toLowerCase() === right.company.trim().toLowerCase()
+    || left.roleTitle.trim().toLowerCase() === right.roleTitle.trim().toLowerCase();
+}
+
+function decisionPagePayload(value: unknown): { cursor: string | null; limit: number } {
+  const payload = objectPayload(value);
+  const allowed = new Set(["cursor", "limit"]);
+  for (const key of Object.keys(payload)) {
+    if (!allowed.has(key)) throw new Error(`Decision list payload contains an unexpected field: ${key}`);
+  }
+  const cursor = payload["cursor"] ?? null;
+  if (cursor !== null && (typeof cursor !== "string" || !/^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/.test(cursor))) {
+    throw new Error("Decision list cursor is invalid");
+  }
+  const limit = payload["limit"] ?? DEFAULT_DECISION_PAGE_LIMIT;
+  if (!Number.isSafeInteger(limit) || (limit as number) < 1 || (limit as number) > MAX_DECISION_PAGE_LIMIT) {
+    throw new Error(`Decision list limit must be between 1 and ${MAX_DECISION_PAGE_LIMIT}`);
+  }
+  return { cursor: cursor as string | null, limit: limit as number };
+}
+
+function decisionRecordPage(records: readonly unknown[], payloadValue: unknown): unknown {
+  const { cursor, limit } = decisionPagePayload(payloadValue);
+  const normalized = records.map((value) => {
+    const current = objectPayload(value);
+    const recordId = requiredString(current["recordId"], "Decision record id");
+    return {
+      domain: requiredString(current["domain"], "Decision record domain"),
+      recordId,
+      version: requiredVersion(current["version"]),
+      valueHash: requiredString(current["valueHash"], "Decision record value hash"),
+      authority: current["authority"],
+      recordedAt: requiredString(current["recordedAt"], "Decision record time")
+    };
+  }).sort((left, right) => left.recordId.localeCompare(right.recordId));
+  const eligible = cursor === null ? normalized : normalized.filter((entry) => entry.recordId > cursor);
+  const items = eligible.slice(0, limit);
+  const nextCursor = eligible.length > items.length ? items.at(-1)?.recordId ?? null : null;
+  const body = { items, nextCursor, limit };
+  return boundedAuthorityResponse(
+    { ...body, pageHash: sha256(stableStringify(body)) },
+    "Decision record page"
+  );
+}
+
+interface DiscoveryReviewProjection {
+  opportunityId: string;
+  version: number;
+  roleTitle: string;
+  company: string;
+  locationText: string;
+  providerId: DiscoveryProviderId;
+  sourceKey: string;
+  status: "ready" | "needs_review" | "blocked";
+  liveness: LivenessAssessment["state"] | "unassessed";
+  livenessConfidence: LivenessAssessment["confidence"] | null;
+  truthDisposition: OpportunityTruthRecord["disposition"] | "unassessed";
+  truthBlockers: string[];
+  duplicateStatus: DedupeDecision["outcome"] | "unassessed";
+  duplicateCandidateIds: string[];
+  taxonomyConfidence: number | null;
+  campaignId: string | null;
+  updatedAt: string;
+  evidenceRecordIds: string[];
+}
+
+interface CandidateDedupeProjection {
+  outcome: DedupeDecision["outcome"];
+  candidateIds: string[];
+  recordId: string;
+}
+
+const DEDUPE_REVIEW_PRIORITY: Readonly<Record<DedupeDecision["outcome"], number>> = Object.freeze({
+  distinct: 1,
+  merge: 2,
+  review: 3
+});
+
+function latestDedupeByCandidate(records: readonly {
+  recordId: string;
+  recordedAt: string;
+  value: DedupeResult;
+}[]): Map<string, CandidateDedupeProjection> {
+  const result = new Map<string, CandidateDedupeProjection>();
+  const orderedRecords = [...records].sort((left, right) =>
+    left.recordedAt.localeCompare(right.recordedAt) || left.recordId.localeCompare(right.recordId)
+  );
+  for (const record of orderedRecords) {
+    const decisionsByCandidate = new Map<string, DedupeDecision[]>();
+    for (const decision of record.value.decisions) {
+      for (const candidateId of [decision.leftCandidateId, decision.rightCandidateId]) {
+        const decisions = decisionsByCandidate.get(candidateId) ?? [];
+        decisions.push(decision);
+        decisionsByCandidate.set(candidateId, decisions);
+      }
+    }
+    for (const [candidateId, decisions] of decisionsByCandidate) {
+      const outcome = decisions.reduce<DedupeDecision["outcome"]>((current, decision) =>
+        DEDUPE_REVIEW_PRIORITY[decision.outcome] > DEDUPE_REVIEW_PRIORITY[current]
+          ? decision.outcome
+          : current,
+      "distinct");
+      const candidateIds = [...new Set(decisions.map((decision) =>
+        decision.leftCandidateId === candidateId ? decision.rightCandidateId : decision.leftCandidateId
+      ))].sort();
+      result.set(candidateId, { outcome, candidateIds, recordId: record.recordId });
+    }
+  }
+  return result;
+}
+
+function latestByKey<T extends { recordedAt: string }>(
+  records: readonly T[],
+  keyOf: (record: T) => string | null
+): Map<string, T> {
+  const result = new Map<string, T>();
+  for (const record of records) {
+    const key = keyOf(record);
+    if (key === null) continue;
+    const current = result.get(key);
+    if (!current || record.recordedAt > current.recordedAt) result.set(key, record);
+  }
+  return result;
+}
+
+function discoveryReviewPage(itemsValue: readonly DiscoveryReviewProjection[], payloadValue: unknown): unknown {
+  const { cursor, limit } = decisionPagePayload(payloadValue);
+  const normalized = [...itemsValue].sort((left, right) => left.opportunityId.localeCompare(right.opportunityId));
+  const eligible = cursor === null ? normalized : normalized.filter((item) => item.opportunityId > cursor);
+  const items = eligible.slice(0, limit);
+  const nextCursor = eligible.length > items.length ? items.at(-1)?.opportunityId ?? null : null;
+  const body = { items, nextCursor, limit };
+  return boundedAuthorityResponse(
+    { ...body, pageHash: sha256(stableStringify(body)) },
+    "Discovery review page"
+  );
+}
+
 function eventIdForRequest(requestId: string): string {
   return `EVT-CMD-${sha256(requestId).slice("sha256:".length)}`;
+}
+
+function internalAuthorityRequestId(requestId: string, purpose: string): string {
+  return `REQ-${sha256(`${requestId}:${purpose}`).slice("sha256:".length, "sha256:".length + 48)}`;
 }
 
 function checkpointIdForRequest(requestId: string): string {
@@ -129,6 +487,33 @@ function requiredVersion(value: unknown): number {
   return value as number;
 }
 
+function canonicalDate(value: unknown, label: string): Date {
+  const text = requiredString(value, label);
+  const timestamp = Date.parse(text);
+  if (!Number.isFinite(timestamp) || new Date(timestamp).toISOString() !== text) {
+    throw new Error(`${label} must be a canonical ISO date-time`);
+  }
+  return new Date(timestamp);
+}
+
+function credentialInputFormat(value: unknown): CredentialInputFormat {
+  if (
+    value !== "json"
+    && value !== "json-ld"
+    && value !== "compact-jws"
+    && value !== "baked-png"
+    && value !== "baked-svg"
+  ) {
+    throw new Error("Credential input format is invalid");
+  }
+  return value;
+}
+
+function errorCode(error: unknown): string | null {
+  if (typeof error !== "object" || error === null || !("code" in error)) return null;
+  return typeof error.code === "string" ? error.code : null;
+}
+
 function authorityBinding(event: StoredEvent<AuthorityEventPayload>): AuthorityBinding | null {
   return event.payload.authority ?? event.payload.metadata?.authority ?? null;
 }
@@ -141,14 +526,60 @@ function authorityResponse(event: StoredEvent<AuthorityEventPayload>): unknown {
 
 export class RuntimeAuthority {
   private readonly repository: RuntimeRepository;
+  private readonly decisionIntelligence: DecisionIntelligenceRepositories;
+  private readonly networkGrants: NetworkAccessGrantRepository;
 
   public constructor(
     private readonly store: EncryptedEventStore,
     private readonly credentials: CredentialStore,
     private readonly runtimeRoot: string,
-    private readonly artifactVault: ArtifactVault | null = null
+    private readonly artifactVault: ArtifactVault | null = null,
+    private readonly options: RuntimeAuthorityOptions = {}
   ) {
     this.repository = new RuntimeRepository(store);
+    this.decisionIntelligence = new DecisionIntelligenceRepositories(store);
+    this.networkGrants = new NetworkAccessGrantRepository(store);
+  }
+
+  private async trustedNetworkIssuers(): Promise<readonly TrustedNetworkAccessGrantIssuer[]> {
+    return (await this.repository.listTrustedApprovers()).map((approver) => ({
+      approvedBy: approver.approvedBy,
+      keyId: approver.keyId,
+      publicKeyPem: approver.publicKeyPem
+    }));
+  }
+
+  private createDiscoveryBroker(context: GovernedDiscoveryBrokerContext): GovernedFetchBroker {
+    return this.options.createGovernedDiscoveryBroker?.(context)
+      ?? createDefaultGovernedFetchBroker(context.grantVerifier, undefined, context.rateGate);
+  }
+
+  private async persistDiscoveryDecision<T>(input: {
+    value: T;
+    recordId: string;
+    authorityRequestId: string;
+    get: (recordId: string) => Promise<{ value: T } | null>;
+    record: (command: {
+      value: T;
+      expectedVersion: number;
+      authorityRequestId: string;
+      now: Date;
+    }) => Promise<unknown>;
+    now: Date;
+  }): Promise<unknown> {
+    const existing = await input.get(input.recordId);
+    if (existing) {
+      if (stableStringify(existing.value) !== stableStringify(input.value)) {
+        throw new Error(`Discovery content-addressed record id was rebound: ${input.recordId}`);
+      }
+      return existing;
+    }
+    return input.record({
+      value: input.value,
+      expectedVersion: 0,
+      authorityRequestId: input.authorityRequestId,
+      now: input.now
+    });
   }
 
   private recordPersistedResponse(
@@ -209,6 +640,127 @@ export class RuntimeAuthority {
     return null;
   }
 
+  private readArtifactJson<T>(manifestValue: unknown, label: string, maximumBytes: number): T {
+    if (!this.artifactVault) throw new Error("Artifact vault is unavailable in this authority runtime");
+    assertArtifactManifest(manifestValue);
+    assertSchema("artifact-manifest", manifestValue);
+    if (manifestValue.sizeBytes > maximumBytes) {
+      throw new Error(`${label} exceeds the configured artifact size limit`);
+    }
+    const plaintext = this.artifactVault.read(manifestValue);
+    try {
+      const text = new TextDecoder("utf-8", { fatal: true }).decode(plaintext);
+      return JSON.parse(text) as T;
+    } catch (error) {
+      throw new Error(`${label} is not valid UTF-8 JSON`, { cause: error });
+    } finally {
+      plaintext.fill(0);
+    }
+  }
+
+  private async ensureInternalArtifactManifest(
+    manifest: ArtifactManifest,
+    eventId: string,
+    occurredAt: Date,
+    metadata: Record<string, unknown>
+  ): Promise<void> {
+    const existing = await this.store.readEvent<{ manifest?: ArtifactManifest; response?: ArtifactManifest }>(eventId);
+    if (existing) {
+      const boundManifest = existing.payload.response ?? existing.payload.manifest;
+      if (
+        existing.aggregateType !== "artifact-manifest"
+        || existing.aggregateId !== manifest.storageLocator
+        || !boundManifest
+        || stableStringify(boundManifest) !== stableStringify(manifest)
+      ) {
+        throw new Error("Internal artifact event is not bound to the generated artifact manifest");
+      }
+      return;
+    }
+    await this.repository.saveArtifactManifest({ manifest, eventId, occurredAt, metadata });
+  }
+
+  private async credentialOriginalManifest(passport: CredentialPassportEntry): Promise<ArtifactManifest> {
+    const matches = (await this.repository.listArtifactManifests()).filter((manifest) =>
+      manifest.contentHash === passport.original.hash
+      && manifest.sizeBytes === passport.original.byteLength
+    );
+    if (matches.length !== 1) {
+      throw new Error("Credential passport original is not uniquely bound to an encrypted artifact manifest");
+    }
+    return matches[0]!;
+  }
+
+  private exportArtifactToFile(manifestValue: unknown, outputPathValue: unknown): {
+    outputPath: string;
+    contentHash: string;
+    sizeBytes: number;
+    recoveredExisting: boolean;
+  } {
+    if (!this.artifactVault) throw new Error("Artifact vault is unavailable in this authority runtime");
+    assertArtifactManifest(manifestValue);
+    assertSchema("artifact-manifest", manifestValue);
+    const outputPath = requiredString(outputPathValue, "Artifact export path");
+    if (!path.isAbsolute(outputPath)) throw new Error("Artifact export path must be absolute");
+    const resolvedOutputPath = path.resolve(outputPath);
+    const parent = path.dirname(resolvedOutputPath);
+    const parentMetadata = statSync(parent);
+    if (!parentMetadata.isDirectory()) throw new Error("Artifact export parent must be a directory");
+
+    const verifyExisting = (): boolean => {
+      if (!existsSync(resolvedOutputPath)) return false;
+      const metadata = lstatSync(resolvedOutputPath);
+      if (metadata.isSymbolicLink() || !metadata.isFile()) {
+        throw new Error("Artifact export target must be a regular file and must not be a symbolic link");
+      }
+      if (metadata.size !== manifestValue.sizeBytes) {
+        throw new Error("Artifact export target already exists with different content");
+      }
+      const existing = readFileSync(resolvedOutputPath);
+      try {
+        if (sha256(existing) !== manifestValue.contentHash) {
+          throw new Error("Artifact export target already exists with different content");
+        }
+      } finally {
+        existing.fill(0);
+      }
+      return true;
+    };
+
+    if (verifyExisting()) {
+      return {
+        outputPath: resolvedOutputPath,
+        contentHash: manifestValue.contentHash,
+        sizeBytes: manifestValue.sizeBytes,
+        recoveredExisting: true
+      };
+    }
+
+    const plaintext = this.artifactVault.read(manifestValue);
+    try {
+      try {
+        writeFileSync(resolvedOutputPath, plaintext, { flag: "wx", mode: 0o600 });
+      } catch (error) {
+        if (errorCode(error) !== "EEXIST" || !verifyExisting()) throw error;
+        return {
+          outputPath: resolvedOutputPath,
+          contentHash: manifestValue.contentHash,
+          sizeBytes: manifestValue.sizeBytes,
+          recoveredExisting: true
+        };
+      }
+    } finally {
+      plaintext.fill(0);
+    }
+    if (!verifyExisting()) throw new Error("Artifact export did not create the requested file");
+    return {
+      outputPath: resolvedOutputPath,
+      contentHash: manifestValue.contentHash,
+      sizeBytes: manifestValue.sizeBytes,
+      recoveredExisting: false
+    };
+  }
+
   private async replayOrReject(
     request: AuthorityRequest,
     requestHash: string,
@@ -224,6 +776,9 @@ export class RuntimeAuthority {
       }
       const event = await this.store.readEvent<AuthorityEventPayload>(receipt.eventId);
       if (!event) throw new Error("Authority receipt references a missing event");
+      if (receipt.completedAt !== event.occurredAt) {
+        throw new Error("Authority receipt completion time is not bound to its event");
+      }
       const binding = authorityBinding(event);
       if (
         !binding
@@ -442,6 +997,73 @@ export class RuntimeAuthority {
     if (request.operation === "collector-list") {
       return this.repository.listTrustedCollectors();
     }
+    if (request.operation === "network-grant-list") {
+      return networkGrantPage(await this.networkGrants.list(), request.payload);
+    }
+    if (request.operation === "discovery-review-list") {
+      const products = new ProductRepositories(this.store);
+      const [opportunities, truthRecords, livenessRecords, dedupeRecords] = await Promise.all([
+        products.opportunities.list(),
+        this.decisionIntelligence.listOpportunityTruthRecords(),
+        this.decisionIntelligence.listLivenessAssessments(),
+        this.decisionIntelligence.listDedupeResults()
+      ]);
+      const truthByOpportunity = latestByKey(truthRecords, (record) => record.value.opportunityKey);
+      const livenessBySource = latestByKey(livenessRecords, (record) => record.value.sourceKey);
+      const duplicateByCandidate = latestDedupeByCandidate(dedupeRecords);
+      const projections = opportunities.flatMap((record): DiscoveryReviewProjection[] => {
+        const opportunity = record.value;
+        if (opportunity.source === "manual") return [];
+        const providerId = providerManifestById(opportunity.source).providerId as DiscoveryProviderId;
+        const sourceKey = `${providerId}:${opportunity.sourceId}`;
+        const truth = truthByOpportunity.get(opportunity.opportunityId);
+        const liveness = livenessBySource.get(sourceKey);
+        const duplicate = duplicateByCandidate.get(opportunity.opportunityId);
+        const duplicateCandidateIds = duplicate?.candidateIds ?? [];
+        const value = opportunity as unknown as Record<string, unknown>;
+        const taxonomyConfidence = typeof value["taxonomyConfidence"] === "number"
+          && Number.isFinite(value["taxonomyConfidence"])
+          && value["taxonomyConfidence"] >= 0
+          && value["taxonomyConfidence"] <= 1
+          ? value["taxonomyConfidence"]
+          : null;
+        const campaignId = typeof value["campaignId"] === "string" && value["campaignId"].trim().length > 0
+          ? value["campaignId"]
+          : null;
+        const livenessState = liveness?.value.state ?? "unassessed";
+        const truthDisposition = truth?.value.disposition ?? "unassessed";
+        const duplicateStatus = duplicate?.outcome ?? "unassessed";
+        const blocked = livenessState === "closed" || truthDisposition === "blocked";
+        const needsReview = !blocked && (
+          livenessState !== "live"
+          || truthDisposition !== "actionable"
+          || duplicateStatus === "review"
+          || duplicateStatus === "merge"
+        );
+        return [{
+          opportunityId: opportunity.opportunityId,
+          version: record.version,
+          roleTitle: opportunity.roleTitle,
+          company: opportunity.company,
+          locationText: opportunity.locationText,
+          providerId,
+          sourceKey,
+          status: blocked ? "blocked" : needsReview ? "needs_review" : "ready",
+          liveness: livenessState,
+          livenessConfidence: liveness?.value.confidence ?? null,
+          truthDisposition,
+          truthBlockers: truth?.value.blockers.map((blocker) => `${blocker.field}:${blocker.code}`) ?? [],
+          duplicateStatus,
+          duplicateCandidateIds,
+          taxonomyConfidence,
+          campaignId,
+          updatedAt: record.recordedAt,
+          evidenceRecordIds: [truth?.recordId, liveness?.recordId, duplicate?.recordId]
+            .filter((recordId): recordId is string => typeof recordId === "string")
+        }];
+      });
+      return discoveryReviewPage(projections, request.payload);
+    }
     if (request.operation === "audit-export") {
       await verifyCheckpointChain(this.store, this.credentials);
       return {
@@ -483,10 +1105,642 @@ export class RuntimeAuthority {
       if (request.operation === "tracker-list") return tracker.list(payload["includeArchived"] === true);
       return tracker.get(requiredString(payload["attemptId"], "Application attempt id"));
     }
+    switch (request.operation) {
+      case "source-observation-get":
+        return boundedAuthorityResponse(await this.decisionIntelligence.getSourceObservation(
+          requiredString(exactObjectPayload(request.payload, ["recordId"])["recordId"], "Source observation id")
+        ), "Source observation");
+      case "source-observation-list":
+        return decisionRecordPage(await this.decisionIntelligence.listSourceObservations(), request.payload);
+      case "opportunity-truth-get":
+        return boundedAuthorityResponse(await this.decisionIntelligence.getOpportunityTruth(
+          requiredString(exactObjectPayload(request.payload, ["recordId"])["recordId"], "Opportunity truth record id")
+        ), "Opportunity truth record");
+      case "opportunity-truth-list":
+        return decisionRecordPage(await this.decisionIntelligence.listOpportunityTruthRecords(), request.payload);
+      case "liveness-assessment-get":
+        return boundedAuthorityResponse(await this.decisionIntelligence.getLivenessAssessment(
+          requiredString(exactObjectPayload(request.payload, ["recordId"])["recordId"], "Liveness assessment id")
+        ), "Liveness assessment");
+      case "liveness-assessment-list":
+        return decisionRecordPage(await this.decisionIntelligence.listLivenessAssessments(), request.payload);
+      case "dedupe-result-get":
+        return boundedAuthorityResponse(await this.decisionIntelligence.getDedupeResult(
+          requiredString(exactObjectPayload(request.payload, ["recordId"])["recordId"], "Dedupe result id")
+        ), "Dedupe result");
+      case "dedupe-result-list":
+        return decisionRecordPage(await this.decisionIntelligence.listDedupeResults(), request.payload);
+      case "taxonomy-snapshot-get":
+        return boundedAuthorityResponse(await this.decisionIntelligence.getTaxonomySnapshot(
+          requiredString(exactObjectPayload(request.payload, ["recordId"])["recordId"], "Taxonomy snapshot id")
+        ), "Taxonomy snapshot");
+      case "taxonomy-snapshot-list":
+        return decisionRecordPage(await this.decisionIntelligence.listTaxonomySnapshots(), request.payload);
+      case "taxonomy-query": {
+        const payload = exactObjectPayload(request.payload, ["limit", "minimumScore", "queries", "snapshotId"]);
+        const snapshotId = requiredString(payload["snapshotId"], "Taxonomy snapshot id");
+        const queries = payload["queries"];
+        if (
+          !Array.isArray(queries)
+          || queries.length < 1
+          || queries.length > 50
+          || queries.some((query) => typeof query !== "string" || query.trim().length < 1 || query.length > 512)
+        ) {
+          throw new Error("Taxonomy query requires between 1 and 50 bounded text queries");
+        }
+        const limit = payload["limit"];
+        if (!Number.isSafeInteger(limit) || (limit as number) < 1 || (limit as number) > 25) {
+          throw new Error("Taxonomy query result limit must be between 1 and 25");
+        }
+        const minimumScore = payload["minimumScore"];
+        if (typeof minimumScore !== "number" || !Number.isFinite(minimumScore) || minimumScore < 0 || minimumScore > 1) {
+          throw new Error("Taxonomy minimum score must be between 0 and 1");
+        }
+        const stored = await this.decisionIntelligence.getTaxonomySnapshot(snapshotId);
+        if (!stored) throw new Error(`Taxonomy snapshot was not found: ${snapshotId}`);
+        return boundedAuthorityResponse({
+          snapshotId,
+          source: stored.value.source,
+          version: stored.value.version,
+          contentHash: stored.value.contentHash,
+          matches: queries.map((query) => ({
+            query: query.trim(),
+            results: rankTaxonomyConcepts(query.trim(), stored.value, {
+              limit: limit as number,
+              minimumScore
+            })
+          }))
+        }, "Taxonomy query result");
+      }
+      case "taxonomy-mapping-get":
+        return boundedAuthorityResponse(await this.decisionIntelligence.getTaxonomyMappingSet(
+          requiredString(exactObjectPayload(request.payload, ["recordId"])["recordId"], "Taxonomy mapping id")
+        ), "Taxonomy mapping set");
+      case "taxonomy-mapping-list":
+        return decisionRecordPage(await this.decisionIntelligence.listTaxonomyMappingSets(), request.payload);
+      case "assurance-case-get":
+        return boundedAuthorityResponse(await this.decisionIntelligence.getCareerAssuranceCase(
+          requiredString(exactObjectPayload(request.payload, ["recordId"])["recordId"], "Assurance case id")
+        ), "Career Assurance Case");
+      case "assurance-case-list":
+        return decisionRecordPage(await this.decisionIntelligence.listCareerAssuranceCases(), request.payload);
+      case "credential-passport-get":
+        return boundedAuthorityResponse(await this.decisionIntelligence.getCredentialPassport(
+          requiredString(exactObjectPayload(request.payload, ["recordId"])["recordId"], "Credential passport id")
+        ), "Credential passport");
+      case "credential-passport-list":
+        return decisionRecordPage(await this.decisionIntelligence.listCredentialPassports(), request.payload);
+      case "credential-mapping-get":
+        return boundedAuthorityResponse(await this.decisionIntelligence.getCredentialMappingPlan(
+          requiredString(exactObjectPayload(request.payload, ["recordId"])["recordId"], "Credential mapping id")
+        ), "Credential mapping plan");
+      case "credential-mapping-list":
+        return decisionRecordPage(await this.decisionIntelligence.listCredentialMappingPlans(), request.payload);
+      case "campaign-get":
+        return new ProductRepositories(this.store).campaigns.get(
+          requiredString(exactObjectPayload(request.payload, ["recordId"])["recordId"], "Campaign id"),
+          true
+        );
+      case "campaign-list":
+        return new ProductRepositories(this.store).campaigns.list(
+          exactObjectPayload(request.payload, ["includeArchived"])["includeArchived"] === true
+        );
+      case "outcome-get":
+        return new ProductRepositories(this.store).outcomes.get(
+          requiredString(exactObjectPayload(request.payload, ["recordId"])["recordId"], "Outcome id"),
+          true
+        );
+      case "outcome-list":
+        return new ProductRepositories(this.store).outcomes.list(
+          exactObjectPayload(request.payload, ["includeArchived"])["includeArchived"] === true
+        );
+    }
 
     await verifyCheckpointChain(this.store, this.credentials);
-    const replay = await this.replayOrReject(request, requestHash, eventId);
-    if (replay) return replay.response;
+    if (!DECISION_INTELLIGENCE_RECORD_OPERATIONS.has(request.operation)) {
+      const replay = await this.replayOrReject(request, requestHash, eventId);
+      if (replay) {
+        if (request.operation === "artifact-export") {
+          const payload = exactObjectPayload(request.payload, ["manifest", "outputPath"]);
+          this.exportArtifactToFile(payload["manifest"], payload["outputPath"]);
+        }
+        return replay.response;
+      }
+    }
+
+    if (request.operation === "network-grant-register") {
+      const payload = exactObjectPayload(request.payload, ["envelope", "scopeUrl"]);
+      assertSchema("discovery-signed-network-access-grant", payload["envelope"]);
+      const envelope = payload["envelope"] as SignedNetworkAccessGrantEnvelope;
+      const providerId = discoveryProviderId(envelope.grant.providerId);
+      const provider = providerManifestById(providerId);
+      if (provider.supportStatus !== "contract-tested-ga" || provider.discoveryMode === "assist-only") {
+        throw new Error(`Discovery provider is not authorized for governed execution: ${providerId}`);
+      }
+      const scopeUrl = payload["scopeUrl"];
+      if (scopeUrl !== null && typeof scopeUrl !== "string") {
+        throw new Error("Network grant scope URL must be null or a string");
+      }
+      const manifest = scopeUrl === null
+        ? provider.egress
+        : buildOperatorScopedEgressManifest(providerId, scopeUrl);
+      const verification = verifySignedNetworkAccessGrant(envelope, {
+        manifest,
+        verifiedAt: now.toISOString(),
+        trustedIssuers: await this.trustedNetworkIssuers()
+      });
+      if (!verification.verified) {
+        throw new Error(`Signed network access grant verification failed: ${verification.reasons.join(", ")}`);
+      }
+      const stored = await this.networkGrants.save(envelope, now);
+      const response = networkGrantSummary(stored);
+      await this.recordCommand(request, requestHash, eventId, response, now);
+      return response;
+    }
+
+    if (request.operation === "discovery-run") {
+      const payload = exactObjectPayload(request.payload, [
+        "companyHint",
+        "grantId",
+        "headers",
+        "operatorScopedTarget",
+        "providerId",
+        "sourceKey",
+        "url"
+      ]);
+      const providerId = discoveryProviderId(payload["providerId"]);
+      const provider = providerManifestById(providerId);
+      if (provider.supportStatus !== "contract-tested-ga" || provider.discoveryMode === "assist-only") {
+        throw new Error(`Discovery provider is not authorized for governed execution: ${providerId}`);
+      }
+      const grantId = requiredString(payload["grantId"], "Network access grant id");
+      const sourceKey = requiredString(payload["sourceKey"], "Discovery source key");
+      if (sourceKey.length > 512) throw new Error("Discovery source key exceeds 512 characters");
+      const url = requiredString(payload["url"], "Discovery URL");
+      const companyHint = payload["companyHint"];
+      if (companyHint !== null && (typeof companyHint !== "string" || companyHint.trim().length === 0)) {
+        throw new Error("Discovery company hint must be null or a non-empty string");
+      }
+      if (typeof payload["operatorScopedTarget"] !== "boolean") {
+        throw new Error("Discovery operator scoped target flag must be boolean");
+      }
+      const operatorScopedTarget = payload["operatorScopedTarget"];
+      const headers = stringHeaders(payload["headers"]);
+      const storedGrant = await this.networkGrants.get(grantId);
+      if (!storedGrant) throw new Error(`Network access grant was not found: ${grantId}`);
+      if (storedGrant.envelope.grant.providerId !== providerId) {
+        throw new Error("Network access grant is bound to another discovery provider");
+      }
+      const manifest = operatorScopedTarget
+        ? buildOperatorScopedEgressManifest(providerId, url)
+        : provider.egress;
+      const verification = verifySignedNetworkAccessGrant(storedGrant.envelope, {
+        manifest,
+        verifiedAt: now.toISOString(),
+        trustedIssuers: await this.trustedNetworkIssuers()
+      });
+      if (!verification.verified) {
+        throw new Error(`Stored network access grant verification failed: ${verification.reasons.join(", ")}`);
+      }
+
+      const grantVerifier = createSignedNetworkAccessGrantVerifier({
+        resolveEnvelope: async (grant) => this.networkGrants.getEnvelope(grant.grantId),
+        trustedIssuers: async () => this.trustedNetworkIssuers()
+      });
+      const persistentRateGate = new PersistentGovernedRateGate(this.store, this.networkGrants);
+      const rateGate = bindPersistentNetworkRateGate(
+        persistentRateGate,
+        request.id,
+        storedGrant.grantDigest
+      );
+      const runtime = new GovernedProviderRuntime(
+        this.createDiscoveryBroker({ grantVerifier, rateGate }),
+        { now: () => new Date(now) }
+      );
+      const result = await runtime.discover({
+        providerId,
+        sourceKey,
+        url,
+        grant: storedGrant.envelope.grant,
+        companyHint: companyHint as string | null,
+        headers,
+        cacheMode: "no-store",
+        operatorScopedTarget
+      });
+      if ((result.parseResult?.postings.length ?? 0) > MAX_DISCOVERY_POSTINGS_PER_RUN) {
+        throw new Error(`Discovery result exceeds ${MAX_DISCOVERY_POSTINGS_PER_RUN} postings`);
+      }
+
+      const endpointObservationRecord = await this.persistDiscoveryDecision<SourceObservation>({
+        value: result.observation,
+        recordId: result.observation.observationId,
+        authorityRequestId: internalAuthorityRequestId(request.id, "discovery-endpoint-observation"),
+        get: (recordId) => this.decisionIntelligence.getSourceObservation(recordId),
+        record: (command) => this.decisionIntelligence.recordSourceObservation(command),
+        now
+      });
+      const endpointLivenessRecord = await this.persistDiscoveryDecision<LivenessAssessment>({
+        value: result.liveness,
+        recordId: result.liveness.assessmentId,
+        authorityRequestId: internalAuthorityRequestId(request.id, "discovery-endpoint-liveness"),
+        get: (recordId) => this.decisionIntelligence.getLivenessAssessment(recordId),
+        record: (command) => this.decisionIntelligence.recordLivenessAssessment(command),
+        now
+      });
+
+      const products = new ProductRepositories(this.store);
+      const postingSummaries: Record<string, unknown>[] = [];
+      const newCandidates: DedupeCandidate[] = [];
+      for (const posting of result.parseResult?.postings ?? []) {
+        const derived = deriveDiscoveryPosting(posting, result.observation);
+        const observationRecord = await this.persistDiscoveryDecision<SourceObservation>({
+          value: derived.observation,
+          recordId: derived.observation.observationId,
+          authorityRequestId: internalAuthorityRequestId(request.id, `discovery-observation:${posting.postingId}`),
+          get: (recordId) => this.decisionIntelligence.getSourceObservation(recordId),
+          record: (command) => this.decisionIntelligence.recordSourceObservation(command),
+          now
+        });
+        const livenessRecord = await this.persistDiscoveryDecision<LivenessAssessment>({
+          value: derived.liveness,
+          recordId: derived.liveness.assessmentId,
+          authorityRequestId: internalAuthorityRequestId(request.id, `discovery-liveness:${posting.postingId}`),
+          get: (recordId) => this.decisionIntelligence.getLivenessAssessment(recordId),
+          record: (command) => this.decisionIntelligence.recordLivenessAssessment(command),
+          now
+        });
+        const truthRecord = await this.persistDiscoveryDecision<OpportunityTruthRecord>({
+          value: derived.truth,
+          recordId: derived.truth.truthRecordId,
+          authorityRequestId: internalAuthorityRequestId(request.id, `discovery-truth:${posting.postingId}`),
+          get: (recordId) => this.decisionIntelligence.getOpportunityTruth(recordId),
+          record: (command) => this.decisionIntelligence.recordOpportunityTruth(command),
+          now
+        });
+        const currentOpportunity = await products.opportunities.get(derived.opportunity.opportunityId, true);
+        const opportunityRecord = await products.opportunities.put({
+          value: derived.opportunity,
+          expectedVersion: currentOpportunity?.version ?? 0,
+          operationId: internalAuthorityRequestId(request.id, `discovery-opportunity:${posting.postingId}`),
+          now,
+          authority: {
+            requestId: request.id,
+            requestHash,
+            operation: request.operation
+          },
+          audit: {
+            sourceObservationId: derived.observation.observationId,
+            truthRecordId: derived.truth.truthRecordId,
+            livenessAssessmentId: derived.liveness.assessmentId,
+            grantDigest: storedGrant.grantDigest
+          }
+        });
+        postingSummaries.push({
+          opportunity: recordSummary(opportunityRecord),
+          observation: recordSummary(observationRecord),
+          liveness: recordSummary(livenessRecord),
+          truth: recordSummary(truthRecord)
+        });
+        newCandidates.push(derived.dedupeCandidate);
+      }
+
+      let dedupeRecord: unknown = null;
+      if (newCandidates.length > 0) {
+        const observations = await this.decisionIntelligence.listSourceObservations();
+        const latestObservationBySourceKey = new Map<string, SourceObservation>();
+        for (const observationRecord of observations) {
+          const current = latestObservationBySourceKey.get(observationRecord.value.sourceKey);
+          if (!current || observationRecord.value.observedAt > current.observedAt) {
+            latestObservationBySourceKey.set(observationRecord.value.sourceKey, observationRecord.value);
+          }
+        }
+        const persistedCandidates = (await products.opportunities.list())
+          .flatMap((opportunityRecord): DedupeCandidate[] => {
+            const opportunity = opportunityRecord.value;
+            if (opportunity.source === "manual") return [];
+            const observation = latestObservationBySourceKey.get(`${opportunity.source}:${opportunity.sourceId}`);
+            return observation
+              ? [dedupeCandidateForOpportunity(opportunity, observation.observationId)]
+              : [];
+          })
+          .sort((left, right) => left.candidateId.localeCompare(right.candidateId));
+        const selected = new Map(newCandidates.map((candidate) => [candidate.candidateId, candidate]));
+        for (const candidate of persistedCandidates) {
+          if (selected.size >= MAX_INCREMENTAL_DEDUPE_CANDIDATES) break;
+          if (newCandidates.some((anchor) => likelyDedupeNeighbor(anchor, candidate))) {
+            selected.set(candidate.candidateId, candidate);
+          }
+        }
+        const dedupe = deduplicateCandidates([...selected.values()]);
+        dedupeRecord = await this.persistDiscoveryDecision<DedupeResult>({
+          value: dedupe,
+          recordId: dedupe.resultId,
+          authorityRequestId: internalAuthorityRequestId(request.id, "discovery-dedupe"),
+          get: (recordId) => this.decisionIntelligence.getDedupeResult(recordId),
+          record: (command) => this.decisionIntelligence.recordDedupeResult(command),
+          now
+        });
+      }
+
+      const responseCore = {
+        providerId,
+        grantId,
+        grantDigest: storedGrant.grantDigest,
+        endpointObservation: recordSummary(endpointObservationRecord),
+        endpointLiveness: recordSummary(endpointLivenessRecord),
+        postings: postingSummaries,
+        dedupe: dedupeRecord === null ? null : recordSummary(dedupeRecord),
+        rejectionCount: result.parseResult?.rejections.length ?? 0
+      };
+      const response = boundedAuthorityResponse({
+        ...responseCore,
+        runHash: sha256(stableStringify(responseCore))
+      }, "Discovery run response");
+      await this.recordCommand(request, requestHash, eventId, response, now);
+      return response;
+    }
+
+    if (request.operation === "credential-export-artifact") {
+      if (!this.artifactVault) throw new Error("Artifact vault is unavailable in this authority runtime");
+      const payload = exactObjectPayload(request.payload, ["exportedAt", "passportId"]);
+      const passportId = requiredString(payload["passportId"], "Credential passport id");
+      const exportedAt = canonicalDate(payload["exportedAt"], "Credential export time");
+      const storedPassport = await this.decisionIntelligence.getCredentialPassport(passportId);
+      if (!storedPassport) throw new Error(`Credential passport was not found: ${passportId}`);
+      const originalManifest = await this.credentialOriginalManifest(storedPassport.value);
+      const original = this.artifactVault.read(originalManifest);
+      let exportBytes: Uint8Array | null = null;
+      let packageHash: string;
+      let exportManifest: ArtifactManifest;
+      try {
+        const generated = createCredentialPassportExport(storedPassport.value, original, exportedAt);
+        exportBytes = generated.bytes;
+        packageHash = generated.value.checksums.package;
+        exportManifest = this.artifactVault.store(exportBytes).manifest;
+      } finally {
+        original.fill(0);
+        exportBytes?.fill(0);
+      }
+      const artifactEventId = eventIdForRequest(
+        internalAuthorityRequestId(request.id, "credential-export-artifact-manifest")
+      );
+      await this.ensureInternalArtifactManifest(exportManifest!, artifactEventId, now, {
+        credentialPassportId: passportId,
+        packageHash: packageHash!
+      });
+      const response = {
+        record: {
+          domain: storedPassport.domain,
+          recordId: storedPassport.recordId,
+          version: storedPassport.version,
+          valueHash: storedPassport.valueHash,
+          recordedAt: storedPassport.recordedAt
+        },
+        packageHash: packageHash!,
+        artifact: exportManifest!
+      };
+      await this.recordCommand(request, requestHash, eventId, response, now);
+      return boundedAuthorityResponse(response, "Credential passport export");
+    }
+
+    if (request.operation === "artifact-export") {
+      const payload = exactObjectPayload(request.payload, ["manifest", "outputPath"]);
+      const response = this.exportArtifactToFile(payload["manifest"], payload["outputPath"]);
+      await this.recordCommand(request, requestHash, eventId, response, now);
+      return response;
+    }
+
+    if (request.operation === "taxonomy-snapshot-import-artifact") {
+      const payload = exactObjectPayload(request.payload, ["expectedVersion", "manifest"]);
+      const manifest = payload["manifest"] as ArtifactManifest;
+      const snapshot = this.readArtifactJson<TaxonomySnapshot>(
+        manifest,
+        "Taxonomy snapshot artifact",
+        MAX_TAXONOMY_ARTIFACT_BYTES
+      );
+      assertSchema("taxonomy-snapshot", snapshot);
+      const validation = validateTaxonomySnapshot(snapshot);
+      if (!validation.valid) {
+        throw new Error(`Taxonomy snapshot artifact is invalid: ${validation.errors.join(", ")}`);
+      }
+      const stored = await this.decisionIntelligence.recordTaxonomySnapshot({
+        value: snapshot,
+        expectedVersion: requiredVersion(payload["expectedVersion"]),
+        authorityRequestId: internalAuthorityRequestId(request.id, "taxonomy-snapshot-record"),
+        now
+      });
+      const response = {
+        record: {
+          domain: stored.domain,
+          recordId: stored.recordId,
+          version: stored.version,
+          valueHash: stored.valueHash,
+          recordedAt: stored.recordedAt
+        },
+        snapshot: {
+          snapshotId: snapshot.snapshotId,
+          source: snapshot.source,
+          version: snapshot.version,
+          conceptCount: snapshot.conceptCount,
+          contentHash: snapshot.contentHash,
+          provenanceHash: snapshot.provenanceHash
+        },
+        artifact: manifest
+      };
+      await this.recordCommand(request, requestHash, eventId, response, now);
+      return response;
+    }
+
+    if (request.operation === "credential-import-artifact") {
+      if (!this.artifactVault) throw new Error("Artifact vault is unavailable in this authority runtime");
+      const payload = exactObjectPayload(request.payload, [
+        "expectedSubjectId",
+        "expectedVersion",
+        "format",
+        "importedAt",
+        "manifest"
+      ]);
+      const manifest = payload["manifest"] as ArtifactManifest;
+      assertArtifactManifest(manifest);
+      assertSchema("artifact-manifest", manifest);
+      const format = credentialInputFormat(payload["format"]);
+      const expectedSubjectId = payload["expectedSubjectId"];
+      if (expectedSubjectId !== null && (typeof expectedSubjectId !== "string" || expectedSubjectId.trim().length === 0)) {
+        throw new Error("Expected credential subject id must be null or a non-empty string");
+      }
+      const plaintext = this.artifactVault.read(manifest);
+      let imported: Awaited<ReturnType<typeof importCredential>>;
+      try {
+        imported = await importCredential(
+          { content: plaintext, format },
+          {
+            cryptoVerifier: createCredentialCryptoVerifier({
+              allowedAlgorithms: ["RS256", "PS256", "ES256", "EdDSA"]
+            }),
+            documentLoader: createLocalCredentialDocumentLoader()
+          },
+          {
+            now: canonicalDate(payload["importedAt"], "Credential import time"),
+            allowedAlgorithms: ["RS256", "PS256", "ES256", "EdDSA"],
+            ...(expectedSubjectId === null ? {} : { expectedSubjectId })
+          }
+        );
+      } finally {
+        plaintext.fill(0);
+      }
+      if (
+        imported.entry.original.hash !== manifest.contentHash
+        || imported.entry.original.byteLength !== manifest.sizeBytes
+      ) {
+        throw new Error("Credential passport original is not bound to the encrypted artifact manifest");
+      }
+      const stored = await this.decisionIntelligence.recordCredentialPassport({
+        value: imported.entry,
+        expectedVersion: requiredVersion(payload["expectedVersion"]),
+        authorityRequestId: internalAuthorityRequestId(request.id, "credential-passport-record"),
+        now
+      });
+      const response = {
+        record: {
+          domain: stored.domain,
+          recordId: stored.recordId,
+          version: stored.version,
+          valueHash: stored.valueHash,
+          recordedAt: stored.recordedAt
+        },
+        passport: {
+          passportEntryId: imported.entry.passportEntryId,
+          canonicalCredentialHash: imported.entry.canonicalCredentialHash,
+          summary: imported.entry.summary,
+          verification: imported.entry.verification
+        },
+        artifact: manifest
+      };
+      await this.recordCommand(request, requestHash, eventId, response, now);
+      return response;
+    }
+
+    const decisionRecordPayload = (): Record<string, unknown> =>
+      exactObjectPayload(request.payload, ["expectedVersion", "value"]);
+    switch (request.operation) {
+      case "source-observation-record": {
+        const payload = decisionRecordPayload();
+        assertInlineAuthorityValue(payload["value"]);
+        return this.decisionIntelligence.recordSourceObservation({
+          value: payload["value"] as SourceObservation,
+          expectedVersion: requiredVersion(payload["expectedVersion"]),
+          authorityRequestId: request.id,
+          now
+        });
+      }
+      case "opportunity-truth-record": {
+        const payload = decisionRecordPayload();
+        assertInlineAuthorityValue(payload["value"]);
+        return this.decisionIntelligence.recordOpportunityTruth({
+          value: payload["value"] as OpportunityTruthRecord,
+          expectedVersion: requiredVersion(payload["expectedVersion"]),
+          authorityRequestId: request.id,
+          now
+        });
+      }
+      case "liveness-assessment-record": {
+        const payload = decisionRecordPayload();
+        assertInlineAuthorityValue(payload["value"]);
+        return this.decisionIntelligence.recordLivenessAssessment({
+          value: payload["value"] as LivenessAssessment,
+          expectedVersion: requiredVersion(payload["expectedVersion"]),
+          authorityRequestId: request.id,
+          now
+        });
+      }
+      case "dedupe-result-record": {
+        const payload = decisionRecordPayload();
+        assertInlineAuthorityValue(payload["value"]);
+        return this.decisionIntelligence.recordDedupeResult({
+          value: payload["value"] as DedupeResult,
+          expectedVersion: requiredVersion(payload["expectedVersion"]),
+          authorityRequestId: request.id,
+          now
+        });
+      }
+      case "taxonomy-snapshot-record": {
+        throw new Error("Taxonomy snapshots must use taxonomy-snapshot-import-artifact");
+      }
+      case "taxonomy-mapping-record": {
+        const payload = decisionRecordPayload();
+        assertInlineAuthorityValue(payload["value"]);
+        return this.decisionIntelligence.recordTaxonomyMappingSet({
+          value: payload["value"] as TaxonomyMappingSet,
+          expectedVersion: requiredVersion(payload["expectedVersion"]),
+          authorityRequestId: request.id,
+          now
+        });
+      }
+      case "assurance-case-record": {
+        const payload = decisionRecordPayload();
+        assertInlineAuthorityValue(payload["value"]);
+        return this.decisionIntelligence.recordCareerAssuranceCase({
+          value: payload["value"] as CareerAssuranceCase,
+          expectedVersion: requiredVersion(payload["expectedVersion"]),
+          authorityRequestId: request.id,
+          now
+        });
+      }
+      case "credential-passport-record": {
+        throw new Error("Credential passports must use credential-import-artifact");
+      }
+      case "credential-mapping-record": {
+        const payload = decisionRecordPayload();
+        assertInlineAuthorityValue(payload["value"]);
+        return this.decisionIntelligence.recordCredentialMappingPlan({
+          value: payload["value"] as CredentialMappingPlan,
+          expectedVersion: requiredVersion(payload["expectedVersion"]),
+          authorityRequestId: request.id,
+          now
+        });
+      }
+      case "campaign-record": {
+        const payload = decisionRecordPayload();
+        const record = await new ProductRepositories(this.store).campaigns.put({
+          value: payload["value"] as CampaignRecord,
+          expectedVersion: requiredVersion(payload["expectedVersion"]),
+          operationId: request.id,
+          eventId,
+          now,
+          authority: { requestId: request.id, requestHash, operation: request.operation }
+        });
+        this.recordPersistedResponse(request, requestHash, eventId, record, now);
+        return record;
+      }
+      case "outcome-record": {
+        const payload = decisionRecordPayload();
+        const record = await new ProductRepositories(this.store).outcomes.put({
+          value: payload["value"] as CareerOutcomeEvent,
+          expectedVersion: requiredVersion(payload["expectedVersion"]),
+          operationId: request.id,
+          eventId,
+          now,
+          authority: { requestId: request.id, requestHash, operation: request.operation }
+        });
+        this.recordPersistedResponse(request, requestHash, eventId, record, now);
+        return record;
+      }
+      case "campaign-archive":
+      case "outcome-archive": {
+        const payload = exactObjectPayload(request.payload, ["expectedVersion", "recordId"]);
+        const domain = request.operation === "campaign-archive" ? "campaigns" : "outcomes";
+        const record = await new ProductRepositories(this.store).repository(domain).archive({
+          recordId: requiredString(payload["recordId"], `${domain} record id`),
+          expectedVersion: requiredVersion(payload["expectedVersion"]),
+          operationId: request.id,
+          eventId,
+          now,
+          authority: { requestId: request.id, requestHash, operation: request.operation }
+        });
+        this.recordPersistedResponse(request, requestHash, eventId, record, now);
+        return record;
+      }
+    }
 
     if (request.operation === "daemon-stop") {
       objectPayload(request.payload);
@@ -625,6 +1879,9 @@ export class RuntimeAuthority {
       if (domain === "applications") {
         throw new Error("Application records must use tracker lifecycle operations");
       }
+      if (domain === "campaigns" || domain === "outcomes") {
+        throw new Error(`${domain} records must use dedicated authority operations`);
+      }
       if (domain === "profiles" && typeof value === "object" && value !== null) {
         const twinId = (value as { twinId?: unknown }).twinId;
         if (typeof twinId === "string" && twinId.startsWith("LOCAL-TWIN-")) {
@@ -715,6 +1972,9 @@ export class RuntimeAuthority {
       const domain = productDomain(payload["domain"]);
       if (domain === "applications") {
         throw new Error("Application records must use tracker lifecycle operations");
+      }
+      if (domain === "campaigns" || domain === "outcomes") {
+        throw new Error(`${domain} records must use dedicated authority operations`);
       }
       const recordId = requiredString(payload["recordId"], "Domain record id");
       const expectedVersion = requiredVersion(payload["expectedVersion"]);

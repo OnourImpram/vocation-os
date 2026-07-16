@@ -1,10 +1,9 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   buildAdvisoryPrompt,
   createRemoteClient,
-  generateAdvisoryNote,
-  type AdvisoryContext,
-  type LlmClient
+  createRemoteClientFromEnv,
+  type AdvisoryContext
 } from "../../src/advisor.js";
 import { demoGraph } from "../fixtures.js";
 
@@ -21,52 +20,36 @@ function context(overrides: Partial<AdvisoryContext> = {}): AdvisoryContext {
   };
 }
 
-function response(body: string, init: ResponseInit = {}): Response {
-  return new Response(body, {
-    status: 200,
-    headers: { "content-type": "application/json" },
-    ...init
-  });
-}
-
-function remoteClient(fetchImpl: typeof fetch): LlmClient {
-  return createRemoteClient({
+function legacyOptions() {
+  return {
     endpoint: "https://advisor.example.test/v1/complete",
     apiKey: "test-secret-not-real",
     model: "test-model",
-    allowedHosts: ["advisor.example.test"],
-    fetchImpl
-  });
+    allowedHosts: ["advisor.example.test"]
+  };
 }
 
 describe("remote advisory boundary", () => {
-  it("requires an allowlisted endpoint host", () => {
-    expect(() =>
-      createRemoteClient({
-        endpoint: "https://advisor.example.test/v1/complete",
-        apiKey: "test-secret-not-real",
-        model: "test-model",
-        allowedHosts: ["different.example.test"]
-      })
-    ).toThrow("not allowlisted");
+  afterEach(() => {
+    vi.unstubAllEnvs();
   });
 
-  it("rejects insecure non localhost endpoints", () => {
-    expect(() =>
-      createRemoteClient({
-        endpoint: "http://advisor.example.test/v1/complete",
-        apiKey: "test-secret-not-real",
-        model: "test-model",
-        allowedHosts: ["advisor.example.test"]
-      })
-    ).toThrow("must use HTTPS");
+  it("fails closed instead of constructing the legacy remote transport", () => {
+    expect(() => createRemoteClient(legacyOptions())).toThrow("governed model gateway");
   });
 
-  it("requires explicit public egress approval before calling fetch", async () => {
-    const fetchImpl = vi.fn<typeof fetch>();
-    const client = remoteClient(fetchImpl);
-    await expect(generateAdvisoryNote(client, context({ dataClassification: "sensitive" }))).rejects.toThrow("explicit egress approval");
-    expect(fetchImpl).not.toHaveBeenCalled();
+  it("returns no remote client when the legacy environment is absent", () => {
+    vi.stubEnv("ADVISOR_ENDPOINT", "");
+    vi.stubEnv("ADVISOR_API_KEY", "");
+    vi.stubEnv("ADVISOR_MODEL", "");
+    expect(createRemoteClientFromEnv()).toBeNull();
+  });
+
+  it("fails closed when legacy remote environment variables are configured", () => {
+    vi.stubEnv("ADVISOR_ENDPOINT", "https://advisor.example.test/v1/complete");
+    vi.stubEnv("ADVISOR_API_KEY", "test-secret-not-real");
+    vi.stubEnv("ADVISOR_MODEL", "test-model");
+    expect(() => createRemoteClientFromEnv()).toThrow("governed model gateway");
   });
 
   it("excludes private and unverified claims from a remote prompt", () => {
@@ -84,44 +67,4 @@ describe("remote advisory boundary", () => {
     expect(prompt).not.toContain("Private operator detail");
   });
 
-  it("sends only through a no redirect JSON request", async () => {
-    const note = {
-      noteId: "ADV-REMOTE-001",
-      mode: "/deep-fit",
-      advisoryOnly: true,
-      reversibilityTag: "R0",
-      narrative: "Review the evidence and preserve option value.",
-      theoryIds: ["PEFIT"],
-      citedClaimIds: ["CLM-DEMO-001"],
-      disclaimers: [],
-      generatedAt: "2026-07-10T00:00:00.000Z"
-    };
-    const fetchImpl: typeof fetch = async (_input, init) => {
-      expect(init?.redirect).toBe("error");
-      expect(init?.headers).toMatchObject({ accept: "application/json" });
-      return response(JSON.stringify({ text: JSON.stringify(note) }));
-    };
-    const result = await generateAdvisoryNote(remoteClient(fetchImpl), context());
-    expect(result.note.reversibilityTag).toBe("R0");
-    expect(result.clientName).toBe("remote-endpoint");
-  });
-
-  it("rejects a non JSON response", async () => {
-    const fetchImpl: typeof fetch = async () => response("plain text", { headers: { "content-type": "text/plain" } });
-    await expect(generateAdvisoryNote(remoteClient(fetchImpl), context())).rejects.toThrow("must return application/json");
-  });
-
-  it("rejects an oversized response", async () => {
-    const fetchImpl: typeof fetch = async () => response(JSON.stringify({ text: "x".repeat(5000) }));
-    const client = createRemoteClient({
-      endpoint: "https://advisor.example.test/v1/complete",
-      apiKey: "test-secret-not-real",
-      model: "test-model",
-      allowedHosts: ["advisor.example.test"],
-      maxResponseBytes: 100,
-      fetchImpl
-    });
-    await expect(generateAdvisoryNote(client, context())).rejects.toThrow("byte limit");
-  });
 });
-

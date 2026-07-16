@@ -21,6 +21,10 @@
 7. Accidental publication of private profile artifacts.
 8. A stale process, replayed IPC request, or second local writer.
 9. A malformed PDF or DOCX designed to exhaust parser resources or carry active content.
+10. SSRF, redirect rebinding, oversized responses, or poisoned discovery payloads.
+11. False liveness, unsafe dedupe, taxonomy poisoning, or stale assurance evidence.
+12. A forged, expired, revoked, wrong-subject, or algorithm-confused credential.
+13. A local UI, MCP client, agent integration, or model provider requesting excess authority.
 
 ## Enforced Mitigations
 
@@ -50,6 +54,14 @@ PDF and DOCX imports use format and size limits, archive and PDF structure prefl
 
 Worker phase advancement requires a registered actor manifest and the phase specific read, write, or execute capability.
 
+Remote discovery is denied unless a signed grant binds host, provider, purpose, retention, and expiry. The fetch broker revalidates DNS and redirects, blocks private address space, bounds content and time, enforces content types and rate policy, and records an egress manifest.
+
+Opportunity truth separates observed, inferred, conflicting, stale, and unresolved fields. Liveness requires positive provider identity and application state evidence. Dedupe ambiguity is conservatively projected to human review. Taxonomy mappings retain source snapshot and deterministic mapping provenance.
+
+Credential import separates schema, signature, issuer, subject, temporal, revocation, and refresh checks. Compact JWS and `eddsa-rdfc-2022` verification bind the credential bytes to a permitted algorithm, verification method, and issuer-authorized assertion relationship. Standard JSON LD contexts and `did:key` material resolve from a pinned local trust set. Other issuer material must pass through an injected bounded loader. Multiple Data Integrity proofs, missing controller evidence, unsupported cryptosuites, altered content, and unauthorized keys fail closed. Mapping a credential to a career claim requires explicit review and defaults to nonpublic, non-automation use. A verified signature is not treated as real-world claim verification.
+
+The TUI, workbench, MCP, agent skill, and model gateway are clients of daemon authority. They cannot write protected decision records or enable a production execution adapter. The loopback workbench uses bearer, CSRF, capability, and origin controls.
+
 Privacy and brand scans operate as release gates.
 
 ## Residual Risks
@@ -70,6 +82,8 @@ The pure policy API is not an isolation boundary against malicious code in the s
 
 PDF.js requires a pinned native canvas addon. Node permissions and network guards reduce the child process surface, but native code means the parser is not equivalent to a container, low integrity operating system token, or virtual machine. Untrusted documents should remain within the configured size and structure limits, and parser dependencies require ongoing security review.
 
-The initial opportunity concept matcher is deterministic and limited.
+The deterministic taxonomy matcher is bounded by the imported ESCO, O*NET, and local snapshot coverage. It is not a learned labor market model.
 
-Desktop workbench integration, plugin process sandboxing, production browser collectors, external checkpoint archival, and recovery drills remain future work.
+The default daemon credential resolver is offline and supports pinned contexts plus `did:key`. Verifying HTTPS issuer material requires a separately governed document loader. Open Badges schema validation, status list resolution, and refresh remain independent checks and can leave a cryptographically valid credential incomplete.
+
+Plugin process sandboxing, a production browser extension, production execution and proof collectors, external checkpoint archival, independent timestamping, portable recovery drills, and live competitor baseline evidence remain future work.
