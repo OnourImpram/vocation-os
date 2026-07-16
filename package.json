@@ -93,6 +93,7 @@
     "brand:scan": "node scripts/brand-scan.mjs",
     "docs:check": "node scripts/docs-check.mjs",
     "workflow:check": "node scripts/workflow-check.mjs",
+    "native:dependency-boundary": "node scripts/native-dependency-boundary-check.mjs",
     "network-boundary:check": "node scripts/network-boundary-check.mjs",
     "catalog:check": "node scripts/catalog-check.mjs",
     "docs:theory-map": "tsx scripts/theory-map.ts",

@@ -184,7 +184,7 @@ fn node_executable() -> Result<PathBuf, BootstrapError> {
     }
     #[cfg(debug_assertions)]
     {
-        return find_program("node").ok_or(BootstrapError::Launcher);
+        find_program("node").ok_or(BootstrapError::Launcher)
     }
     #[cfg(not(debug_assertions))]
     {
@@ -300,7 +300,7 @@ fn read_envelope<R: Read>(mut input: R, limit: usize) -> Result<Vec<u8>, Bootstr
 }
 
 fn token_length(bytes: usize) -> usize {
-    (bytes * 8 + 5) / 6
+    (bytes * 8).div_ceil(6)
 }
 
 fn validate_target(

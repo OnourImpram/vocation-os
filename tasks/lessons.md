@@ -10,6 +10,10 @@ Normalize uncontrolled route input with bounded index and character operations i
 
 Desktop release validation requires the assets and native dependency lock that the platform build actually consumes. Keep the Tauri icon set, `Cargo.lock`, exact Rust toolchain, and `--locked` CI commands in the release contract.
 
+A target-specific transitive advisory must not be silenced with an unguarded allowlist. Narrow the shipped platform contract, prove the package is absent from the supported target graph, bind the exception to the exact advisory and upstream path, and fail when dependency drift makes that reasoning stale.
+
+Run Rust tests and Clippy with denied warnings before treating native validation as complete. A successful compile or test run does not prove the lint gate will pass.
+
 ## 2026-07-14
 
 Keep source availability, parsed field availability, and action route liveness as separate contracts. A reachable provider payload may support extracted fields while the opportunity remains unresolved because a valid application endpoint is absent. Encode that distinction explicitly instead of weakening source observation invariants.

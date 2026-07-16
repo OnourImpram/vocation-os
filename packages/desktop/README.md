@@ -21,7 +21,7 @@ Release builds use one of these trusted launch paths.
 
 Shell scripts such as `.cmd`, `.bat`, and `.ps1` are rejected. If `VOCATION_OS_CLI_PATH` names a JavaScript file in a release build, `VOCATION_OS_NODE_PATH` must name an absolute Node executable. Debug builds can use the repository `dist/cli.js` and resolve Node from `PATH`.
 
-The current Tauri bundle does not yet declare a native sidecar. Distribution packaging must provide the adjacent launcher or configure both absolute paths. Missing launch authority exits without creating a window.
+The current Tauri bundle does not yet declare a native sidecar. Distribution packaging must provide the adjacent launcher or configure both absolute paths. Missing launch authority exits without creating a window. Version 0.6 validates and bundles only Windows `msi` and `nsis` targets. Linux and macOS native artifacts remain blocked until their dependency and packaging contracts receive equivalent release evidence.
 
 ## Commands
 
@@ -34,4 +34,4 @@ npm run dev --workspace @vocation-os/desktop
 
 The first command builds the canonical React workbench and runs desktop validation. Native commands require Rust `1.77.2` or newer and the platform prerequisites documented by Tauri.
 
-`scripts/validate-contract.mjs` and the Node tests run without Rust. Native Rust tests, formatting, and Clippy are enforced by the desktop workflow.
+`scripts/validate-contract.mjs` and the Node tests run without Rust. Native Rust tests, formatting, Clippy, and the Windows-only dependency boundary are enforced by the desktop workflow.

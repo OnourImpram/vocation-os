@@ -51,6 +51,8 @@ jobs:
         run: |
           rustup toolchain install 1.97.1 --profile minimal --component rustfmt,clippy
           rustup default 1.97.1
+      - name: Validate native dependency target boundary
+        run: npm run native:dependency-boundary
       - name: Build and validate desktop package
         run: npm run build --workspace @vocation-os/desktop
       - name: Check Rust formatting

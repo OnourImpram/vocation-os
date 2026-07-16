@@ -34,6 +34,13 @@ describe("desktop secure bootstrap contract", () => {
     expect(existsSync(resolve(tauriRoot, "capabilities", "main.json"))).toBe(false);
   });
 
+  it("fails closed to the Windows installer targets validated by this release", () => {
+    const config = json(resolve(tauriRoot, "tauri.conf.json"));
+    const bundle = config.bundle as Record<string, unknown>;
+
+    expect(bundle.targets).toEqual(["msi", "nsis"]);
+  });
+
   it("locks the inert local asset down without a daemon network allowance", () => {
     const config = json(resolve(tauriRoot, "tauri.conf.json"));
     const app = config.app as Record<string, unknown>;
