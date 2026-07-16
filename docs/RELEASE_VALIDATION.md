@@ -37,6 +37,8 @@ An independent read-only review inspected the complete v0.6.0 diff against `orig
 
 The release remains source first. GitHub artifact attestation, SBOM attestation, and durable release evidence are produced by the tag workflow. No npm publish, native code-signing certificate, production auto apply adapter, independent compliance certification, or competitor superiority claim is part of this release.
 
+GitHub pull request [#14](https://github.com/OnourImpram/vocation-os/pull/14) publishes the hash-verified release tree for protected-branch review and remote release gates.
+
 ## v0.5.0 Product Foundation Evidence
 
 Version 0.5.0 adds product operations without enabling production auto apply. The release gate covers the following executable contracts.

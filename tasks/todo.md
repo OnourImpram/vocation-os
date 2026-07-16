@@ -11,7 +11,7 @@
 - [x] Add Career Assurance Case, Credential Passport, Interview, Network, Offer, and outcome learning systems.
 - [x] Expand VocationBench and pass safety, benchmark, coverage, packaging, privacy, and release gates.
 - [x] Complete an independent adversarial review with no open P0 or P1 finding.
-- [ ] Publish one reviewable pull request without npm publication.
+- [x] Publish one reviewable pull request without npm publication.
 
 ### v0.6.0 Baseline Evidence
 
@@ -26,6 +26,7 @@
 - 2026-07-17: final local `npm run safe:publish-check` passed with 103 test files, 676 tests, 53 schemas, 19 evaluator cases, 23 citation records, a 530 component SBOM, 2 Astro pages, external CLI smoke, and a clean production tarball install.
 - 2026-07-17: combined coverage passed at 80.91 percent statements, 71.62 percent branches, 91.77 percent functions, and 85.21 percent lines.
 - 2026-07-17: independent read-only review inspected the complete diff and reported no open P0 or P1 finding. Its sandbox could not execute Node or npm, so the static verdict supplements the complete local release gate.
+- 2026-07-17: pull request `#14` published the hash-verified release branch for protected-branch review. No npm publication was performed.
 
 - [x] Build clean public repo boundary.
 - [x] Enforce privacy and brand scans.
