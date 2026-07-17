@@ -1,5 +1,32 @@
 # Release Validation
 
+## v0.6.1 Security Patch Evidence
+
+Date: 2026-07-17
+
+Base: clean `origin/main` checkout at `5196c15091f5e1c6b375a4d0cfc15f176bebaaf1`.
+
+The post-merge CodeQL analysis for `v0.6.0` identified a high-severity file-system race in artifact export recovery. Existing targets were checked with `lstat` and then read through the path again. Version `0.6.1` opens the target once, verifies regular-file and path identity against the descriptor, reads through that descriptor, rechecks descriptor metadata and path binding, and rejects symlink, replacement, size, metadata, or content drift.
+
+| Check | Result |
+| --- | --- |
+| Focused authority regression | 6 of 6 passed, including valid descriptor-bound existing-target recovery |
+| Agent bundle integrity | 7 of 7 workspace contract tests passed with a regenerated skill checksum |
+| MCP subprocess lifecycle | 3 of 3 isolated stdio smoke tests passed |
+| Privacy, brand, workflow, network, catalog | PASS |
+| Strict TypeScript and workspace builds | PASS |
+| Combined Vitest | 103 files, 680 tests passed |
+| Coverage | 80.95 statements, 71.67 branches, 91.86 functions, 85.24 lines |
+| JSON Schema | 53 schemas valid |
+| Evaluator | 19 of 19 passed |
+| Citation contract | 23 offline records passed |
+| SBOM | 530 CycloneDX components parsed |
+| Astro | 2 pages built |
+| Package | Real tarball scan, production-only install, bundled SDK, external CLI, and bounded PDF and DOCX parser smokes passed |
+| Dependency audit | Zero npm vulnerabilities reported |
+
+The complete `npm run safe:publish-check` passed in an authorized local run because `selfcheck` intentionally writes and removes a probe under the user's local VocationOS state boundary. Remote CodeQL, Ubuntu, Windows, native Rust, dependency review, and protected-branch checks remain mandatory before merge. The GitHub release remains source first and does not publish to npm.
+
 ## v0.6.0 Decision Intelligence Evidence
 
 Date: 2026-07-17

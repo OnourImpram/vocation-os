@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.6.1
+
+Security patch release. No npm publication or production ATS execution adapter is included.
+
+### Security
+
+1. Replaced artifact export recovery's path check then path read with a single open file descriptor.
+2. Bound the opened descriptor to the current regular-file path identity before and after reading.
+3. Rejected path replacement, symbolic links, in-place metadata changes, size drift, and content hash mismatches.
+4. Added regression coverage for valid descriptor-bound recovery and made zero open CodeQL alerts a final release gate.
+
+### Changed
+
+1. Aligned root, private workspace, Tauri, MCP, agent skill, citation, and release metadata on `0.6.1`.
+2. Preserved the complete `0.6.0` decision intelligence feature set and source-first distribution boundary.
+
 ## 0.6.0
 
 Released as a source-first GitHub decision intelligence release. No npm publication or production ATS execution adapter is included.

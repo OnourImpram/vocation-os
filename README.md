@@ -16,13 +16,13 @@ Website: [onourimpram.github.io/vocation-os](https://onourimpram.github.io/vocat
 
 ## Current Release
 
-Version 0.6.0 is the source-first decision intelligence release.
+Version 0.6.1 is the source-first decision intelligence release with descriptor-bound artifact export recovery.
 
 It adds 36 contract-tested discovery adapters, a governed network boundary, 278 identity-confirmed career portal routes, source observations, opportunity truth, liveness, conservative deduplication, versioned ESCO and O*NET normalization, campaign and portfolio intelligence, an Ink review queue, a React loopback workbench, Career Assurance Case reports, Credential Passport verification, interview, network, offer, and outcome foundations, a read-first MCP server, a canonical agent skill, verified agent integration lifecycle tools, and a policy-bound model gateway.
 
 `vocationd` remains the single writer for consequential local mutations. Discovery, truth, taxonomy, assurance, credential, campaign, application, approval, receipt, and outcome records use dedicated authenticated operations with idempotency and encrypted event history. Remote discovery is off by default and requires a signed, scoped `NetworkAccessGrant`. The portal catalog keeps 209 unresolved routes outside the verified set instead of upgrading failed checks into evidence.
 
-Version 0.6.0 still ships no production auto apply adapter. Its compiled execution boundary permits only `local-fixture` with a synthetic profile. Adding an adapter string, agent integration, MCP client, or model provider cannot grant production execution authority.
+Version 0.6.1 still ships no production auto apply adapter. Its compiled execution boundary permits only `local-fixture` with a synthetic profile. Adding an adapter string, agent integration, MCP client, or model provider cannot grant production execution authority.
 
 ## Why It Exists
 
@@ -54,7 +54,7 @@ Most career tooling optimizes output volume. VocationOS optimizes decision quali
 
 ## Quick Start
 
-Version 0.6.0 is a source-first GitHub release. Registry installation remains intentionally unavailable until the typed SDK and root package complete a separate npm release pass.
+Version 0.6.1 is a source-first GitHub release. Registry installation remains intentionally unavailable until the typed SDK and root package complete a separate npm release pass.
 
 ```bash
 npm ci

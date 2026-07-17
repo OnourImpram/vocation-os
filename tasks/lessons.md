@@ -2,6 +2,10 @@
 
 ## 2026-07-17
 
+Do not infer that a successful CodeQL workflow means zero findings. Query the final commit's open code scanning alerts after analysis completes, and keep the release gate open until every supported P0 or P1 finding is fixed or evidence-bound as not applicable.
+
+Apply descriptor-bound TOCTOU rules to recovery and idempotency branches as rigorously as first-write branches. A safe exclusive create does not make the existing-target verification path safe.
+
 Build internal type providers such as the SDK before any dependent workspace typecheck. A release gate must also be reproduced from a tree without ignored `dist` output so stale local builds cannot hide dependency ordering defects.
 
 A size or path check followed by a second path based read is a TOCTOU boundary. Open once, validate the file descriptor, and read from that same descriptor.

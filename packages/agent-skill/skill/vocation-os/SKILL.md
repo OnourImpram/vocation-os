@@ -5,7 +5,7 @@ license: MIT
 compatibility: Requires a local VocationOS daemon or MCP endpoint. Side effects require a daemon capability and a scoped approval.
 metadata:
   author: VocationOS
-  version: "0.6.0"
+  version: "0.6.1"
 ---
 
 # VocationOS

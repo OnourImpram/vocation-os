@@ -10,6 +10,10 @@ Public release is blocked if any private artifact, credential, local database, r
 
 If a previous public repository contained secrets, rotate affected credentials and rewrite history before release.
 
+A successful CodeQL workflow does not by itself prove that the analysis produced zero findings. The final commit must have no open P0 or P1 code scanning alert before release. Any not-applicable classification requires a concrete reachability or platform-boundary proof and a recorded dismissal rationale.
+
+Existing artifact export targets are opened once and verified through the same file descriptor. Path identity, regular-file status, metadata stability, size, and content hash must remain bound throughout recovery.
+
 ## Automation Boundaries
 
 VocationOS must not bypass CAPTCHA, anti bot systems, payment prompts, identity checks, or site terms. It must not fabricate credentials, licenses, publications, employers, or eligibility.

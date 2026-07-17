@@ -1,6 +1,6 @@
 {
   "name": "@vocation-os/workbench",
-  "version": "0.6.0",
+  "version": "0.6.1",
   "description": "Secure loopback client contracts and route view models for the VocationOS workbench.",
   "type": "module",
   "license": "MIT",

@@ -1,6 +1,6 @@
 {
   "name": "vocation-os",
-  "version": "0.6.0",
+  "version": "0.6.1",
   "description": "Evidence grounded career decision safety for high agency operators.",
   "type": "module",
   "packageManager": "npm@10.9.8",
