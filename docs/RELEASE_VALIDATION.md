@@ -25,7 +25,13 @@ The post-merge CodeQL analysis for `v0.6.0` identified a high-severity file-syst
 | Package | Real tarball scan, production-only install, bundled SDK, external CLI, and bounded PDF and DOCX parser smokes passed |
 | Dependency audit | Zero npm vulnerabilities reported |
 
-The complete `npm run safe:publish-check` passed in an authorized local run because `selfcheck` intentionally writes and removes a probe under the user's local VocationOS state boundary. Remote CodeQL, Ubuntu, Windows, native Rust, dependency review, and protected-branch checks remain mandatory before merge. The GitHub release remains source first and does not publish to npm.
+The complete `npm run safe:publish-check` passed in an authorized local run because `selfcheck` intentionally writes and removes a probe under the user's local VocationOS state boundary.
+
+Pull request [#16](https://github.com/OnourImpram/vocation-os/pull/16) passed CodeQL, dependency review, Ubuntu, Windows, and native Rust checks before merge. Merge commit `34a82abb4c756ba64e9bba4f994613be738ea6f4` then passed the main-branch security, CI, native Rust, and Pages workflows. CodeQL alert `#9` changed from `open` to `fixed`, and repository queries returned zero open code scanning, Dependabot, and secret scanning alerts.
+
+Release workflow [29555795072](https://github.com/OnourImpram/vocation-os/actions/runs/29555795072) reran the complete publish gate and produced `vocation-os-0.6.1.tgz` plus the CycloneDX SBOM. Downloaded SHA256 digests matched the GitHub release metadata: `a4c02fd9959f495bf008886a3b195a53b7ade7d8c72ed5477cf32f2a07f3543c` for the package and `43221957476bb8bb5bfcde2b225b9deb9fae761a0a3cee1e606ee04fc2889290` for the SBOM. One SLSA provenance attestation and one CycloneDX SBOM attestation verified against `.github/workflows/release-evidence.yml` and `refs/tags/v0.6.1`. The live site returned HTTP 200.
+
+The [v0.6.1 GitHub release](https://github.com/OnourImpram/vocation-os/releases/tag/v0.6.1) remains source first and does not publish to npm.
 
 ## v0.6.0 Decision Intelligence Evidence
 
