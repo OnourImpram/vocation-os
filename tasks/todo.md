@@ -6,8 +6,8 @@
 - [x] Replace path-based recovery reads with descriptor-bound verification.
 - [x] Add focused recovery regression coverage.
 - [x] Pass strict TypeScript, the complete local release gate, and focused security regressions.
-- [ ] Pass CodeQL and all protected-branch checks on the exact release commit.
-- [ ] Merge the patch, publish an attested `v0.6.1` GitHub release, and verify zero open security alerts.
+- [x] Pass CodeQL and all protected-branch checks on the exact release commit.
+- [x] Merge the patch, publish an attested `v0.6.1` GitHub release, and verify zero open security alerts.
 
 ## v0.6.0 Market Leadership Mega Release
 
