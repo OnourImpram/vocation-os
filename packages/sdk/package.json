@@ -23,6 +23,6 @@
     "node": ">=22.13.0"
   },
   "devDependencies": {
-    "typescript": "^5.8.2"
+    "typescript": "^7.0.2"
   }
 }
