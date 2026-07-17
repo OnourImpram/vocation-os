@@ -1,6 +1,6 @@
 {
   "name": "@vocation-os/provider-sdk",
-  "version": "0.6.0",
+  "version": "0.6.1",
   "description": "Typed, broker-mediated provider contracts for VocationOS discovery integrations.",
   "type": "module",
   "license": "MIT",

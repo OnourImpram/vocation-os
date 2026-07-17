@@ -1,5 +1,14 @@
 import { decideAutoApply, enableAutoApply, engageKillSwitch, rearmAutoApplyAuthorized } from "../auto-apply.js";
-import { existsSync, lstatSync, readFileSync, statSync, writeFileSync } from "node:fs";
+import {
+  closeSync,
+  existsSync,
+  fstatSync,
+  lstatSync,
+  openSync,
+  readFileSync,
+  statSync,
+  writeFileSync
+} from "node:fs";
 import path from "node:path";
 import {
   assertExecutableAdapter,
@@ -708,21 +717,60 @@ export class RuntimeAuthority {
     if (!parentMetadata.isDirectory()) throw new Error("Artifact export parent must be a directory");
 
     const verifyExisting = (): boolean => {
-      if (!existsSync(resolvedOutputPath)) return false;
-      const metadata = lstatSync(resolvedOutputPath);
-      if (metadata.isSymbolicLink() || !metadata.isFile()) {
-        throw new Error("Artifact export target must be a regular file and must not be a symbolic link");
-      }
-      if (metadata.size !== manifestValue.sizeBytes) {
-        throw new Error("Artifact export target already exists with different content");
-      }
-      const existing = readFileSync(resolvedOutputPath);
+      let descriptor: number;
       try {
-        if (sha256(existing) !== manifestValue.contentHash) {
+        descriptor = openSync(resolvedOutputPath, "r");
+      } catch (error) {
+        if (errorCode(error) === "ENOENT") return false;
+        throw error;
+      }
+
+      try {
+        const openedMetadata = fstatSync(descriptor);
+        const assertPathBinding = (): void => {
+          let pathMetadata;
+          try {
+            pathMetadata = lstatSync(resolvedOutputPath);
+          } catch (error) {
+            if (errorCode(error) === "ENOENT") {
+              throw new Error("Artifact export target changed while it was being verified");
+            }
+            throw error;
+          }
+          if (pathMetadata.isSymbolicLink() || !pathMetadata.isFile() || !openedMetadata.isFile()) {
+            throw new Error("Artifact export target must be a regular file and must not be a symbolic link");
+          }
+          if (pathMetadata.dev !== openedMetadata.dev || pathMetadata.ino !== openedMetadata.ino) {
+            throw new Error("Artifact export target changed while it was being verified");
+          }
+        };
+
+        assertPathBinding();
+        if (openedMetadata.size !== manifestValue.sizeBytes) {
           throw new Error("Artifact export target already exists with different content");
         }
+
+        const existing = readFileSync(descriptor);
+        try {
+          if (sha256(existing) !== manifestValue.contentHash) {
+            throw new Error("Artifact export target already exists with different content");
+          }
+          const finalMetadata = fstatSync(descriptor);
+          if (
+            finalMetadata.dev !== openedMetadata.dev
+            || finalMetadata.ino !== openedMetadata.ino
+            || finalMetadata.size !== openedMetadata.size
+            || finalMetadata.mtimeMs !== openedMetadata.mtimeMs
+            || finalMetadata.ctimeMs !== openedMetadata.ctimeMs
+          ) {
+            throw new Error("Artifact export target changed while it was being verified");
+          }
+          assertPathBinding();
+        } finally {
+          existing.fill(0);
+        }
       } finally {
-        existing.fill(0);
+        closeSync(descriptor);
       }
       return true;
     };

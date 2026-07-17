@@ -1,6 +1,6 @@
 {
   "name": "@vocation-os/installer",
-  "version": "0.6.0",
+  "version": "0.6.1",
   "description": "Copy-only, checksum-gated local bundle installer for VocationOS integrations.",
   "type": "module",
   "license": "MIT",

@@ -26,7 +26,7 @@ CLI, typed SDK, TUI, loopback workbench, MCP, and desktop shell
   -> encrypted event and outcome store
 ```
 
-Version 0.6.0 exposes one command onboarding, governed discovery, truth and liveness assessment, dedupe review, taxonomy snapshots, campaign and portfolio intelligence, Career Assurance Case, Credential Passport, application operations, TUI review, a React loopback workbench, MCP, agent skills, and model gateway surfaces. Consequential local runtime mutations go through `vocationd` as the authenticated single writer. The Tauri shell is included and validated in a dedicated Windows workflow. A browser extension is not shipped.
+Version 0.6.1 exposes one command onboarding, governed discovery, truth and liveness assessment, dedupe review, taxonomy snapshots, campaign and portfolio intelligence, Career Assurance Case, Credential Passport, application operations, TUI review, a React loopback workbench, MCP, agent skills, and model gateway surfaces. Consequential local runtime mutations go through `vocationd` as the authenticated single writer. The Tauri shell is included and validated in a dedicated Windows workflow. A browser extension is not shipped.
 
 IPC uses length prefixed JSON frames with a one MiB frame limit, a bounded complete-frame queue, a bounded pending-handshake pool, and separate authenticated connection capacity. A random client nonce and server challenge authenticate with HMAC without transmitting the IPC secret. Per connection keys bind request and response MACs. Request sequences are monotonic. Mutating request IDs are durable and idempotent. Reusing an ID with different canonical parameters fails closed. Long-running commands expose their request ID when a response deadline expires so the same request can recover the canonical result. Receipt rows are reconstructable caches. Replay also verifies the deterministic event ID and the request, operation, response, and hash binding inside the authenticated event.
 
@@ -84,4 +84,4 @@ The model gateway validates payload hashes, provider policy, explicit egress dec
 
 These controls do not replace platform receipts, legal signatures, independent timestamp authorities, or external compliance review.
 
-The pure policy evaluator accepts injected state for deterministic tests. It is not a production side effect authority. Version 0.6.0 permits only a synthetic local fixture. Production config, ledger, approval registry, and adapter authority are behind `vocationd`, and real execution adapters still require a separate release gate.
+The pure policy evaluator accepts injected state for deterministic tests. It is not a production side effect authority. Version 0.6.1 permits only a synthetic local fixture. Production config, ledger, approval registry, and adapter authority are behind `vocationd`, and real execution adapters still require a separate release gate.

@@ -1,6 +1,6 @@
 {
   "name": "@vocation-os/agent-skill",
-  "version": "0.6.0",
+  "version": "0.6.1",
   "description": "Portable Open Agent Skills package and client integration manifests for VocationOS.",
   "type": "module",
   "license": "MIT",

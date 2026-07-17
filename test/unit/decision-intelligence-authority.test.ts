@@ -463,6 +463,16 @@ describe("decision intelligence daemon authority", () => {
     const exported = validateCredentialPassportExport(JSON.parse(readFileSync(outputPath, "utf8")) as unknown);
     expect(exported.checksums.package).toBe(generated.packageHash);
 
+    await expect(authority.execute({
+      ...writeCommand,
+      id: "REQ-CREDENTIAL-PASSPORT-WRITE-RECOVER-0001"
+    }, new Date(NOW.getTime() + 30_000))).resolves.toMatchObject({
+      outputPath,
+      contentHash: generated.artifact.contentHash,
+      sizeBytes: generated.artifact.sizeBytes,
+      recoveredExisting: true
+    });
+
     rmSync(outputPath);
     await expect(authority.execute(writeCommand, new Date(NOW.getTime() + 60_000))).resolves.toEqual(firstWrite);
     expect(validateCredentialPassportExport(JSON.parse(readFileSync(outputPath, "utf8")) as unknown)

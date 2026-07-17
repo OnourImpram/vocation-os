@@ -254,7 +254,7 @@ export class McpProtocolServer {
       serverInfo: {
         name: "vocation-os",
         title: "VocationOS",
-        version: "0.6.0",
+        version: "0.6.1",
         description: "Read-first local daemon tools with capability and scoped approval gates."
       },
       instructions: this.visibleTools().some((tool) => tool.security.effect === "side-effect")

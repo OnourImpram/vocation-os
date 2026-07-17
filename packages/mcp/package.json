@@ -1,6 +1,6 @@
 {
   "name": "@vocation-os/mcp",
-  "version": "0.6.0",
+  "version": "0.6.1",
   "description": "Read-first MCP tool contracts with enforced capability and approval gates for VocationOS.",
   "type": "module",
   "license": "MIT",

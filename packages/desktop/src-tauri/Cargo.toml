@@ -1,6 +1,6 @@
 [package]
 name = "vocation-os-desktop"
-version = "0.6.0"
+version = "0.6.1"
 description = "Fail-closed bootstrap for the authenticated local VocationOS workbench"
 authors = ["Onour Impram"]
 license = "MIT"
