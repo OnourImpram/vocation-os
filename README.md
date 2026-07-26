@@ -1,34 +1,80 @@
 # VocationOS
 
-Evidence grounded career decision safety for high agency operators.
+A local-first daemon for career decisions — apply, outreach, relocation, licensing — that will not execute a consequential action until the evidence and a scoped human approval check out, and will not record it as done without a trusted collector receipt.
 
 ![VocationOS decision control room banner](assets/vocationos-banner.png)
 
 [![CI](https://github.com/OnourImpram/vocation-os/actions/workflows/ci.yml/badge.svg)](https://github.com/OnourImpram/vocation-os/actions/workflows/ci.yml)
 [![Security analysis](https://github.com/OnourImpram/vocation-os/actions/workflows/security.yml/badge.svg)](https://github.com/OnourImpram/vocation-os/actions/workflows/security.yml)
-![TypeScript](https://img.shields.io/badge/TypeScript-strict-blue)
-![Safety](https://img.shields.io/badge/safety-adversarially%20tested-informational)
+[![TypeScript](https://img.shields.io/badge/TypeScript-strict-blue)](tsconfig.json)
+[![Safety](https://img.shields.io/badge/safety-adversarially%20tested-informational)](test/red-team)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
-VocationOS is a local first career decision safety system. It makes consequential automation conditional on evidence, reversibility, stakes, scoped human authorization, and verifiable completion evidence.
+You are about to let software do something that cannot be undone: send the outreach, submit the form, publish the claim. Afterwards there is usually no way to prove it acted only on evidence someone actually verified, that a human authorised that exact action rather than a similar one, or that the `submitted` it reported ever happened. If the controls are prompts and config flags, anything that can edit config can turn the safety off.
+
+VocationOS refuses to execute a consequential action unless every claim behind it traces to verified evidence and a human has signed an approval scoped to that exact action, and it refuses to mark that action complete without a trusted Ed25519 collector receipt. The refusal is logged either way.
+
+Two readers get something from it today: the operator running their own career decisions on their own machine, and the engineer reading it as a worked example of these controls enforced in compiled code and adversarial tests rather than in prompts. No production execution adapter ships in 0.6.1; what is implemented is the enforcement path, not application volume.
 
 Website: [onourimpram.github.io/vocation-os](https://onourimpram.github.io/vocation-os/)
 
-## Current Release
+A refusal, from the shipped demo command:
+
+```console
+$ node dist/cli.js demo-auto-apply-decision
+{
+  "allowed": false,
+  "blockedBy": "packet-evidence-not-verified",
+  "reasons": [
+    "packet-evidence-not-verified:CLM-DEMO-001",
+    "document-hash-mismatch:cv"
+  ],
+  "requiredApprovals": [],
+  "confirmationEvidenceRequired": true,
+  "ledgerActionId": "A-2026-573a3533-3db7-4594-b6a8-ef5d923d73ee"
+}
+```
+
+The `ledgerActionId` is new on each run. Other refusals on the same decision path carry `execution-adapter-not-shipped`, `local-fixture-requires-synthetic-profile`, and `high-stakes-requires-manual-review` (`src/auto-apply.ts:171-188`).
+
+Requires Node 22.13 or later; `.nvmrc` pins 22.23.1.
+
+```bash
+git clone https://github.com/OnourImpram/vocation-os.git && cd vocation-os && npm ci && npm run build && node dist/cli.js doctor
+```
+
+Version 0.6.1 is a source-first GitHub release. Registry installation remains intentionally unavailable until the typed SDK and root package complete a separate npm release pass.
+
+Then run the complete synthetic onboarding journey. The CLI starts the local daemon when needed:
+
+```bash
+node dist/cli.js init --demo
+```
+
+- **Config data cannot grant execution authority.** Pushing `greenhouse` into the operator's `adapterAllowlist` still returns `blockedBy: "execution-adapter-not-shipped"`, because the compiled shipped-adapter check runs before the allowlist is read — and that compiled list holds exactly one adapter, a local synthetic fixture.
+  Evidence: `src/auto-apply.ts:69,171-173,177-179`, `test/red-team/release-blockers.test.ts:149-165`
+
+- **The safety benchmark is a gate, not a report.** Corrupt one fixture label and the suite goes to `FAIL` with a changed deterministic run ID, and the CLI exits non-zero on any run that does not pass.
+  Evidence: `test/unit/vocation-bench.test.ts:138-153`, `src/cli.ts:493-497`, thresholds frozen at `src/benchmark/vocation-bench.ts:125-137`
+
+- **Failed verification is kept as failure, not rounded up.** The committed portal-catalog run attempted 487 routes, confirmed 278, and left 209 unresolved, with a nine-way failure-reason breakdown and separate SHA-256 digests for the verified catalog and the unresolved set.
+  Evidence: `catalog/v1/verification-report.json:14-16,30-42`
+
+## Scope and limits
+
+What 0.6.1 does not do.
 
 Version 0.6.1 is the source-first decision intelligence release with descriptor-bound artifact export recovery.
 
-It adds 36 contract-tested discovery adapters, a governed network boundary, 278 identity-confirmed career portal routes, source observations, opportunity truth, liveness, conservative deduplication, versioned ESCO and O*NET normalization, campaign and portfolio intelligence, an Ink review queue, a React loopback workbench, Career Assurance Case reports, Credential Passport verification, interview, network, offer, and outcome foundations, a read-first MCP server, a canonical agent skill, verified agent integration lifecycle tools, and a policy-bound model gateway.
+Version 0.6.1 still ships no production auto apply adapter. Its compiled execution boundary permits only `local-fixture` with a synthetic profile. Adding an adapter string, agent integration, MCP client, or model provider cannot grant production execution authority. The MCP server it ships is read-first.
 
-`vocationd` remains the single writer for consequential local mutations. Discovery, truth, taxonomy, assurance, credential, campaign, application, approval, receipt, and outcome records use dedicated authenticated operations with idempotency and encrypted event history. Remote discovery is off by default and requires a signed, scoped `NetworkAccessGrant`. The portal catalog keeps 209 unresolved routes outside the verified set instead of upgrading failed checks into evidence.
+`vocationd` remains the single writer for consequential local mutations. Remote discovery is off by default and requires a signed, scoped `NetworkAccessGrant`. The portal catalog keeps 209 unresolved routes outside the verified set instead of upgrading failed checks into evidence.
 
-Version 0.6.1 still ships no production auto apply adapter. Its compiled execution boundary permits only `local-fixture` with a synthetic profile. Adding an adapter string, agent integration, MCP client, or model provider cannot grant production execution authority.
+A draft, a public claim, an outreach message, a submitted application, a licensing decision, and an international relocation do not have the same reversibility, and the gates are graded accordingly. VocationOS optimizes decision quality and prevents unsupported claims, stale evidence, replayed approvals, unsafe automation, and false completion records.
 
-## Why It Exists
+The benchmark is narrow and reported as such. The committed 94-case fixture set is executed by the test suite under `npm run ci` on both Ubuntu and Windows (`docs/VOCATIONBENCH.md:7`, `test/unit/vocation-bench.test.ts:22-26,68-69`, `.github/workflows/ci.yml:16-19,28`). Two of the eleven frozen thresholds — minimum ranking improvement and minimum safety mutation score — remain `not-evaluated`, and all three named baselines remain `not-run` (`test/unit/vocation-bench.test.ts:106-116`).
 
-A draft, a public claim, an outreach message, a submitted application, a licensing decision, and an international relocation do not have the same reversibility.
-
-Most career tooling optimizes output volume. VocationOS optimizes decision quality and prevents unsupported claims, stale evidence, replayed approvals, unsafe automation, and false completion records.
+Further limits are stated in the sections below: the install path in Quick Start, headless daemon rules, liveness and taxonomy qualifications, answer reuse restrictions, credential verification boundaries, benchmark scope, and the explicit What This Is Not list.
 
 ## Implemented Controls
 
