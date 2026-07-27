@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.6.2
+
+Maintenance release. No behaviour change, no npm publication, and no production
+ATS execution adapter. It exists so the archived record has a version to point
+at, and it carries the dependency and documentation work that accumulated after
+`0.6.1`.
+
+### Changed
+
+1. Updated `postcss`, `svgo`, `fast-uri`, and the npm minor and patch group across the lockfile.
+2. Updated `actions/setup-node` and the GitHub Actions minor and patch group across all five workflows.
+3. Rewrote the README opening to state the problem before the control inventory.
+4. Recorded the `v0.6.1` verification evidence in `docs/RELEASE_VALIDATION.md`.
+5. Realigned root, the seven release-tracked workspaces, Tauri, MCP, agent skill, and citation metadata on `0.6.2`. `@vocation-os/sdk` stays at `0.2.0`, which it is versioned and pinned at independently.
+
 ## 0.6.1
 
 Security patch release. No npm publication or production ATS execution adapter is included.
