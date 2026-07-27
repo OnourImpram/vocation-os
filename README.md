@@ -14,7 +14,7 @@ You are about to let software do something that cannot be undone: send the outre
 
 VocationOS refuses to execute a consequential action unless every claim behind it traces to verified evidence and a human has signed an approval scoped to that exact action, and it refuses to mark that action complete without a trusted Ed25519 collector receipt. The refusal is logged either way.
 
-Two readers get something from it today: the operator running their own career decisions on their own machine, and the engineer reading it as a worked example of these controls enforced in compiled code and adversarial tests rather than in prompts. No production execution adapter ships in 0.6.1; what is implemented is the enforcement path, not application volume.
+Two readers get something from it today: the operator running their own career decisions on their own machine, and the engineer reading it as a worked example of these controls enforced in compiled code and adversarial tests rather than in prompts. No production execution adapter ships in 0.6.2; what is implemented is the enforcement path, not application volume.
 
 Website: [onourimpram.github.io/vocation-os](https://onourimpram.github.io/vocation-os/)
 
@@ -43,7 +43,7 @@ Requires Node 22.13 or later; `.nvmrc` pins 22.23.1.
 git clone https://github.com/OnourImpram/vocation-os.git && cd vocation-os && npm ci && npm run build && node dist/cli.js doctor
 ```
 
-Version 0.6.1 is a source-first GitHub release. Registry installation remains intentionally unavailable until the typed SDK and root package complete a separate npm release pass.
+Version 0.6.2 is a source-first GitHub release. Registry installation remains intentionally unavailable until the typed SDK and root package complete a separate npm release pass.
 
 Then run the complete synthetic onboarding journey. The CLI starts the local daemon when needed:
 
@@ -62,11 +62,11 @@ node dist/cli.js init --demo
 
 ## Scope and limits
 
-What 0.6.1 does not do.
+What 0.6.2 does not do.
 
-Version 0.6.1 is the source-first decision intelligence release with descriptor-bound artifact export recovery.
+Version 0.6.2 is the source-first decision intelligence release with descriptor-bound artifact export recovery.
 
-Version 0.6.1 still ships no production auto apply adapter. Its compiled execution boundary permits only `local-fixture` with a synthetic profile. Adding an adapter string, agent integration, MCP client, or model provider cannot grant production execution authority. The MCP server it ships is read-first.
+Version 0.6.2 still ships no production auto apply adapter. Its compiled execution boundary permits only `local-fixture` with a synthetic profile. Adding an adapter string, agent integration, MCP client, or model provider cannot grant production execution authority. The MCP server it ships is read-first.
 
 `vocationd` remains the single writer for consequential local mutations. Remote discovery is off by default and requires a signed, scoped `NetworkAccessGrant`. The portal catalog keeps 209 unresolved routes outside the verified set instead of upgrading failed checks into evidence.
 
@@ -100,7 +100,7 @@ Further limits are stated in the sections below: the install path in Quick Start
 
 ## Quick Start
 
-Version 0.6.1 is a source-first GitHub release. Registry installation remains intentionally unavailable until the typed SDK and root package complete a separate npm release pass.
+Version 0.6.2 is a source-first GitHub release. Registry installation remains intentionally unavailable until the typed SDK and root package complete a separate npm release pass.
 
 ```bash
 npm ci
