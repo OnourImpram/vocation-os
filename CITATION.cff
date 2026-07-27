@@ -11,3 +11,13 @@ license: MIT
 repository-code: "https://github.com/OnourImpram/vocation-os"
 url: "https://onourimpram.github.io/vocation-os/"
 type: software
+doi: "10.5281/zenodo.21631447"
+identifiers:
+  - type: doi
+    value: "10.5281/zenodo.21631447"
+    description: >-
+      Concept DOI. Resolves to the most recent archived version.
+  - type: doi
+    value: "10.5281/zenodo.21631448"
+    description: >-
+      Version DOI for 0.6.2, the first release deposited in the archive.
