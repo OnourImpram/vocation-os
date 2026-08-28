@@ -1,0 +1,67 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://vocation-os.dev/schemas/opportunity-verification-bundle.schema.json",
+  "title": "OpportunityVerificationBundle",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "opportunityId",
+    "status",
+    "primaryObservationId",
+    "independentObservationId",
+    "preActionObservationId",
+    "reasons",
+    "evaluatedAt",
+    "expiresAt",
+    "bundleHash"
+  ],
+  "properties": {
+    "opportunityId": {
+      "type": "string",
+      "pattern": "^OPP-[A-Z0-9-]+$"
+    },
+    "status": {
+      "type": "string",
+      "enum": ["incomplete", "verified", "expired", "conflicted", "rejected"]
+    },
+    "primaryObservationId": {
+      "oneOf": [
+        { "type": "string", "pattern": "^OBS-[A-F0-9]{20}$" },
+        { "type": "null" }
+      ]
+    },
+    "independentObservationId": {
+      "oneOf": [
+        { "type": "string", "pattern": "^OBS-[A-F0-9]{20}$" },
+        { "type": "null" }
+      ]
+    },
+    "preActionObservationId": {
+      "oneOf": [
+        { "type": "string", "pattern": "^OBS-[A-F0-9]{20}$" },
+        { "type": "null" }
+      ]
+    },
+    "reasons": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 300
+      }
+    },
+    "evaluatedAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "expiresAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "bundleHash": {
+      "type": "string",
+      "pattern": "^sha256:[a-f0-9]{64}$"
+    }
+  }
+}

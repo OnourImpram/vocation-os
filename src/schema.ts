@@ -22,6 +22,8 @@ export const SCHEMA_NAMES = [
   "mode-output",
   "opportunity-intake",
   "opportunity-record",
+  "verification-observation",
+  "opportunity-verification-bundle",
   "opportunity-score",
   "submission-proof",
   "backup-manifest",
