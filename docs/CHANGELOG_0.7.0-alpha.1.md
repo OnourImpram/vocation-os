@@ -13,13 +13,15 @@
 5. Blocking signals for payment, inappropriate identity-document requests, suspicious contact domains, unverified employer identity, and non-current verification.
 6. Warning signals for unknown agency employers, repeated reposting, missing posting dates, and limited extraction confidence.
 7. Ed25519-signed scoped execution grants binding adapters, employer domains, opportunity and action types, allowed and forbidden fields, fit threshold, legitimacy tiers, quotas, and expiry.
-8. Transactional Outbox commands with deterministic idempotency keys and fail-closed state transitions.
+8. Transactional Outbox commands with deterministic idempotency keys, fail-closed state transitions, reconciliation-required failures, and durable suppression.
 9. A compiled execution-adapter contract and registry that configuration cannot extend.
-10. The `career-ops-local-fixture` adapter, restricted to synthetic profiles and the `synthetic.example` domain.
-11. A synthetic end-to-end execution journey from verification through trusted collector proof and confirmed application lifecycle.
-12. The directly executable `vocation-career` binary and compiled CLI smoke test.
-13. Unit, golden-path, schema, and adversarial tests covering stale evidence, fake corroboration, red legitimacy, expired grants, low fit, forbidden fields, non-synthetic profiles, replay, proof mismatch, and negative confirmation signals.
-14. Architecture specification, implementation plan, ADRs, Career Ops clean-room attribution, and a dedicated alpha product guide.
+10. Adapter-level grant revalidation during both planning and execution.
+11. Command-bound execution observations covering the exact command, application attempt, action intent, verification bundle, packet, grant, plan, target domain, and idempotency key.
+12. The `career-ops-local-fixture` adapter, restricted to synthetic profiles and the `synthetic.example` domain.
+13. A synthetic end-to-end execution journey from verification through trusted collector proof and confirmed application lifecycle.
+14. The directly executable `vocation-career` binary and compiled CLI smoke test.
+15. Unit, golden-path, schema, and adversarial tests covering stale evidence, fake corroboration, red legitimacy, expired grants, malformed expectations, low fit, forbidden fields, non-synthetic profiles, replay, suppression reuse, observation grafting, payload tampering, proof mismatch, and negative confirmation signals.
+16. Architecture specification, implementation plan, ADRs, Career Ops clean-room attribution, and a dedicated alpha product guide.
 
 ## Security
 
@@ -27,10 +29,14 @@
 2. Pre-action evidence must be current inside a bounded execution window.
 3. Legitimacy remains independent from fit, so a high-fit suspicious vacancy stays blocked.
 4. Protected traits, identity documents, payment, and unsupported fields cannot be introduced through a broad grant.
-5. Identical external action intent produces a stable idempotency key across runs.
-6. Attempted execution remains `submitted_unconfirmed` until trusted proof binds the exact attempt, packet, adapter, and action intent.
-7. Public tests and examples contain only synthetic identities, employers, documents, domains, and keys.
-8. Production email and ATS adapters remain compile-blocked in this prerelease.
+5. Malformed execution expectations return controlled deny decisions rather than escaping policy evaluation as exceptions.
+6. Identical external action intent produces a stable idempotency key across runs.
+7. Failed commands retain their key until reconciliation, and suppressed commands permanently block key reuse.
+8. A precomputed plan is insufficient by itself. The adapter revalidates the signed grant and exact scope at execution.
+9. Collector evidence cannot be grafted across attempts or commands without invalidating observation integrity and proof binding.
+10. Attempted execution remains `submitted_unconfirmed` until trusted proof binds the exact attempt, packet, adapter, and action intent.
+11. Public tests and examples contain only synthetic identities, employers, documents, domains, and keys.
+12. Production email and ATS adapters remain compile-blocked in this prerelease.
 
 ## Explicit limits
 
