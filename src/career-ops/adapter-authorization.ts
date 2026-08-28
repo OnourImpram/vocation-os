@@ -26,6 +26,7 @@ export interface EvaluateAdapterAuthorizationInput {
   command: OutboxCommand;
   requestedFields: string[];
   legitimacyTier: LegitimacyTier;
+  evaluatedAt: Date;
   expectedOpportunityType?: string;
   expectedFitScore?: number;
   expectedGrantSignatureHash?: string;
@@ -54,6 +55,13 @@ export function evaluateAdapterAuthorization(
   const grantSignatureHash = sha256(authorization.grant.signature);
   const expectation = authorization.expectation;
 
+  if (!Number.isFinite(input.evaluatedAt.getTime())) {
+    return blocked(
+      grantSignatureHash,
+      "adapter-authorization-time-invalid",
+      ["adapter authorization time is invalid"]
+    );
+  }
   if (authorization.grant.grantId !== command.executionGrantId) {
     return blocked(
       grantSignatureHash,
@@ -65,7 +73,7 @@ export function evaluateAdapterAuthorization(
   const decision = evaluateExecutionGrant(
     authorization.grant,
     authorization.trustedApprovers,
-    authorization.expectation
+    { ...authorization.expectation, evaluatedAt: input.evaluatedAt.toISOString() }
   );
   if (!decision.allowed) {
     return blocked(
