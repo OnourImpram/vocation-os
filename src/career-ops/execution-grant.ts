@@ -125,6 +125,10 @@ export function createExecutionGrant(draft: ExecutionGrantDraft, privateKey: Key
     throw new Error("execution grant validity must not exceed 31 days");
   }
 
+  const approvalText = draft.approvalText.trim();
+  if (!approvalText) throw new Error("execution grant approval text is required");
+  if (approvalText.length > 10_000) throw new Error("execution grant approval text must not exceed 10000 characters");
+
   const allowedFields = normalizeList(draft.allowedFields, "allowed field", FIELD_PATTERN);
   const forbiddenFields = normalizeList(draft.forbiddenFields, "forbidden field", FIELD_PATTERN);
   const overlap = allowedFields.filter((field) => forbiddenFields.includes(field));
@@ -150,7 +154,7 @@ export function createExecutionGrant(draft: ExecutionGrantDraft, privateKey: Key
     maxActionsPerDay,
     validFrom,
     expiresAt,
-    approvalTextHash: sha256(draft.approvalText.trim())
+    approvalTextHash: sha256(approvalText)
   };
   if (!unsigned.grantId || !unsigned.approvedBy || !unsigned.keyId) throw new Error("execution grant identity fields are required");
   if (unsigned.allowedActionTypes.length === 0) throw new Error("execution grant must allow at least one action type");
@@ -208,6 +212,41 @@ export function evaluateExecutionGrant(
   if (!Number.isFinite(evaluatedAt)) {
     return blocked(grant.grantId, "execution-grant-evaluation-time-invalid", ["evaluation time is invalid"]);
   }
+  if (!Number.isFinite(expectation.fitScore) || expectation.fitScore < 1 || expectation.fitScore > 5) {
+    return blocked(grant.grantId, "execution-grant-fit-score-invalid", ["fit score must be between 1 and 5"]);
+  }
+  if (
+    !countIsValid(expectation.totalConfirmedActions)
+    || !countIsValid(expectation.confirmedActionsToday)
+    || expectation.confirmedActionsToday > expectation.totalConfirmedActions
+  ) {
+    return blocked(
+      grant.grantId,
+      "execution-grant-usage-invalid",
+      ["execution grant usage counts must be non-negative, internally consistent integers"]
+    );
+  }
+
+  let adapterId: string;
+  let employerDomain: string;
+  let opportunityType: string;
+  let requestedFields: string[];
+  try {
+    adapterId = normalizeToken(expectation.adapterId, "adapter id", ADAPTER_ID_PATTERN);
+    employerDomain = normalizeToken(expectation.employerDomain, "employer domain", DOMAIN_PATTERN);
+    opportunityType = normalizeToken(expectation.opportunityType, "opportunity type", OPPORTUNITY_TYPE_PATTERN);
+    if (!CAREER_ACTION_TYPES.includes(expectation.actionType)) throw new Error("action type is invalid");
+    requestedFields = [...new Set(
+      expectation.requestedFields.map((field) => normalizeToken(field, "requested field", FIELD_PATTERN))
+    )].sort();
+  } catch (error) {
+    return blocked(
+      grant.grantId,
+      "execution-grant-expectation-invalid",
+      [error instanceof Error ? error.message : String(error)]
+    );
+  }
+
   if (evaluatedAt < Date.parse(grant.validFrom)) {
     return blocked(grant.grantId, "execution-grant-not-yet-valid", ["execution grant is not yet valid"]);
   }
@@ -215,15 +254,12 @@ export function evaluateExecutionGrant(
     return blocked(grant.grantId, "execution-grant-expired", ["execution grant has expired"]);
   }
 
-  const adapterId = normalizeToken(expectation.adapterId, "adapter id", ADAPTER_ID_PATTERN);
   if (!grant.allowedAdapters.includes(adapterId)) {
     return blocked(grant.grantId, "adapter-not-granted", [`adapter ${adapterId} is outside the grant scope`]);
   }
-  const employerDomain = normalizeToken(expectation.employerDomain, "employer domain", DOMAIN_PATTERN);
   if (!grant.allowedEmployerDomains.includes(employerDomain)) {
     return blocked(grant.grantId, "employer-domain-not-granted", [`employer domain ${employerDomain} is outside the grant scope`]);
   }
-  const opportunityType = normalizeToken(expectation.opportunityType, "opportunity type", OPPORTUNITY_TYPE_PATTERN);
   if (!grant.allowedOpportunityTypes.includes(opportunityType)) {
     return blocked(grant.grantId, "opportunity-type-not-granted", [`opportunity type ${opportunityType} is outside the grant scope`]);
   }
@@ -231,7 +267,6 @@ export function evaluateExecutionGrant(
     return blocked(grant.grantId, "action-type-not-granted", [`action type ${expectation.actionType} is outside the grant scope`]);
   }
 
-  const requestedFields = [...new Set(expectation.requestedFields.map((field) => normalizeToken(field, "requested field", FIELD_PATTERN)))].sort();
   const forbidden = requestedFields.filter((field) => grant.forbiddenFields.includes(field));
   if (forbidden.length > 0) {
     return blocked(grant.grantId, "forbidden-field-requested", forbidden.map((field) => `field ${field} is forbidden`));
@@ -241,7 +276,7 @@ export function evaluateExecutionGrant(
     return blocked(grant.grantId, "field-not-granted", outsideAllowed.map((field) => `field ${field} is outside the grant scope`));
   }
 
-  if (!Number.isFinite(expectation.fitScore) || expectation.fitScore < grant.minimumFitScore) {
+  if (expectation.fitScore < grant.minimumFitScore) {
     return blocked(
       grant.grantId,
       "fit-score-below-grant-threshold",
@@ -256,9 +291,6 @@ export function evaluateExecutionGrant(
     );
   }
 
-  if (!countIsValid(expectation.totalConfirmedActions) || !countIsValid(expectation.confirmedActionsToday)) {
-    return blocked(grant.grantId, "execution-grant-usage-invalid", ["execution grant usage counts must be non-negative integers"]);
-  }
   if (expectation.totalConfirmedActions >= grant.maxActions) {
     return blocked(grant.grantId, "execution-grant-total-limit-exhausted", ["execution grant total action limit is exhausted"]);
   }
