@@ -2,10 +2,13 @@ import type { ApplicationAttempt } from "../application-lifecycle.js";
 import { assertSchema } from "../schema.js";
 import type { SubmissionObservationDraft, SubmissionProofKind } from "../submission-proof.js";
 import type { CareerActionType } from "./execution-grant.js";
+import type { ExecutionObservation } from "./execution-observation.js";
 import type { LegitimacyTier } from "./legitimacy.js";
 import type { OutboxCommand } from "./outbox.js";
 import type { VerificationBundleStatus } from "./verification.js";
 import { careerOpsLocalFixtureAdapter } from "./local-fixture-adapter.js";
+
+export type { ExecutionObservation } from "./execution-observation.js";
 
 export const EXECUTION_ADAPTER_MATURITIES = ["synthetic", "experimental", "stable"] as const;
 export const EXECUTION_PROFILE_SCOPES = ["synthetic", "local-private"] as const;
@@ -85,23 +88,9 @@ export interface AdapterExecuteContext {
   now?: Date;
 }
 
-export interface ExecutionObservation {
-  adapterId: string;
-  commandId: string;
-  opportunityId: string;
-  status: "submitted" | "failed" | "unknown";
-  capturedAt: string;
-  sourceDomain: string;
-  targetDomain: string;
-  referenceId: string | null;
-  indicators: string[];
-  attachmentCount: number;
-  submittedAt: string | null;
-  payloadHash: string;
-}
-
 export interface ReconciliationContext {
   command: OutboxCommand;
+  planHash: string;
   observation: ExecutionObservation | null;
 }
 
