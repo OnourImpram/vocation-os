@@ -92,7 +92,8 @@ async function plannedFixture() {
     verificationStatus: "verified",
     legitimacyTier: "green",
     requestedFields: ["name", "email", "cv"],
-    authorization: auth
+    authorization: auth,
+    now: new Date("2026-08-28T08:34:00.000Z")
   });
   return { adapter, command, authorization: auth, plan };
 }
@@ -144,7 +145,12 @@ describe("career execution adapter contract", () => {
     const { adapter, command, authorization: auth, plan } = await plannedFixture();
     const validation = await adapter.validate(plan);
     const preview = await adapter.preview(plan);
-    const observation = await adapter.execute({ command, plan, authorization: auth });
+    const observation = await adapter.execute({
+      command,
+      plan,
+      authorization: auth,
+      now: new Date("2026-08-28T08:35:00.000Z")
+    });
 
     expect(validation.valid).toBe(true);
     expect(preview.planHash).toBe(plan.planHash);
@@ -175,7 +181,8 @@ describe("career execution adapter contract", () => {
       verificationStatus: "expired",
       legitimacyTier: "green",
       requestedFields: ["name", "email", "cv"],
-      authorization: authorization(command)
+      authorization: authorization(command),
+      now: new Date("2026-08-28T08:34:00.000Z")
     })).rejects.toThrow("verification must be current before adapter planning");
   });
 
@@ -190,7 +197,8 @@ describe("career execution adapter contract", () => {
       verificationStatus: "verified",
       legitimacyTier: "green",
       requestedFields: ["name", "email", "cv"],
-      authorization: { ...auth, trustedApprovers: [] }
+      authorization: { ...auth, trustedApprovers: [] },
+      now: new Date("2026-08-28T08:34:00.000Z")
     })).rejects.toThrow("execution-grant-approver-untrusted");
   });
 
@@ -203,7 +211,8 @@ describe("career execution adapter contract", () => {
       authorization: {
         ...auth,
         expectation: { ...auth.expectation, requestedFields: ["name", "protected-traits"] }
-      }
+      },
+      now: new Date("2026-08-28T08:35:00.000Z")
     })).rejects.toThrow("forbidden-field-requested");
   });
 
