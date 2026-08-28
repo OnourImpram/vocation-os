@@ -26,6 +26,7 @@ export const SCHEMA_NAMES = [
   "opportunity-verification-bundle",
   "legitimacy-assessment",
   "execution-grant",
+  "outbox-command",
   "opportunity-score",
   "submission-proof",
   "backup-manifest",
