@@ -1,7 +1,7 @@
 {
   "name": "vocation-os",
-  "version": "0.6.2",
-  "description": "Evidence grounded career decision safety for high agency operators.",
+  "version": "0.7.0-alpha.1",
+  "description": "Evidence-grounded career decision and bounded execution safety for high-agency operators.",
   "type": "module",
   "packageManager": "npm@10.9.8",
   "license": "MIT",
@@ -27,7 +27,8 @@
   "bin": {
     "vocation": "./dist/cli.js",
     "vocationd": "./dist/vocationd.js",
-    "vocation-mcp": "./packages/mcp/dist/bin.js"
+    "vocation-mcp": "./packages/mcp/dist/bin.js",
+    "vocation-career": "./dist/career-ops-cli.js"
   },
   "files": [
     "dist",
@@ -62,6 +63,9 @@
     "vocational-psychology",
     "career-guidance",
     "decision-support",
+    "career-operations",
+    "ats-automation",
+    "transactional-outbox",
     "ai-safety",
     "human-in-the-loop",
     "llm-agent",
@@ -87,7 +91,8 @@
     "test:workspaces": "npm run test --workspaces --if-present",
     "test:watch": "vitest",
     "coverage": "vitest run --coverage",
-    "test:cli": "npm run build && node scripts/cli-subprocess-smoke.mjs",
+    "test:cli": "npm run build && node scripts/cli-subprocess-smoke.mjs && node scripts/career-ops-cli-smoke.mjs",
+    "career-ops:demo": "npm run build && node dist/career-ops-cli.js demo --at 2026-08-28T09:00:00.000Z",
     "validate:schemas": "tsx src/cli.ts validate-schemas",
     "privacy:scan": "node scripts/privacy-scan.mjs",
     "brand:scan": "node scripts/brand-scan.mjs",
