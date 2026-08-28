@@ -53,6 +53,7 @@ export interface AdapterPlanContext {
   legitimacyTier: LegitimacyTier;
   requestedFields: string[];
   authorization: AdapterAuthorizationContext;
+  now?: Date;
 }
 
 export interface AdapterExecutionPlan {
