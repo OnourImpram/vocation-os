@@ -150,10 +150,8 @@ export function createExecutionObservation(input: CreateExecutionObservationInpu
   return observation;
 }
 
-export function evaluateExecutionObservationBinding(
-  observation: ExecutionObservation,
-  command: OutboxCommand,
-  expectedPlanHash: string
+export function evaluateExecutionObservationIntegrity(
+  observation: ExecutionObservation
 ): ExecutionObservationBindingResult {
   const reasons: string[] = [];
   try {
@@ -165,6 +163,16 @@ export function evaluateExecutionObservationBinding(
   if (computeExecutionObservationPayloadHash(withoutPayloadHash(observation)) !== observation.payloadHash) {
     reasons.push("execution observation payload hash does not match its content");
   }
+  return { valid: reasons.length === 0, reasons: [...new Set(reasons)] };
+}
+
+export function evaluateExecutionObservationBinding(
+  observation: ExecutionObservation,
+  command: OutboxCommand,
+  expectedPlanHash: string
+): ExecutionObservationBindingResult {
+  const reasons = [...evaluateExecutionObservationIntegrity(observation).reasons];
+
   if (observation.adapterId !== command.adapterId) {
     reasons.push("execution observation adapter does not match the Outbox command");
   }
