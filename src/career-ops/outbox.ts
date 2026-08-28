@@ -123,17 +123,20 @@ export function assertOutboxIdempotencyAvailable(
   candidate: Pick<OutboxCommand, "commandId" | "idempotencyKey">
 ): void {
   const conflicting = existingCommands.find(
-    (command) =>
-      command.commandId !== candidate.commandId
-      && command.idempotencyKey === candidate.idempotencyKey
-      && command.status !== "failed"
-      && command.status !== "suppressed"
+    (command) => command.commandId !== candidate.commandId && command.idempotencyKey === candidate.idempotencyKey
   );
   if (!conflicting) return;
-  if (conflicting.status === "confirmed") {
+
+  switch (conflicting.status) {
+  case "confirmed":
     throw new Error("confirmed outbox command already owns the idempotency key");
+  case "suppressed":
+    throw new Error("suppressed outbox command blocks idempotency key reuse");
+  case "failed":
+    throw new Error("failed outbox command requires reconciliation before idempotency key reuse");
+  default:
+    throw new Error("active outbox command already owns the idempotency key");
   }
-  throw new Error("active outbox command already owns the idempotency key");
 }
 
 export function createOutboxCommand(input: CreateOutboxCommandInput): OutboxCommand {
