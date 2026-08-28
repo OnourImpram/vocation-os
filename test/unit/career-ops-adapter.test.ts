@@ -1,9 +1,15 @@
 import { describe, expect, it } from "vitest";
+import { createApplicationAttempt } from "../../src/application-lifecycle.js";
 import {
   getShippedCareerExecutionAdapter,
   listShippedCareerExecutionAdapters
 } from "../../src/career-ops/execution-adapter.js";
 import { createOutboxCommand, markOutboxExecuting, markOutboxReady, reserveOutboxCommand } from "../../src/career-ops/outbox.js";
+import { HIGH_STAKES_FLAGS, type HighStakesFlags } from "../../src/types.js";
+
+function allHighStakesFalse(): HighStakesFlags {
+  return Object.fromEntries(HIGH_STAKES_FLAGS.map((flag) => [flag, false])) as HighStakesFlags;
+}
 
 function executingCommand() {
   const drafted = createOutboxCommand({
@@ -28,6 +34,21 @@ function executingCommand() {
     ),
     new Date("2026-08-28T08:33:00.000Z")
   );
+}
+
+async function executedFixture() {
+  const adapter = getShippedCareerExecutionAdapter("career-ops-local-fixture");
+  if (!adapter) throw new Error("synthetic fixture adapter is unavailable");
+  const command = executingCommand();
+  const plan = await adapter.plan({
+    command,
+    profileScope: "synthetic",
+    verificationStatus: "verified",
+    legitimacyTier: "green",
+    requestedFields: ["name", "email", "cv"]
+  });
+  const observation = await adapter.execute({ command, plan, now: new Date("2026-08-28T08:35:00.000Z") });
+  return { adapter, command, plan, observation };
 }
 
 describe("career execution adapter contract", () => {
@@ -82,6 +103,13 @@ describe("career execution adapter contract", () => {
     expect(observation.status).toBe("submitted");
     expect(observation.referenceId).toMatch(/^SYN-/);
     expect(observation.payloadHash).toMatch(/^sha256:[a-f0-9]{64}$/);
+    expect(observation.commandId).toBe(command.commandId);
+    expect(observation.attemptId).toBe(command.attemptId);
+    expect(observation.actionIntentHash).toBe(command.actionIntentHash);
+    expect(observation.packetHash).toBe(command.packetHash);
+    expect(observation.executionGrantId).toBe(command.executionGrantId);
+    expect(observation.idempotencyKey).toBe(command.idempotencyKey);
+    expect(observation.planHash).toBe(plan.planHash);
   });
 
   it("rejects planning when the verification bundle is not current", async () => {
@@ -94,5 +122,35 @@ describe("career execution adapter contract", () => {
       legitimacyTier: "green",
       requestedFields: ["name", "email", "cv"]
     })).rejects.toThrow("verification must be current before adapter planning");
+  });
+
+  it("does not graft a valid execution observation onto another application attempt", async () => {
+    const { adapter, command, observation } = await executedFixture();
+    const differentAttempt = createApplicationAttempt({
+      opportunityId: command.opportunityId,
+      packetHash: command.packetHash,
+      adapterId: command.adapterId,
+      channel: "ats-form",
+      reversibilityTag: "R3",
+      highStakesFlags: allHighStakesFalse(),
+      now: new Date("2026-08-28T08:34:00.000Z")
+    });
+
+    await expect(adapter.collect(differentAttempt, observation)).rejects.toThrow(
+      "local fixture observation is bound to a different application attempt"
+    );
+  });
+
+  it("reconciliation rejects a tampered execution observation", async () => {
+    const { adapter, command, plan, observation } = await executedFixture();
+    const result = await adapter.reconcile({
+      command,
+      planHash: plan.planHash,
+      observation: { ...observation, packetHash: `sha256:${"9".repeat(64)}` }
+    });
+
+    expect(result.status).toBe("not-confirmed");
+    expect(result.reasons).toContain("execution observation packet hash does not match the Outbox command");
+    expect(result.reasons).toContain("execution observation payload hash does not match its content");
   });
 });
