@@ -53,7 +53,7 @@ export interface AdapterPlanContext {
   legitimacyTier: LegitimacyTier;
   requestedFields: string[];
   authorization: AdapterAuthorizationContext;
-  now?: Date;
+  now: Date;
 }
 
 export interface AdapterExecutionPlan {
@@ -94,7 +94,7 @@ export interface AdapterExecuteContext {
   command: OutboxCommand;
   plan: AdapterExecutionPlan;
   authorization: AdapterAuthorizationContext;
-  now?: Date;
+  now: Date;
 }
 
 export interface ReconciliationContext {
