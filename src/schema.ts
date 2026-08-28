@@ -24,6 +24,7 @@ export const SCHEMA_NAMES = [
   "opportunity-record",
   "verification-observation",
   "opportunity-verification-bundle",
+  "legitimacy-assessment",
   "opportunity-score",
   "submission-proof",
   "backup-manifest",
