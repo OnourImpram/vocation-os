@@ -1,0 +1,138 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://vocation-os.dev/schemas/execution-observation.schema.json",
+  "title": "ExecutionObservation",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "adapterId",
+    "commandId",
+    "opportunityId",
+    "attemptId",
+    "actionIntentHash",
+    "verificationBundleHash",
+    "packetHash",
+    "executionGrantId",
+    "idempotencyKey",
+    "planHash",
+    "status",
+    "capturedAt",
+    "sourceDomain",
+    "targetDomain",
+    "referenceId",
+    "indicators",
+    "attachmentCount",
+    "submittedAt",
+    "payloadHash"
+  ],
+  "properties": {
+    "adapterId": {
+      "type": "string",
+      "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+      "maxLength": 100
+    },
+    "commandId": {
+      "type": "string",
+      "pattern": "^CMD-[A-F0-9-]{36}$"
+    },
+    "opportunityId": {
+      "type": "string",
+      "pattern": "^OPP-[A-Z0-9-]+$"
+    },
+    "attemptId": {
+      "type": "string",
+      "pattern": "^ATT-[A-Za-z0-9._:-]+$",
+      "maxLength": 200
+    },
+    "actionIntentHash": {
+      "type": "string",
+      "pattern": "^sha256:[a-f0-9]{64}$"
+    },
+    "verificationBundleHash": {
+      "type": "string",
+      "pattern": "^sha256:[a-f0-9]{64}$"
+    },
+    "packetHash": {
+      "type": "string",
+      "pattern": "^sha256:[a-f0-9]{64}$"
+    },
+    "executionGrantId": {
+      "type": "string",
+      "pattern": "^GRANT-[A-Za-z0-9._:-]+$",
+      "maxLength": 160
+    },
+    "idempotencyKey": {
+      "type": "string",
+      "pattern": "^sha256:[a-f0-9]{64}$"
+    },
+    "planHash": {
+      "type": "string",
+      "pattern": "^sha256:[a-f0-9]{64}$"
+    },
+    "status": {
+      "type": "string",
+      "enum": ["submitted", "failed", "unknown"]
+    },
+    "capturedAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "sourceDomain": {
+      "type": "string",
+      "pattern": "^[a-z0-9.-]+\\.[a-z0-9.-]+$",
+      "maxLength": 253
+    },
+    "targetDomain": {
+      "type": "string",
+      "pattern": "^[a-z0-9.-]+\\.[a-z0-9.-]+$",
+      "maxLength": 253
+    },
+    "referenceId": {
+      "oneOf": [
+        {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,159}$"
+        },
+        { "type": "null" }
+      ]
+    },
+    "indicators": {
+      "type": "array",
+      "uniqueItems": true,
+      "maxItems": 20,
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 200
+      }
+    },
+    "attachmentCount": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "submittedAt": {
+      "oneOf": [
+        { "type": "string", "format": "date-time" },
+        { "type": "null" }
+      ]
+    },
+    "payloadHash": {
+      "type": "string",
+      "pattern": "^sha256:[a-f0-9]{64}$"
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": { "status": { "const": "submitted" } },
+        "required": ["status"]
+      },
+      "then": {
+        "properties": {
+          "referenceId": { "type": "string" },
+          "submittedAt": { "type": "string", "format": "date-time" }
+        }
+      }
+    }
+  ]
+}
