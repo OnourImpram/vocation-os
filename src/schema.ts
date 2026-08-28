@@ -28,6 +28,7 @@ export const SCHEMA_NAMES = [
   "execution-grant",
   "outbox-command",
   "execution-adapter-manifest",
+  "execution-observation",
   "opportunity-score",
   "submission-proof",
   "backup-manifest",
