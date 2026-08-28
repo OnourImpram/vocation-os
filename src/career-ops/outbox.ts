@@ -118,6 +118,24 @@ export function deriveOutboxIdempotencyKey(
   return sha256(stableStringify(canonical));
 }
 
+export function assertOutboxIdempotencyAvailable(
+  existingCommands: readonly OutboxCommand[],
+  candidate: Pick<OutboxCommand, "commandId" | "idempotencyKey">
+): void {
+  const conflicting = existingCommands.find(
+    (command) =>
+      command.commandId !== candidate.commandId
+      && command.idempotencyKey === candidate.idempotencyKey
+      && command.status !== "failed"
+      && command.status !== "suppressed"
+  );
+  if (!conflicting) return;
+  if (conflicting.status === "confirmed") {
+    throw new Error("confirmed outbox command already owns the idempotency key");
+  }
+  throw new Error("active outbox command already owns the idempotency key");
+}
+
 export function createOutboxCommand(input: CreateOutboxCommandInput): OutboxCommand {
   const now = input.now ?? new Date();
   const createdAt = timestamp(now);
