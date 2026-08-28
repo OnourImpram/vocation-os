@@ -28,7 +28,8 @@ import { getShippedCareerExecutionAdapter } from "./execution-adapter.js";
 import {
   createExecutionGrant,
   evaluateExecutionGrant,
-  type ExecutionGrantDecision
+  type ExecutionGrantDecision,
+  type ExecutionGrantExpectation
 } from "./execution-grant.js";
 import { assessLegitimacy, type LegitimacyAssessment } from "./legitimacy.js";
 import {
@@ -216,7 +217,7 @@ export async function runCareerOpsAlphaDemo(now = new Date()): Promise<CareerOps
       expiresAt: at(3600).toISOString(),
       approvalText: "Allow one bounded synthetic alpha application journey."
     }, approverKeys.privateKey);
-    const grantDecision = evaluateExecutionGrant(grant, trustedApprovers, {
+    const grantExpectation: ExecutionGrantExpectation = {
       adapterId: ADAPTER_ID,
       employerDomain: TARGET_DOMAIN,
       opportunityType: "job",
@@ -227,10 +228,12 @@ export async function runCareerOpsAlphaDemo(now = new Date()): Promise<CareerOps
       totalConfirmedActions: 0,
       confirmedActionsToday: 0,
       evaluatedAt: at(-175).toISOString()
-    });
+    };
+    const grantDecision = evaluateExecutionGrant(grant, trustedApprovers, grantExpectation);
     if (!grantDecision.allowed) {
       throw new Error(`synthetic execution grant was blocked: ${grantDecision.reasons.join(", ")}`);
     }
+    const adapterAuthorization = { grant, trustedApprovers, expectation: grantExpectation };
 
     const preparedAttempt = createApplicationAttempt({
       opportunityId: OPPORTUNITY_ID,
@@ -288,14 +291,20 @@ export async function runCareerOpsAlphaDemo(now = new Date()): Promise<CareerOps
       profileScope: graph.profileScope,
       verificationStatus: verification.status,
       legitimacyTier: legitimacy.tier,
-      requestedFields: ["name", "email", "cv"]
+      requestedFields: ["name", "email", "cv"],
+      authorization: adapterAuthorization
     });
     const planValidation = await adapter.validate(plan);
     if (!planValidation.valid) {
       throw new Error(`synthetic execution plan is invalid: ${planValidation.reasons.join(", ")}`);
     }
     await adapter.preview(plan);
-    const observation = await adapter.execute({ command: executingOutbox, plan, now: at(-160) });
+    const observation = await adapter.execute({
+      command: executingOutbox,
+      plan,
+      authorization: adapterAuthorization,
+      now: at(-160)
+    });
     const submittedOutbox = markOutboxSubmitted(executingOutbox, at(-150));
 
     const collectorKeys = generateKeyPairSync("ed25519");
