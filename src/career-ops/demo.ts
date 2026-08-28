@@ -11,12 +11,7 @@ import {
 } from "../application-lifecycle.js";
 import { createApprovalReference, type TrustedApprover } from "../approval.js";
 import { validateApplicationPacket } from "../claim-graph.js";
-import {
-  computeClaimTextHash,
-  computeFileHash,
-  computePacketHash,
-  sha256
-} from "../hash.js";
+import { computeClaimTextHash, computeFileHash, computePacketHash, sha256 } from "../hash.js";
 import {
   createSubmissionProof,
   type SubmissionProofEvaluation,
@@ -94,6 +89,7 @@ export async function runCareerOpsAlphaDemo(now = new Date()): Promise<CareerOps
   if (!Number.isFinite(now.getTime())) throw new Error("career operations demo time is invalid");
   const at = (seconds: number): Date => new Date(now.getTime() + seconds * 1000);
   const root = mkdtempSync(path.join(tmpdir(), "vocation-career-ops-alpha-"));
+
   try {
     const cvRelativePath = "synthetic-cv.txt";
     const cvPath = path.join(root, cvRelativePath);
@@ -103,19 +99,14 @@ export async function runCareerOpsAlphaDemo(now = new Date()): Promise<CareerOps
       "utf8"
     );
     const cvHash = computeFileHash(cvPath);
-    const verifiedDate = at(-3600).toISOString().slice(0, 10);
-    const claim = syntheticClaim(verifiedDate);
+    const claim = syntheticClaim(at(-3600).toISOString().slice(0, 10));
     const graph: ClaimGraph = {
       profileId: "DEMO-CAREER-OPS-ALPHA",
       profileScope: "synthetic",
       generatedAt: at(-600).toISOString(),
       graphVersion: "1.0.0",
       claims: [claim],
-      validationSummary: {
-        verifiedClaims: 1,
-        unverifiedClaims: 0,
-        privateClaims: 0
-      }
+      validationSummary: { verifiedClaims: 1, unverifiedClaims: 0, privateClaims: 0 }
     };
     const packet: ApplicationPacket = {
       opportunityId: OPPORTUNITY_ID,
@@ -127,29 +118,20 @@ export async function runCareerOpsAlphaDemo(now = new Date()): Promise<CareerOps
         sourcePointer: claim.sourcePointer,
         publiclyAssertable: claim.publiclyAssertable
       }],
-      documents: [{
-        kind: "cv",
-        path: cvRelativePath,
-        contentHash: cvHash
-      }],
+      documents: [{ kind: "cv", path: cvRelativePath, contentHash: cvHash }],
       tosCompliant: true,
       generatedAt: at(-500).toISOString(),
       packetHash: `sha256:${"0".repeat(64)}`,
       approvalRequired: true
     };
     packet.packetHash = computePacketHash(packet);
-    const packetValidation = validateApplicationPacket(packet, graph, {
-      documentRoot: root,
-      now: at(-400)
-    });
+    const packetValidation = validateApplicationPacket(packet, graph, { documentRoot: root, now: at(-400) });
     if (!packetValidation.valid) {
       throw new Error(`synthetic application packet is invalid: ${packetValidation.reasons.join(", ")}`);
     }
 
-    const primary = createVerificationObservation({
+    const commonObservation = {
       opportunityId: OPPORTUNITY_ID,
-      sourceKind: "primary",
-      sourceUrl: "https://boards.greenhouse.io/synthetic/jobs/1001",
       employer: "Synthetic Research Labs",
       roleTitle: "Research Operations Lead",
       requisitionId: "REQ-ALPHA-001",
@@ -157,41 +139,28 @@ export async function runCareerOpsAlphaDemo(now = new Date()): Promise<CareerOps
       applyUrl: "https://boards.greenhouse.io/synthetic/jobs/1001#app",
       postedAt: at(-86_400).toISOString(),
       deadlineAt: at(1_209_600).toISOString(),
-      observedStatus: "live",
+      observedStatus: "live" as const,
+      extractionConfidence: "high" as const
+    };
+    const primary = createVerificationObservation({
+      ...commonObservation,
+      sourceKind: "primary",
+      sourceUrl: "https://boards.greenhouse.io/synthetic/jobs/1001",
       capturedAt: at(-600).toISOString(),
-      extractionConfidence: "high",
       sourcePayload: { status: "open", requisitionId: "REQ-ALPHA-001" }
     });
     const independent = createVerificationObservation({
-      opportunityId: OPPORTUNITY_ID,
+      ...commonObservation,
       sourceKind: "independent",
       sourceUrl: "https://synthetic.example/careers/research-operations-lead",
-      employer: "Synthetic Research Labs",
-      roleTitle: "Research Operations Lead",
-      requisitionId: "REQ-ALPHA-001",
-      locationText: "Remote, European Union",
-      applyUrl: "https://boards.greenhouse.io/synthetic/jobs/1001#app",
-      postedAt: at(-86_400).toISOString(),
-      deadlineAt: at(1_209_600).toISOString(),
-      observedStatus: "live",
       capturedAt: at(-480).toISOString(),
-      extractionConfidence: "high",
       sourcePayload: { currentOpening: true, requisitionId: "REQ-ALPHA-001" }
     });
     const preAction = createVerificationObservation({
-      opportunityId: OPPORTUNITY_ID,
+      ...commonObservation,
       sourceKind: "pre-action",
       sourceUrl: "https://boards.greenhouse.io/synthetic/jobs/1001",
-      employer: "Synthetic Research Labs",
-      roleTitle: "Research Operations Lead",
-      requisitionId: "REQ-ALPHA-001",
-      locationText: "Remote, European Union",
-      applyUrl: "https://boards.greenhouse.io/synthetic/jobs/1001#app",
-      postedAt: at(-86_400).toISOString(),
-      deadlineAt: at(1_209_600).toISOString(),
-      observedStatus: "live",
       capturedAt: at(-190).toISOString(),
-      extractionConfidence: "high",
       sourcePayload: { status: "open", actionRoute: "available" }
     });
     const verification = evaluateVerificationBundle({
@@ -199,10 +168,7 @@ export async function runCareerOpsAlphaDemo(now = new Date()): Promise<CareerOps
       primary,
       independent,
       preAction,
-      policy: {
-        maximumPreActionAgeSeconds: 600,
-        bundleLifetimeSeconds: 3600
-      },
+      policy: { maximumPreActionAgeSeconds: 600, bundleLifetimeSeconds: 3600 },
       evaluatedAt: at(-185).toISOString()
     });
     if (verification.status !== "verified") {
@@ -224,9 +190,7 @@ export async function runCareerOpsAlphaDemo(now = new Date()): Promise<CareerOps
       },
       assessedAt: at(-180).toISOString()
     });
-    if (legitimacy.tier !== "green") {
-      throw new Error("synthetic opportunity legitimacy must be green");
-    }
+    if (legitimacy.tier !== "green") throw new Error("synthetic opportunity legitimacy must be green");
 
     const approverKeys = generateKeyPairSync("ed25519");
     const trustedApprovers: TrustedApprover[] = [{
@@ -290,12 +254,7 @@ export async function runCareerOpsAlphaDemo(now = new Date()): Promise<CareerOps
       actionIntentHash: preparedAttempt.actionIntentHash,
       allowedFields: ["application-packet"]
     }, approverKeys.privateKey);
-    const approvedAttempt = approveApplicationAttempt(
-      preparedAttempt,
-      approval,
-      trustedApprovers,
-      at(-220)
-    );
+    const approvedAttempt = approveApplicationAttempt(preparedAttempt, approval, trustedApprovers, at(-220));
 
     const draftedOutbox = createOutboxCommand({
       runId: "RUN-CAREER-OPS-ALPHA",
@@ -312,9 +271,14 @@ export async function runCareerOpsAlphaDemo(now = new Date()): Promise<CareerOps
       now: at(-210)
     });
     assertOutboxIdempotencyAvailable([], draftedOutbox);
-    const readyOutbox = markOutboxReady(draftedOutbox, at(-200));
-    const reservedOutbox = reserveOutboxCommand(readyOutbox, "application-operator-alpha", at(-190));
-    const executingOutbox = markOutboxExecuting(reservedOutbox, at(-180));
+    const executingOutbox = markOutboxExecuting(
+      reserveOutboxCommand(
+        markOutboxReady(draftedOutbox, at(-200)),
+        "application-operator-alpha",
+        at(-190)
+      ),
+      at(-180)
+    );
 
     const submittedAttempt = markSubmissionAttempted(approvedAttempt, trustedApprovers, at(-170));
     const adapter = getShippedCareerExecutionAdapter(ADAPTER_ID);
@@ -331,19 +295,15 @@ export async function runCareerOpsAlphaDemo(now = new Date()): Promise<CareerOps
       throw new Error(`synthetic execution plan is invalid: ${planValidation.reasons.join(", ")}`);
     }
     await adapter.preview(plan);
-    const observation = await adapter.execute({
-      command: executingOutbox,
-      plan,
-      now: at(-160)
-    });
+    const observation = await adapter.execute({ command: executingOutbox, plan, now: at(-160) });
     const submittedOutbox = markOutboxSubmitted(executingOutbox, at(-150));
 
     const collectorKeys = generateKeyPairSync("ed25519");
     const proofDraft = await adapter.collect(submittedAttempt, observation);
     const proof = createSubmissionProof(proofDraft, collectorKeys.privateKey);
     const trustedCollectors: TrustedCollector[] = [{
-      collectorId: "career-ops-local-fixture-collector",
-      keyId: "KEY-CAREER-OPS-LOCAL-FIXTURE",
+      collectorId: proofDraft.collectorId,
+      keyId: proofDraft.keyId,
       publicKeyPem: collectorKeys.publicKey.export({ type: "spki", format: "pem" }).toString(),
       allowedAdapters: [ADAPTER_ID],
       allowedSourceDomains: [TARGET_DOMAIN],

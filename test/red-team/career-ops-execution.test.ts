@@ -24,6 +24,12 @@ import {
   type TrustedCollector
 } from "../../src/submission-proof.js";
 
+const ATTEMPT_ID = "ATT-2026-00000000-0000-4000-8000-000000000001";
+const WRONG_ATTEMPT_ID = "ATT-2026-00000000-0000-4000-8000-000000000002";
+const COLLECTOR_ID = "COL-RED-TEAM";
+const COLLECTOR_VERSION = "0.7.0";
+const COLLECTOR_KEY_ID = "KEY-REDTEAM-COLLECTOR";
+
 const BASE: Omit<VerificationObservationDraft, "sourceKind" | "sourceUrl" | "applyUrl" | "capturedAt" | "sourcePayload"> = {
   opportunityId: "OPP-GREENHOUSE-SYNTHETIC-REDTEAM",
   employer: "Synthetic Research Labs",
@@ -73,7 +79,7 @@ function outbox(runId: string) {
   return createOutboxCommand({
     runId,
     opportunityId: BASE.opportunityId,
-    attemptId: "ATT-2026-REDTEAM-001",
+    attemptId: ATTEMPT_ID,
     adapterId: "career-ops-local-fixture",
     actionType: "submit-ats-application",
     actionIntentHash: `sha256:${"1".repeat(64)}`,
@@ -84,6 +90,39 @@ function outbox(runId: string) {
     documentHashes: [`sha256:${"4".repeat(64)}`],
     now: new Date("2026-08-28T08:30:00.000Z")
   });
+}
+
+function proofDraft(indicators: string[], referenceId: string, payload: string): SubmissionObservationDraft {
+  return {
+    collectorId: COLLECTOR_ID,
+    collectorVersion: COLLECTOR_VERSION,
+    keyId: COLLECTOR_KEY_ID,
+    attemptId: ATTEMPT_ID,
+    actionIntentHash: `sha256:${"5".repeat(64)}`,
+    opportunityId: BASE.opportunityId,
+    packetHash: `sha256:${"6".repeat(64)}`,
+    adapterId: "career-ops-local-fixture",
+    kind: "confirmation-page",
+    capturedAt: "2026-08-28T08:35:00.000Z",
+    sourceDomain: "synthetic.example",
+    sourcePointer: `proof:${referenceId}`,
+    indicators,
+    attachmentCount: 1,
+    referenceId,
+    sentAt: "2026-08-28T08:35:00.000Z",
+    payloadHash: sha256(payload)
+  };
+}
+
+function trustedCollector(publicKeyPem: string): TrustedCollector {
+  return {
+    collectorId: COLLECTOR_ID,
+    keyId: COLLECTOR_KEY_ID,
+    publicKeyPem,
+    allowedAdapters: ["career-ops-local-fixture"],
+    allowedSourceDomains: ["synthetic.example"],
+    allowedKinds: ["confirmation-page"]
+  };
 }
 
 describe("career operations adversarial execution controls", () => {
@@ -197,84 +236,41 @@ describe("career operations adversarial execution controls", () => {
 
   it("rejects proof bound to the wrong attempt", () => {
     const { privateKey, publicKey } = generateKeyPairSync("ed25519");
-    const draft: SubmissionObservationDraft = {
-      collectorId: "red-team-collector",
-      collectorVersion: "0.7.0-alpha.1",
-      keyId: "KEY-REDTEAM-COLLECTOR",
-      attemptId: "ATT-2026-REDTEAM-001",
-      actionIntentHash: `sha256:${"5".repeat(64)}`,
-      opportunityId: BASE.opportunityId,
-      packetHash: `sha256:${"6".repeat(64)}`,
-      adapterId: "career-ops-local-fixture",
-      kind: "confirmation-page",
-      capturedAt: "2026-08-28T08:35:00.000Z",
-      sourceDomain: "synthetic.example",
-      sourcePointer: "proof:SYN-REDTEAM-001",
-      indicators: ["application successfully submitted"],
-      attachmentCount: 1,
-      referenceId: "SYN-REDTEAM-001",
-      sentAt: "2026-08-28T08:35:00.000Z",
-      payloadHash: sha256("red-team-observation")
-    };
+    const draft = proofDraft(["application successfully submitted"], "SYN-REDTEAM-001", "red-team-observation");
     const proof = createSubmissionProof(draft, privateKey);
-    const collectors: TrustedCollector[] = [{
-      collectorId: "red-team-collector",
-      keyId: "KEY-REDTEAM-COLLECTOR",
-      publicKeyPem: publicKey.export({ type: "spki", format: "pem" }).toString(),
-      allowedAdapters: ["career-ops-local-fixture"],
-      allowedSourceDomains: ["synthetic.example"],
-      allowedKinds: ["confirmation-page"]
-    }];
-    const evaluation = evaluateSubmissionProof(proof, collectors, {
-      attemptId: "ATT-2026-WRONG-ATTEMPT",
-      actionIntentHash: draft.actionIntentHash,
-      opportunityId: draft.opportunityId,
-      packetHash: draft.packetHash,
-      adapterId: draft.adapterId,
-      submittedAt: "2026-08-28T08:34:00.000Z",
-      evaluatedAt: "2026-08-28T08:36:00.000Z"
-    });
+    const evaluation = evaluateSubmissionProof(
+      proof,
+      [trustedCollector(publicKey.export({ type: "spki", format: "pem" }).toString())],
+      {
+        attemptId: WRONG_ATTEMPT_ID,
+        actionIntentHash: draft.actionIntentHash,
+        opportunityId: draft.opportunityId,
+        packetHash: draft.packetHash,
+        adapterId: draft.adapterId,
+        submittedAt: "2026-08-28T08:34:00.000Z",
+        evaluatedAt: "2026-08-28T08:36:00.000Z"
+      }
+    );
     expect(evaluation.status).toBe("rejected");
   });
 
   it("rejects a signed proof containing a non-completion indicator", () => {
     const { privateKey, publicKey } = generateKeyPairSync("ed25519");
-    const draft: SubmissionObservationDraft = {
-      collectorId: "red-team-collector",
-      collectorVersion: "0.7.0-alpha.1",
-      keyId: "KEY-REDTEAM-COLLECTOR",
-      attemptId: "ATT-2026-REDTEAM-001",
-      actionIntentHash: `sha256:${"5".repeat(64)}`,
-      opportunityId: BASE.opportunityId,
-      packetHash: `sha256:${"6".repeat(64)}`,
-      adapterId: "career-ops-local-fixture",
-      kind: "confirmation-page",
-      capturedAt: "2026-08-28T08:35:00.000Z",
-      sourceDomain: "synthetic.example",
-      sourcePointer: "proof:SYN-REDTEAM-002",
-      indicators: ["application was not submitted"],
-      attachmentCount: 1,
-      referenceId: "SYN-REDTEAM-002",
-      sentAt: "2026-08-28T08:35:00.000Z",
-      payloadHash: sha256("red-team-negative-observation")
-    };
+    const draft = proofDraft(["application was not submitted"], "SYN-REDTEAM-002", "red-team-negative-observation");
     const proof = createSubmissionProof(draft, privateKey);
-    const evaluation = evaluateSubmissionProof(proof, [{
-      collectorId: "red-team-collector",
-      keyId: "KEY-REDTEAM-COLLECTOR",
-      publicKeyPem: publicKey.export({ type: "spki", format: "pem" }).toString(),
-      allowedAdapters: ["career-ops-local-fixture"],
-      allowedSourceDomains: ["synthetic.example"],
-      allowedKinds: ["confirmation-page"]
-    }], {
-      attemptId: draft.attemptId,
-      actionIntentHash: draft.actionIntentHash,
-      opportunityId: draft.opportunityId,
-      packetHash: draft.packetHash,
-      adapterId: draft.adapterId,
-      submittedAt: "2026-08-28T08:34:00.000Z",
-      evaluatedAt: "2026-08-28T08:36:00.000Z"
-    });
+    const evaluation = evaluateSubmissionProof(
+      proof,
+      [trustedCollector(publicKey.export({ type: "spki", format: "pem" }).toString())],
+      {
+        attemptId: draft.attemptId,
+        actionIntentHash: draft.actionIntentHash,
+        opportunityId: draft.opportunityId,
+        packetHash: draft.packetHash,
+        adapterId: draft.adapterId,
+        submittedAt: "2026-08-28T08:34:00.000Z",
+        evaluatedAt: "2026-08-28T08:36:00.000Z"
+      }
+    );
     expect(evaluation.status).toBe("rejected");
     expect(evaluation.reasons).toContain("proof contains a non completion signal");
   });

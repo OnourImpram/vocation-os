@@ -17,6 +17,9 @@ import type {
 
 const ADAPTER_ID = "career-ops-local-fixture";
 const ADAPTER_VERSION = "0.7.0-alpha.1";
+const COLLECTOR_ID = "COL-CAREER-OPS-LOCAL-FIXTURE";
+const COLLECTOR_VERSION = "0.7.0";
+const COLLECTOR_KEY_ID = "KEY-CAREER-OPS-LOCAL-FIXTURE";
 const TARGET_DOMAIN = "synthetic.example";
 const SUPPORTED_FIELDS = ["cv", "email", "name"] as const;
 const FORBIDDEN_FIELDS = ["identity-document", "payment", "protected-traits"] as const;
@@ -205,9 +208,9 @@ export const careerOpsLocalFixtureAdapter: ExecutionAdapter = {
     }
     if (!observation.referenceId) throw new Error("local fixture observation reference is required");
     return {
-      collectorId: "career-ops-local-fixture-collector",
-      collectorVersion: ADAPTER_VERSION,
-      keyId: "KEY-CAREER-OPS-LOCAL-FIXTURE",
+      collectorId: COLLECTOR_ID,
+      collectorVersion: COLLECTOR_VERSION,
+      keyId: COLLECTOR_KEY_ID,
       attemptId: attempt.attemptId,
       actionIntentHash: attempt.actionIntentHash,
       opportunityId: attempt.opportunityId,
