@@ -61,6 +61,20 @@ export function evaluateAdapterAuthorization(
       ["execution grant id does not match the Outbox command"]
     );
   }
+
+  const decision = evaluateExecutionGrant(
+    authorization.grant,
+    authorization.trustedApprovers,
+    authorization.expectation
+  );
+  if (!decision.allowed) {
+    return blocked(
+      grantSignatureHash,
+      decision.blockedBy ?? "execution-grant-denied",
+      decision.reasons
+    );
+  }
+
   if (expectation.adapterId.trim().toLowerCase() !== command.adapterId) {
     return blocked(
       grantSignatureHash,
@@ -124,17 +138,5 @@ export function evaluateAdapterAuthorization(
     );
   }
 
-  const decision = evaluateExecutionGrant(
-    authorization.grant,
-    authorization.trustedApprovers,
-    authorization.expectation
-  );
-  if (!decision.allowed) {
-    return blocked(
-      grantSignatureHash,
-      decision.blockedBy ?? "execution-grant-denied",
-      decision.reasons
-    );
-  }
   return { allowed: true, reasons: [], grantSignatureHash };
 }
