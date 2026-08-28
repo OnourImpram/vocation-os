@@ -10,10 +10,14 @@ import type {
   AdapterValidationResult,
   ExecutionAdapter,
   ExecutionAdapterManifest,
-  ExecutionObservation,
   ReconciliationContext,
   ReconciliationResult
 } from "./execution-adapter.js";
+import {
+  createExecutionObservation,
+  evaluateExecutionObservationBinding,
+  evaluateExecutionObservationIntegrity
+} from "./execution-observation.js";
 
 const ADAPTER_ID = "career-ops-local-fixture";
 const ADAPTER_VERSION = "0.7.0-alpha.1";
@@ -165,7 +169,7 @@ export const careerOpsLocalFixtureAdapter: ExecutionAdapter = {
     };
   },
 
-  async execute(context: AdapterExecuteContext): Promise<ExecutionObservation> {
+  async execute(context: AdapterExecuteContext) {
     const validation = validatePlanSynchronously(context.plan);
     if (!validation.valid) throw new Error(`adapter plan is invalid: ${validation.reasons.join(", ")}`);
     if (context.command.status !== "executing") throw new Error("outbox command must be executing before adapter execution");
@@ -183,10 +187,9 @@ export const careerOpsLocalFixtureAdapter: ExecutionAdapter = {
       planHash: context.plan.planHash,
       idempotencyKey: context.command.idempotencyKey
     })).slice("sha256:".length, "sha256:".length + 20).toUpperCase()}`;
-    const withoutHash: Omit<ExecutionObservation, "payloadHash"> = {
-      adapterId: ADAPTER_ID,
-      commandId: context.command.commandId,
-      opportunityId: context.command.opportunityId,
+    return createExecutionObservation({
+      command: context.command,
+      planHash: context.plan.planHash,
       status: "submitted",
       capturedAt,
       sourceDomain: TARGET_DOMAIN,
@@ -195,16 +198,31 @@ export const careerOpsLocalFixtureAdapter: ExecutionAdapter = {
       indicators: ["application successfully submitted"],
       attachmentCount: context.command.documentHashes.length,
       submittedAt: capturedAt
-    };
-    return { ...withoutHash, payloadHash: sha256(stableStringify(withoutHash)) };
+    });
   },
 
   async collect(attempt, observation): Promise<SubmissionObservationDraft> {
+    const integrity = evaluateExecutionObservationIntegrity(observation);
+    if (!integrity.valid) {
+      throw new Error(`execution observation integrity failed: ${integrity.reasons.join(", ")}`);
+    }
     if (observation.adapterId !== ADAPTER_ID || observation.status !== "submitted") {
       throw new Error("local fixture collector requires a submitted local fixture observation");
     }
+    if (observation.sourceDomain !== TARGET_DOMAIN || observation.targetDomain !== TARGET_DOMAIN) {
+      throw new Error("local fixture observation is outside the synthetic domain boundary");
+    }
     if (observation.opportunityId !== attempt.opportunityId) {
       throw new Error("local fixture observation is bound to a different opportunity");
+    }
+    if (observation.attemptId !== attempt.attemptId) {
+      throw new Error("local fixture observation is bound to a different application attempt");
+    }
+    if (observation.actionIntentHash !== attempt.actionIntentHash) {
+      throw new Error("local fixture observation action intent does not match the application attempt");
+    }
+    if (observation.packetHash !== attempt.packetHash) {
+      throw new Error("local fixture observation packet does not match the application attempt");
     }
     if (!observation.referenceId) throw new Error("local fixture observation reference is required");
     return {
@@ -233,8 +251,9 @@ export const careerOpsLocalFixtureAdapter: ExecutionAdapter = {
     if (!context.observation) {
       return { status: "unresolved", reasons: ["no execution observation is available"], referenceId: null };
     }
-    if (context.observation.commandId !== context.command.commandId) {
-      return { status: "not-confirmed", reasons: ["observation is bound to a different command"], referenceId: null };
+    const binding = evaluateExecutionObservationBinding(context.observation, context.command, context.planHash);
+    if (!binding.valid) {
+      return { status: "not-confirmed", reasons: binding.reasons, referenceId: null };
     }
     if (context.observation.status !== "submitted" || !context.observation.referenceId) {
       return { status: "not-confirmed", reasons: ["observation does not confirm submission"], referenceId: null };
