@@ -1,5 +1,6 @@
 import { sha256, stableStringify } from "../hash.js";
 import type { SubmissionObservationDraft } from "../submission-proof.js";
+import { evaluateAdapterAuthorization } from "./adapter-authorization.js";
 import type {
   AdapterExecuteContext,
   AdapterExecutionPlan,
@@ -27,6 +28,8 @@ const COLLECTOR_KEY_ID = "KEY-CAREER-OPS-LOCAL-FIXTURE";
 const TARGET_DOMAIN = "synthetic.example";
 const SUPPORTED_FIELDS = ["cv", "email", "name"] as const;
 const FORBIDDEN_FIELDS = ["identity-document", "payment", "protected-traits"] as const;
+const SHA256_PATTERN = /^sha256:[a-f0-9]{64}$/;
+const OPPORTUNITY_TYPE_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
 function manifestWithoutRecipeHash(): Omit<ExecutionAdapterManifest, "recipeHash"> {
   return {
@@ -66,6 +69,11 @@ function computePlanHash(plan: Omit<AdapterExecutionPlan, "planHash">): string {
   return sha256(canonicalPlan(plan));
 }
 
+function authorizationError(blockedBy: string | undefined, reasons: string[]): Error {
+  const code = blockedBy ?? "adapter-authorization-denied";
+  return new Error(`${code}: ${reasons.join(", ")}`);
+}
+
 function validatePlanSynchronously(plan: AdapterExecutionPlan): AdapterValidationResult {
   const reasons: string[] = [];
   if (plan.adapterId !== ADAPTER_ID) reasons.push("plan adapter does not match the local fixture adapter");
@@ -74,6 +82,10 @@ function validatePlanSynchronously(plan: AdapterExecutionPlan): AdapterValidatio
   if (plan.verificationStatus !== "verified") reasons.push("plan verification is not current");
   if (plan.legitimacyTier !== "green") reasons.push("plan legitimacy tier is not green");
   if (plan.actionType !== "submit-ats-application") reasons.push("plan action type is not supported");
+  if (!plan.executionGrantId.startsWith("GRANT-")) reasons.push("plan execution grant id is invalid");
+  if (!SHA256_PATTERN.test(plan.grantSignatureHash)) reasons.push("plan grant signature hash is invalid");
+  if (!OPPORTUNITY_TYPE_PATTERN.test(plan.opportunityType)) reasons.push("plan opportunity type is invalid");
+  if (!Number.isFinite(plan.fitScore) || plan.fitScore < 1 || plan.fitScore > 5) reasons.push("plan fit score is invalid");
   if (plan.requestedFields.some((field) => !SUPPORTED_FIELDS.includes(field as (typeof SUPPORTED_FIELDS)[number]))) {
     reasons.push("plan requests an unsupported field");
   }
@@ -135,6 +147,14 @@ export const careerOpsLocalFixtureAdapter: ExecutionAdapter = {
     const unsupported = requestedFields.filter((field) => !SUPPORTED_FIELDS.includes(field as (typeof SUPPORTED_FIELDS)[number]));
     if (unsupported.length > 0) throw new Error(`adapter plan requests unsupported fields: ${unsupported.join(", ")}`);
 
+    const authorization = evaluateAdapterAuthorization({
+      authorization: context.authorization,
+      command: context.command,
+      requestedFields,
+      legitimacyTier: context.legitimacyTier
+    });
+    if (!authorization.allowed) throw authorizationError(authorization.blockedBy, authorization.reasons);
+
     const withoutHash: Omit<AdapterExecutionPlan, "planHash"> = {
       planId: `PLAN-${context.command.idempotencyKey.slice("sha256:".length, "sha256:".length + 20).toUpperCase()}`,
       adapterId: ADAPTER_ID,
@@ -146,6 +166,10 @@ export const careerOpsLocalFixtureAdapter: ExecutionAdapter = {
       verificationStatus: context.verificationStatus,
       legitimacyTier: context.legitimacyTier,
       requestedFields,
+      executionGrantId: context.authorization.grant.grantId,
+      grantSignatureHash: authorization.grantSignatureHash,
+      opportunityType: context.authorization.expectation.opportunityType,
+      fitScore: context.authorization.expectation.fitScore,
       plannedAt: context.command.updatedAt
     };
     return { ...withoutHash, planHash: computePlanHash(withoutHash) };
@@ -180,6 +204,20 @@ export const careerOpsLocalFixtureAdapter: ExecutionAdapter = {
     if (context.command.targetDomain !== TARGET_DOMAIN || context.plan.targetDomain !== TARGET_DOMAIN) {
       throw new Error("execution target domain is outside the local fixture boundary");
     }
+    if (context.command.executionGrantId !== context.plan.executionGrantId) {
+      throw new Error("execution plan grant does not match the Outbox command");
+    }
+
+    const authorization = evaluateAdapterAuthorization({
+      authorization: context.authorization,
+      command: context.command,
+      requestedFields: context.plan.requestedFields,
+      legitimacyTier: context.plan.legitimacyTier,
+      expectedOpportunityType: context.plan.opportunityType,
+      expectedFitScore: context.plan.fitScore,
+      expectedGrantSignatureHash: context.plan.grantSignatureHash
+    });
+    if (!authorization.allowed) throw authorizationError(authorization.blockedBy, authorization.reasons);
 
     const capturedAt = (context.now ?? new Date()).toISOString();
     const referenceId = `SYN-${sha256(stableStringify({
