@@ -1,0 +1,57 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://vocation-os.dev/schemas/legitimacy-assessment.schema.json",
+  "title": "LegitimacyAssessment",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "opportunityId",
+    "tier",
+    "signals",
+    "assessedAt",
+    "assessmentHash"
+  ],
+  "properties": {
+    "opportunityId": {
+      "type": "string",
+      "pattern": "^OPP-[A-Z0-9-]+$"
+    },
+    "tier": {
+      "type": "string",
+      "enum": ["green", "yellow", "red"]
+    },
+    "signals": {
+      "type": "array",
+      "maxItems": 32,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["code", "severity", "evidence"],
+        "properties": {
+          "code": {
+            "type": "string",
+            "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+            "maxLength": 80
+          },
+          "severity": {
+            "type": "string",
+            "enum": ["info", "warning", "blocking"]
+          },
+          "evidence": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500
+          }
+        }
+      }
+    },
+    "assessedAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "assessmentHash": {
+      "type": "string",
+      "pattern": "^sha256:[a-f0-9]{64}$"
+    }
+  }
+}

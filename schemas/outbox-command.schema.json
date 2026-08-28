@@ -1,0 +1,150 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://vocation-os.dev/schemas/outbox-command.schema.json",
+  "title": "OutboxCommand",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "commandId",
+    "runId",
+    "opportunityId",
+    "attemptId",
+    "adapterId",
+    "actionType",
+    "actionIntentHash",
+    "verificationBundleHash",
+    "packetHash",
+    "executionGrantId",
+    "targetDomain",
+    "documentHashes",
+    "idempotencyKey",
+    "status",
+    "createdAt",
+    "updatedAt",
+    "reservedBy",
+    "reservedAt",
+    "executionStartedAt",
+    "blocker",
+    "proofId"
+  ],
+  "properties": {
+    "commandId": {
+      "type": "string",
+      "pattern": "^CMD-[A-F0-9-]{36}$"
+    },
+    "runId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200
+    },
+    "opportunityId": {
+      "type": "string",
+      "pattern": "^OPP-[A-Z0-9-]+$"
+    },
+    "attemptId": {
+      "type": "string",
+      "pattern": "^ATT-[A-Za-z0-9._:-]+$",
+      "maxLength": 200
+    },
+    "adapterId": {
+      "type": "string",
+      "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+      "maxLength": 100
+    },
+    "actionType": {
+      "type": "string",
+      "enum": [
+        "send-application-email",
+        "send-outreach-email",
+        "send-follow-up-email",
+        "submit-ats-application"
+      ]
+    },
+    "actionIntentHash": {
+      "type": "string",
+      "pattern": "^sha256:[a-f0-9]{64}$"
+    },
+    "verificationBundleHash": {
+      "type": "string",
+      "pattern": "^sha256:[a-f0-9]{64}$"
+    },
+    "packetHash": {
+      "type": "string",
+      "pattern": "^sha256:[a-f0-9]{64}$"
+    },
+    "executionGrantId": {
+      "type": "string",
+      "pattern": "^GRANT-[A-Za-z0-9._:-]+$",
+      "maxLength": 160
+    },
+    "targetDomain": {
+      "type": "string",
+      "pattern": "^[a-z0-9.-]+\\.[a-z0-9.-]+$",
+      "maxLength": 253
+    },
+    "documentHashes": {
+      "type": "array",
+      "uniqueItems": true,
+      "maxItems": 32,
+      "items": {
+        "type": "string",
+        "pattern": "^sha256:[a-f0-9]{64}$"
+      }
+    },
+    "idempotencyKey": {
+      "type": "string",
+      "pattern": "^sha256:[a-f0-9]{64}$"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "drafted",
+        "ready",
+        "reserved",
+        "executing",
+        "submitted_unconfirmed",
+        "confirmed",
+        "failed",
+        "suppressed"
+      ]
+    },
+    "createdAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "updatedAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "reservedBy": {
+      "oneOf": [
+        { "type": "string", "minLength": 1, "maxLength": 160 },
+        { "type": "null" }
+      ]
+    },
+    "reservedAt": {
+      "oneOf": [
+        { "type": "string", "format": "date-time" },
+        { "type": "null" }
+      ]
+    },
+    "executionStartedAt": {
+      "oneOf": [
+        { "type": "string", "format": "date-time" },
+        { "type": "null" }
+      ]
+    },
+    "blocker": {
+      "oneOf": [
+        { "type": "string", "minLength": 1, "maxLength": 500 },
+        { "type": "null" }
+      ]
+    },
+    "proofId": {
+      "oneOf": [
+        { "type": "string", "minLength": 1, "maxLength": 160 },
+        { "type": "null" }
+      ]
+    }
+  }
+}

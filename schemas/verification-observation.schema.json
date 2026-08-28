@@ -1,0 +1,102 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://vocation-os.dev/schemas/verification-observation.schema.json",
+  "title": "VerificationObservation",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "observationId",
+    "opportunityId",
+    "sourceKind",
+    "sourceUrl",
+    "sourceDomain",
+    "employer",
+    "roleTitle",
+    "requisitionId",
+    "locationText",
+    "applyUrl",
+    "postedAt",
+    "deadlineAt",
+    "observedStatus",
+    "capturedAt",
+    "payloadHash",
+    "extractionConfidence"
+  ],
+  "properties": {
+    "observationId": {
+      "type": "string",
+      "pattern": "^OBS-[A-F0-9]{20}$"
+    },
+    "opportunityId": {
+      "type": "string",
+      "pattern": "^OPP-[A-Z0-9-]+$"
+    },
+    "sourceKind": {
+      "type": "string",
+      "enum": ["primary", "independent", "pre-action"]
+    },
+    "sourceUrl": {
+      "type": "string",
+      "format": "uri",
+      "pattern": "^https://"
+    },
+    "sourceDomain": {
+      "type": "string",
+      "pattern": "^[a-z0-9.-]+\\.[a-z0-9.-]+$"
+    },
+    "employer": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 300
+    },
+    "roleTitle": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 300
+    },
+    "requisitionId": {
+      "oneOf": [
+        { "type": "string", "minLength": 1, "maxLength": 200 },
+        { "type": "null" }
+      ]
+    },
+    "locationText": {
+      "type": "string",
+      "maxLength": 500
+    },
+    "applyUrl": {
+      "oneOf": [
+        { "type": "string", "format": "uri", "pattern": "^https://" },
+        { "type": "null" }
+      ]
+    },
+    "postedAt": {
+      "oneOf": [
+        { "type": "string", "format": "date-time" },
+        { "type": "null" }
+      ]
+    },
+    "deadlineAt": {
+      "oneOf": [
+        { "type": "string", "format": "date-time" },
+        { "type": "null" }
+      ]
+    },
+    "observedStatus": {
+      "type": "string",
+      "enum": ["live", "closed", "stale", "unverifiable"]
+    },
+    "capturedAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "payloadHash": {
+      "type": "string",
+      "pattern": "^sha256:[a-f0-9]{64}$"
+    },
+    "extractionConfidence": {
+      "type": "string",
+      "enum": ["high", "medium", "low"]
+    }
+  }
+}
