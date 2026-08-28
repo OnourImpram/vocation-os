@@ -27,6 +27,7 @@ export const SCHEMA_NAMES = [
   "legitimacy-assessment",
   "execution-grant",
   "outbox-command",
+  "execution-adapter-manifest",
   "opportunity-score",
   "submission-proof",
   "backup-manifest",
