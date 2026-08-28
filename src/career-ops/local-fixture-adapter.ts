@@ -74,6 +74,12 @@ function authorizationError(blockedBy: string | undefined, reasons: string[]): E
   return new Error(`${code}: ${reasons.join(", ")}`);
 }
 
+function actionTime(now: Date | undefined, label: string): Date {
+  const resolved = now ?? new Date();
+  if (!Number.isFinite(resolved.getTime())) throw new Error(`${label} is invalid`);
+  return resolved;
+}
+
 function validatePlanSynchronously(plan: AdapterExecutionPlan): AdapterValidationResult {
   const reasons: string[] = [];
   if (plan.adapterId !== ADAPTER_ID) reasons.push("plan adapter does not match the local fixture adapter");
@@ -124,6 +130,7 @@ export const careerOpsLocalFixtureAdapter: ExecutionAdapter = {
   },
 
   async plan(context: AdapterPlanContext): Promise<AdapterExecutionPlan> {
+    const planningTime = actionTime(context.now, "adapter planning time");
     if (context.verificationStatus !== "verified") {
       throw new Error("verification must be current before adapter planning");
     }
@@ -151,7 +158,8 @@ export const careerOpsLocalFixtureAdapter: ExecutionAdapter = {
       authorization: context.authorization,
       command: context.command,
       requestedFields,
-      legitimacyTier: context.legitimacyTier
+      legitimacyTier: context.legitimacyTier,
+      evaluatedAt: planningTime
     });
     if (!authorization.allowed) throw authorizationError(authorization.blockedBy, authorization.reasons);
 
@@ -170,7 +178,7 @@ export const careerOpsLocalFixtureAdapter: ExecutionAdapter = {
       grantSignatureHash: authorization.grantSignatureHash,
       opportunityType: context.authorization.expectation.opportunityType,
       fitScore: context.authorization.expectation.fitScore,
-      plannedAt: context.command.updatedAt
+      plannedAt: planningTime.toISOString()
     };
     return { ...withoutHash, planHash: computePlanHash(withoutHash) };
   },
@@ -194,6 +202,7 @@ export const careerOpsLocalFixtureAdapter: ExecutionAdapter = {
   },
 
   async execute(context: AdapterExecuteContext) {
+    const executionTime = actionTime(context.now, "adapter execution time");
     const validation = validatePlanSynchronously(context.plan);
     if (!validation.valid) throw new Error(`adapter plan is invalid: ${validation.reasons.join(", ")}`);
     if (context.command.status !== "executing") throw new Error("outbox command must be executing before adapter execution");
@@ -213,13 +222,14 @@ export const careerOpsLocalFixtureAdapter: ExecutionAdapter = {
       command: context.command,
       requestedFields: context.plan.requestedFields,
       legitimacyTier: context.plan.legitimacyTier,
+      evaluatedAt: executionTime,
       expectedOpportunityType: context.plan.opportunityType,
       expectedFitScore: context.plan.fitScore,
       expectedGrantSignatureHash: context.plan.grantSignatureHash
     });
     if (!authorization.allowed) throw authorizationError(authorization.blockedBy, authorization.reasons);
 
-    const capturedAt = (context.now ?? new Date()).toISOString();
+    const capturedAt = executionTime.toISOString();
     const referenceId = `SYN-${sha256(stableStringify({
       commandId: context.command.commandId,
       planHash: context.plan.planHash,
