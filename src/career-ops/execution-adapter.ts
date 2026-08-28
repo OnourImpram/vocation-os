@@ -1,6 +1,7 @@
 import type { ApplicationAttempt } from "../application-lifecycle.js";
 import { assertSchema } from "../schema.js";
 import type { SubmissionObservationDraft, SubmissionProofKind } from "../submission-proof.js";
+import type { AdapterAuthorizationContext } from "./adapter-authorization.js";
 import type { CareerActionType } from "./execution-grant.js";
 import type { ExecutionObservation } from "./execution-observation.js";
 import type { LegitimacyTier } from "./legitimacy.js";
@@ -8,6 +9,7 @@ import type { OutboxCommand } from "./outbox.js";
 import type { VerificationBundleStatus } from "./verification.js";
 import { careerOpsLocalFixtureAdapter } from "./local-fixture-adapter.js";
 
+export type { AdapterAuthorizationContext } from "./adapter-authorization.js";
 export type { ExecutionObservation } from "./execution-observation.js";
 
 export const EXECUTION_ADAPTER_MATURITIES = ["synthetic", "experimental", "stable"] as const;
@@ -50,6 +52,7 @@ export interface AdapterPlanContext {
   verificationStatus: VerificationBundleStatus;
   legitimacyTier: LegitimacyTier;
   requestedFields: string[];
+  authorization: AdapterAuthorizationContext;
 }
 
 export interface AdapterExecutionPlan {
@@ -63,6 +66,10 @@ export interface AdapterExecutionPlan {
   verificationStatus: VerificationBundleStatus;
   legitimacyTier: LegitimacyTier;
   requestedFields: string[];
+  executionGrantId: string;
+  grantSignatureHash: string;
+  opportunityType: string;
+  fitScore: number;
   plannedAt: string;
   planHash: string;
 }
@@ -85,6 +92,7 @@ export interface AdapterPreview {
 export interface AdapterExecuteContext {
   command: OutboxCommand;
   plan: AdapterExecutionPlan;
+  authorization: AdapterAuthorizationContext;
   now?: Date;
 }
 
