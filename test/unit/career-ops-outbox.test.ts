@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  assertOutboxIdempotencyAvailable,
   confirmOutboxCommand,
   createOutboxCommand,
   failOutboxCommand,
@@ -100,5 +101,44 @@ describe("career operations transactional outbox", () => {
 
     expect(suppressed.status).toBe("suppressed");
     expect(() => markOutboxReady(suppressed, new Date())).toThrow("must be drafted");
+  });
+
+  it("requires reconciliation before a failed idempotency key can be reused", () => {
+    const original = failOutboxCommand(
+      command(),
+      "transport result is ambiguous",
+      new Date("2026-08-28T08:31:00.000Z")
+    );
+    const duplicate = command();
+
+    expect(() => assertOutboxIdempotencyAvailable([original], duplicate)).toThrow(
+      "failed outbox command requires reconciliation before idempotency key reuse"
+    );
+  });
+
+  it("preserves suppression across runs for the same semantic action", () => {
+    const original = suppressOutboxCommand(
+      command(),
+      "recipient opted out",
+      new Date("2026-08-28T08:31:00.000Z")
+    );
+    const duplicate = command();
+
+    expect(() => assertOutboxIdempotencyAvailable([original], duplicate)).toThrow(
+      "suppressed outbox command blocks idempotency key reuse"
+    );
+  });
+
+  it("does not allow a confirmed semantic action to be recreated", () => {
+    const ready = markOutboxReady(command(), new Date("2026-08-28T08:31:00.000Z"));
+    const reserved = reserveOutboxCommand(ready, "application-operator-1", new Date("2026-08-28T08:32:00.000Z"));
+    const executing = markOutboxExecuting(reserved, new Date("2026-08-28T08:33:00.000Z"));
+    const submitted = markOutboxSubmitted(executing, new Date("2026-08-28T08:34:00.000Z"));
+    const confirmed = confirmOutboxCommand(submitted, "PRF-SYNTHETIC-001", new Date("2026-08-28T08:35:00.000Z"));
+    const duplicate = command();
+
+    expect(() => assertOutboxIdempotencyAvailable([confirmed], duplicate)).toThrow(
+      "confirmed outbox command already owns the idempotency key"
+    );
   });
 });
