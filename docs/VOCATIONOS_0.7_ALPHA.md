@@ -25,6 +25,7 @@ primary verification
   -> claim-bound application packet
   -> transactional idempotent Outbox
   -> shipped synthetic adapter
+  -> command-bound execution observation
   -> signed trusted collector proof
   -> confirmed application lifecycle
 ```
@@ -60,11 +61,12 @@ The output contains no private key material or real personal data.
 | Three-stage verification | Requires a live primary source, an independent authoritative source, and a current pre-action observation. |
 | Source independence | Reusing the same canonical source family as corroboration is rejected. |
 | Legitimacy | Payment, inappropriate identity-document requests, suspicious domains, and unverified employer identity block execution. |
-| Scoped grant | Ed25519 signatures bind adapter, employer domain, action, fields, fit threshold, legitimacy tier, limits, and expiry. |
-| Outbox | Every action follows a deterministic, immutable state machine and stable idempotency key. |
+| Scoped grant | Ed25519 signatures bind adapter, employer domain, action, fields, fit threshold, legitimacy tier, limits, and expiry. The adapter revalidates the signed grant during planning and execution. |
+| Outbox | Every action follows a deterministic, immutable state machine and stable idempotency key. Failed keys require reconciliation and suppressed keys cannot be reused. |
 | Adapter authority | Configuration cannot activate an unshipped adapter. |
+| Execution observation | Collector evidence is bound to the exact command, attempt, packet, action intent, verification bundle, grant, plan, target, and idempotency key. |
 | Completion proof | The application remains unconfirmed until a trusted collector proof validates the exact attempt. |
-| Red-team boundary | Stale evidence, wrong-source corroboration, expired grants, protected fields, non-synthetic profiles, and mismatched proofs fail closed. |
+| Red-team boundary | Stale evidence, wrong-source corroboration, expired grants, protected fields, non-synthetic profiles, replay, observation grafting, and mismatched proofs fail closed. |
 
 ## Explicit limits
 
@@ -88,7 +90,7 @@ The values below are checked by `npm run docs:check` for the alpha branch.
 | Modes | 21 |
 | Theories | 28 |
 | Rubric dimensions | 20 |
-| Schemas | 59 |
+| Schemas | 60 |
 | CLI commands | 73 |
 | Evaluator tests | 19 |
 
