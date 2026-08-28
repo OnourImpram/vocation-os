@@ -86,6 +86,16 @@ describe("career operations execution grants", () => {
     expect(result.blockedBy).toBe("fit-score-below-grant-threshold");
   });
 
+  it("rejects a fit score outside the one-to-five scale", () => {
+    const result = evaluateExecutionGrant(grant(), trustedApprovers, {
+      ...EXPECTATION,
+      fitScore: 6
+    });
+
+    expect(result.allowed).toBe(false);
+    expect(result.blockedBy).toBe("execution-grant-fit-score-invalid");
+  });
+
   it("rejects an expired grant", () => {
     const result = evaluateExecutionGrant(grant(), trustedApprovers, {
       ...EXPECTATION,
@@ -104,6 +114,48 @@ describe("career operations execution grants", () => {
 
     expect(result.allowed).toBe(false);
     expect(result.blockedBy).toBe("execution-grant-daily-limit-exhausted");
+  });
+
+  it("rejects inconsistent grant usage counters", () => {
+    const result = evaluateExecutionGrant(grant(), trustedApprovers, {
+      ...EXPECTATION,
+      totalConfirmedActions: 0,
+      confirmedActionsToday: 1
+    });
+
+    expect(result.allowed).toBe(false);
+    expect(result.blockedBy).toBe("execution-grant-usage-invalid");
+  });
+
+  it("returns a blocked decision instead of throwing for malformed expectations", () => {
+    const result = evaluateExecutionGrant(grant(), trustedApprovers, {
+      ...EXPECTATION,
+      adapterId: "Green House!"
+    });
+
+    expect(result.allowed).toBe(false);
+    expect(result.blockedBy).toBe("execution-grant-expectation-invalid");
+  });
+
+  it("requires non-empty approval text before signing a grant", () => {
+    expect(() => createExecutionGrant({
+      grantId: "GRANT-2026-SYNTHETIC-002",
+      approvedBy: "synthetic-operator",
+      keyId: "KEY-SYNTHETIC-001",
+      allowedAdapters: ["career-ops-local-fixture"],
+      allowedEmployerDomains: ["synthetic.example"],
+      allowedOpportunityTypes: ["job"],
+      allowedActionTypes: ["submit-ats-application"],
+      allowedFields: ["name", "email", "cv"],
+      forbiddenFields: ["protected-traits", "identity-document", "payment"],
+      minimumFitScore: 4.5,
+      allowedLegitimacyTiers: ["green"],
+      maxActions: 5,
+      maxActionsPerDay: 2,
+      validFrom: "2026-08-28T08:00:00.000Z",
+      expiresAt: "2026-08-29T08:00:00.000Z",
+      approvalText: "   "
+    }, privateKey)).toThrow("execution grant approval text is required");
   });
 
   it("rejects a grant whose signature has been changed", () => {
