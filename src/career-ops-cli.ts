@@ -1,3 +1,5 @@
+#!/usr/bin/env node
+import { pathToFileURL } from "node:url";
 import {
   getShippedCareerExecutionAdapter,
   listShippedCareerExecutionAdapters
@@ -61,4 +63,9 @@ export async function runCareerOpsCli(
     write(`Career operations command failed: ${message}\n`);
     return 2;
   }
+}
+
+const entryPath = process.argv[1];
+if (entryPath && import.meta.url === pathToFileURL(entryPath).href) {
+  process.exitCode = await runCareerOpsCli(process.argv.slice(2));
 }
