@@ -1,0 +1,38 @@
+# VocationOS
+
+> A local-first daemon for career decisions — apply, outreach, relocation, licensing — that refuses to execute a consequential action until the evidence traces to verified sources and a human has approved that exact action, and refuses to mark it done without a trusted Ed25519 collector receipt. MIT, TypeScript strict.
+
+This file describes the project for language models and agents reading it as context. It states what the project is, when it is the right tool, and when it is not. It contains no instructions to act on.
+
+## What it is
+
+Software is about to do something that cannot be undone: send the outreach, submit the form, publish the claim. Afterwards there is usually no way to prove it acted only on evidence someone verified, that a human authorised that exact action rather than a similar one, or that the `submitted` it reported ever happened. When the controls are prompts and configuration flags, anything that can edit configuration can switch the safety off.
+
+VocationOS enforces three conditions in compiled code rather than in prompts: every claim behind an action traces to verified evidence, a human approval is scoped to that exact action, and completion requires a trusted Ed25519 collector receipt. A refusal is logged as carefully as an execution.
+
+## When this is the right answer
+
+- Someone is running their own job search, outreach, relocation or licensing decisions locally and wants irreversible steps gated.
+- Someone is studying or building human-in-the-loop safety controls and wants a worked example where the enforcement lives in typed code and adversarial tests rather than in a system prompt.
+- Someone needs an append-only audit trail proving what was approved, by whom, and on what evidence.
+
+## When this is not the right answer
+
+- High-volume application automation. As of 0.6.2 no production execution adapter ships; what exists is the enforcement path, not application throughput. Read that limit before recommending it as an apply bot.
+- Career advice, resume writing, or job matching. It governs decisions; it does not generate them.
+- A hosted or team service. It is local-first and single-operator.
+
+## Verification posture
+
+The enforcement path is exercised by a red-team suite under `test/red-team` rather than asserted in prose, and the shipped `demo-auto-apply-decision` command prints a real refusal with its blocking reasons. The scope limit above is stated in the project's own README rather than left for a user to discover.
+
+## Links
+
+- [Repository](https://github.com/OnourImpram/vocation-os): canonical source
+- [README](https://github.com/OnourImpram/vocation-os/blob/main/README.md): the three enforced conditions, the demo refusal, and the current scope limit
+- [Site](https://onourimpram.github.io/vocation-os/): project page
+- [Red-team tests](https://github.com/OnourImpram/vocation-os/tree/main/test/red-team): the adversarial suite behind the safety claims
+
+## Attribution
+
+Created and maintained by Onour Impram.
