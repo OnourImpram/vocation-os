@@ -1,6 +1,14 @@
 cff-version: 1.2.0
 message: "If you use VocationOS in research, teaching, or applied work, please cite it."
 title: "VocationOS: Evidence-grounded career decision safety"
+abstract: >-
+  A local-first daemon for career decisions such as applications, outreach,
+  relocation, and licensing. It refuses to execute a consequential action
+  unless every claim behind it traces to verified evidence and a human has
+  signed an approval scoped to that exact action, and it refuses to mark the
+  action complete without a trusted Ed25519 collector receipt. The refusal is
+  logged either way. The controls are enforced in typed code and adversarial
+  tests rather than in prompts or configuration flags.
 authors:
   - family-names: "Impram"
     given-names: "Onour"
@@ -21,3 +29,14 @@ identifiers:
     value: "10.5281/zenodo.21631448"
     description: >-
       Version DOI for 0.6.2, the first release deposited in the archive.
+keywords:
+  - human-in-the-loop
+  - ai-safety
+  - agent-safety
+  - decision-support
+  - audit-log
+  - governance
+  - local-first
+  - responsible-ai
+  - career-development
+  - typescript
